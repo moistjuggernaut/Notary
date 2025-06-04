@@ -1,5 +1,7 @@
-"features": {
-	"ghcr.io/devcontainers/features/sshd:1": {
-		"version": "latest"
+{
+	"features": {
+		"ghcr.io/devcontainers/features/sshd:1": {
+			"version": "latest"
+		}
 	}
 }
