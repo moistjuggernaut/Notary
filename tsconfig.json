@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "./dist", // Or wherever your compiled output goes
+    "declaration": true // Useful for generating type definitions
+  },
+  "include": ["api/**/*.ts"], // Or wherever your API functions are
+  "exclude": ["node_modules"]
+}
