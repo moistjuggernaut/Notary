@@ -41,36 +41,36 @@ export default function Home() {
     setTimeout(() => {
       const mockResult: ValidationResult = {
         status: 'success',
-        score: 92,
+        score: 94,
         checks: [
           {
             name: 'Background Quality',
-            description: 'White background detected, meets requirements',
+            description: 'Plain white background detected, meets ICAO requirements',
             score: 98,
             status: 'pass'
           },
           {
-            name: 'Face Detection',
-            description: 'Face properly centered and sized',
-            score: 95,
+            name: 'Face Framing',
+            description: 'Full face visible from top of head to chin, properly centered',
+            score: 96,
             status: 'pass'
           },
           {
-            name: 'Image Resolution',
-            description: 'Resolution acceptable but could be higher for optimal quality',
-            score: 78,
-            status: 'warning'
+            name: 'Photo Quality',
+            description: 'High resolution, sharp focus with neutral lighting',
+            score: 92,
+            status: 'pass'
           },
           {
-            name: 'Lighting & Shadows',
-            description: 'Even lighting, no harsh shadows detected',
-            score: 92,
+            name: 'Baby Expression (Special Allowance)',
+            description: 'Eyes closed - acceptable for infants under 6 months per ICAO guidelines',
+            score: 88,
             status: 'pass'
           }
         ],
         recommendations: [
-          'Consider taking photo with higher resolution camera',
-          'Ensure consistent lighting across face'
+          'Photo meets all ICAO requirements for baby passport photos',
+          'Special allowances applied for infant under 6 months'
         ]
       };
       
@@ -87,11 +87,11 @@ export default function Home() {
         {/* Page Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-dark-slate mb-4">
-            ICAO Children's Passport Photo Validator
+            ICAO Baby Passport Photo Validator
           </h2>
           <p className="text-lg text-slate-grey max-w-2xl mx-auto leading-relaxed">
-            Ensure your child's passport photo meets International Civil Aviation Organization (ICAO) standards 
-            for official document acceptance worldwide.
+            Ensure your baby's passport photo meets International Civil Aviation Organization (ICAO) standards 
+            with special allowances for infants under 6 months.
           </p>
         </div>
 
@@ -134,7 +134,7 @@ export default function Home() {
               </div>
               <span className="text-xl font-semibold text-dark-slate">Photo ID Validator</span>
             </div>
-            <p className="text-slate-grey mb-6">Ensuring ICAO compliance for children's passport photographs worldwide.</p>
+            <p className="text-slate-grey mb-6">Ensuring ICAO compliance for baby passport photographs with special infant allowances.</p>
             <div className="flex justify-center space-x-6 text-sm text-slate-grey">
               <a href="#" className="hover:text-official-blue transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-official-blue transition-colors">Terms of Service</a>

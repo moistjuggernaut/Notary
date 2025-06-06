@@ -9,11 +9,11 @@ export default function HowItWorks() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-dark-slate mb-4">
-            How Photo ID Validator Works
+            How Baby Photo Validation Works
           </h2>
           <p className="text-lg text-slate-grey max-w-2xl mx-auto leading-relaxed">
-            Our AI-powered system validates your child's passport photo against ICAO international standards 
-            in three simple steps.
+            Our AI-powered system validates your baby's passport photo against ICAO international standards 
+            with special allowances for infants under 6 months.
           </p>
         </div>
 

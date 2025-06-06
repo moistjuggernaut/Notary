@@ -83,8 +83,8 @@ export default function PhotoUploader({
     <section className="mb-12">
       <div className="bg-white rounded-lg border-2 border-gray-200 p-8">
         <div className="text-center mb-8">
-          <h3 className="text-2xl font-semibold text-dark-slate mb-2">Upload Your Child's Photo</h3>
-          <p className="text-slate-grey">Drag and drop your photo or click to browse. We'll validate it against ICAO standards.</p>
+          <h3 className="text-2xl font-semibold text-dark-slate mb-2">Upload Your Baby's Photo</h3>
+          <p className="text-slate-grey">Drag and drop your photo or click to browse. We'll validate it against ICAO standards with special allowances for infants.</p>
         </div>
 
         {!selectedFile && !isUploading && (
