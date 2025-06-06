@@ -70,9 +70,9 @@ export default function ValidationResults({ result, onValidateAnother }: Validat
   const statusMessage = getOverallStatusMessage();
 
   return (
-    <section className="mb-12">
-      <div className="bg-white rounded-lg border border-gray-200 p-8">
-        <h3 className="text-2xl font-semibold text-dark-slate mb-6">Validation Results</h3>
+    <section className="mb-16">
+      <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-10">
+        <h3 className="text-2xl font-semibold text-dark-slate mb-8">Validation Results</h3>
         
         {/* Overall Status */}
         <div className={`flex items-center p-4 rounded-lg mb-6 ${statusMessage.bgColor}`}>

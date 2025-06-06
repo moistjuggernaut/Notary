@@ -2,10 +2,10 @@ import { Code, Zap, Edit } from "lucide-react";
 
 export default function APIEndpoints() {
   return (
-    <section className="mt-16 mb-12">
-      <div className="bg-gray-50 rounded-lg p-8 border border-gray-200">
-        <h3 className="text-2xl font-semibold text-dark-slate mb-6">Developer API Endpoints</h3>
-        <p className="text-slate-grey mb-6">This application provides three REST API endpoints for integration:</p>
+    <section className="mt-20 mb-16">
+      <div className="bg-white rounded-lg p-10 border border-gray-100 shadow-sm">
+        <h3 className="text-2xl font-semibold text-dark-slate mb-8">Developer API Endpoints</h3>
+        <p className="text-lg text-slate-grey mb-8 leading-relaxed">This application provides three REST API endpoints for integration:</p>
         
         <div className="grid md:grid-cols-3 gap-6">
           <div className="bg-white rounded-lg p-6 border border-gray-100">

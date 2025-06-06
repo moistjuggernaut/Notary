@@ -80,16 +80,16 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         {/* Page Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-dark-slate mb-4">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold text-dark-slate mb-6">
             ICAO Baby Passport Photo Validator
           </h2>
-          <p className="text-lg text-slate-grey max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-slate-grey max-w-3xl mx-auto leading-relaxed">
             Ensure your baby's passport photo meets International Civil Aviation Organization (ICAO) standards 
             with special allowances for infants under 6 months.
           </p>

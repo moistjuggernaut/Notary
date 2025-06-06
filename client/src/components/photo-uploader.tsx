@@ -80,11 +80,11 @@ export default function PhotoUploader({
   };
 
   return (
-    <section className="mb-12">
-      <div className="bg-white rounded-lg border-2 border-gray-200 p-8">
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-semibold text-dark-slate mb-2">Upload Your Baby's Photo</h3>
-          <p className="text-slate-grey">Drag and drop your photo or click to browse. We'll validate it against ICAO standards with special allowances for infants.</p>
+    <section className="mb-16">
+      <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-10">
+        <div className="text-center mb-10">
+          <h3 className="text-2xl font-semibold text-dark-slate mb-4">Upload Your Baby's Photo</h3>
+          <p className="text-slate-grey text-lg leading-relaxed max-w-2xl mx-auto">Drag and drop your photo or click to browse. We'll validate it against ICAO standards with special allowances for infants.</p>
         </div>
 
         {!selectedFile && !isUploading && (
