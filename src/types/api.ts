@@ -20,4 +20,8 @@ export const API_ENDPOINTS = {
         create: '/documents',
         get: (id: string) => `/documents/${id}`,
     },
+    photo: {
+        validate: '/validate-photo',
+        preprocess: '/preprocess-photo',
+    },
 } as const; 

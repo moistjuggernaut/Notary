@@ -29,15 +29,26 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     return response.json();
 }
 
-export const api = {
-    documents: {
-        list: () => fetchApi<DocumentResponse[]>(API_ENDPOINTS.documents.list),
-        create: (document: Document) =>
-            fetchApi<DocumentResponse>(API_ENDPOINTS.documents.create, {
-                method: 'POST',
-                body: JSON.stringify(document),
-            }),
-        get: (id: string) =>
-            fetchApi<DocumentResponse>(API_ENDPOINTS.documents.get(id)),
-    },
+// --- New photo API functions ---
+export async function validatePhoto(file: File): Promise<boolean> {
+    const formData = new FormData();
+    formData.append('photo', file);
+    const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.photo.validate}`, {
+        method: 'POST',
+        body: formData,
+    });
+    if (!res.ok) throw new Error('Validation failed');
+    const data = await res.json();
+    return data.valid;
+}
+
+export async function preprocessPhoto(file: File): Promise<Blob> {
+    const formData = new FormData();
+    formData.append('photo', file);
+    const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.photo.preprocess}`, {
+        method: 'POST',
+        body: formData,
+    });
+    if (!res.ok) throw new Error('Preprocessing failed');
+    return await res.blob();
 };
