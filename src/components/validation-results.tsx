@@ -1,6 +1,6 @@
 import { CheckCircle, AlertTriangle, XCircle, Download, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { ValidationResult } from "@/pages/home";
+import type { ValidationResult } from "@/types/validation";
 
 interface ValidationResultsProps {
   result: ValidationResult;

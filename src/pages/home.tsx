@@ -3,18 +3,8 @@ import ICAORequirements from "@/components/icao-requirements";
 import PhotoUploader from "@/components/photo-uploader";
 import ValidationResults from "@/components/validation-results";
 import { useState } from "react";
-
-export interface ValidationResult {
-  status: 'success' | 'warning' | 'error';
-  score: number;
-  checks: {
-    name: string;
-    description: string;
-    score: number;
-    status: 'pass' | 'warning' | 'fail';
-  }[];
-  recommendations?: string[];
-}
+import ICAOCountries from "@/components/countries";
+import type { ValidationResult } from "@/types/validation";
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -93,10 +83,13 @@ export default function Home() {
             with special allowances for infants under 6 months.
           </p>
         </div>
+        
 
         {/* ICAO Requirements */}
         <ICAORequirements />
 
+        <ICAOCountries />
+        
         {/* Photo Uploader */}
         <PhotoUploader 
           selectedFile={selectedFile}
