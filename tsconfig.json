@@ -1,15 +1,40 @@
+// tsconfig.json
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "outDir": "./dist", // Or wherever your compiled output goes
-    "declaration": true // Useful for generating type definitions
+    "target": "ESNext", // Modern JavaScript target for your frontend
+    "useDefineForClassFields": true, // Recommended for modern JS/TS in React
+    "lib": ["ES2020", "DOM", "DOM.Iterable"], // Essential for browser APIs and modern JS features
+    "module": "ESNext", // Use ES Modules for bundling
+    "skipLibCheck": true, // Speeds up compilation by skipping type checking of declaration files
+
+    /* Bundler mode (Vite specific) */
+    "moduleResolution": "bundler", // Tell TypeScript to use Vite's module resolution strategy
+    "allowImportingTsExtensions": true, // Allow importing files with .ts, .tsx extensions (useful for some dev scenarios)
+    "resolveJsonModule": true, // Allow importing .json files as modules
+    "isolatedModules": true, // Ensures each file can be compiled independently (good for bundlers)
+    "noEmit": true, // Crucial: Tell TypeScript NOT to emit JS files; Vite handles this
+    "jsx": "react-jsx", // THIS IS KEY: Tells TypeScript to compile JSX using React's automatic runtime
+
+    /* Path Aliases */
+    "baseUrl": ".", // Crucial for resolving non-relative paths (like aliases)
+    "paths": {
+      "@/*": ["./src/*"] // Maps "@/" to your "src/" directory
+      // Example: import { Button } from "@/components/Button"; -> resolves to src/components/Button.tsx
+    },
+
+    /* Linting/Strictness (Good practices) */
+    "strict": true, // Enable all strict type-checking options
+    "noUnusedLocals": true, // Report errors on unused local variables
+    "noUnusedParameters": true, // Report errors on unused parameters
+    "noFallthroughCasesInSwitch": true, // Enforce fallthrough checks in switch statements
+    "forceConsistentCasingInFileNames": true, // Ensure consistent casing for file imports
+    "esModuleInterop": true // Allows default imports from modules with no default export
   },
-  "include": ["api/**/*.ts"], // Or wherever your API functions are
-  "exclude": ["node_modules"]
+  "include": [
+    "src/**/*.ts", // Include all .ts files in src/
+    "src/**/*.tsx", // Include all .tsx (React component) files in src/
+    "src/**/*.d.ts", // Include all declaration files in src/
+    "vite-env.d.ts" // Essential for Vite's built-in environment types (import.meta.env)
+  ],
+  "exclude": ["node_modules", "dist"] // Exclude node_modules and your build output folder
 }
