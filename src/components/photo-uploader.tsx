@@ -3,6 +3,7 @@ import { Upload, X, CloudUpload, FileImage } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { formatFileSize, validateImageFile } from "@/lib/file-utils";
+import { API_ENDPOINTS } from "@/types/api";
 
 interface PhotoUploaderProps {
   selectedFile: File | null;
@@ -22,6 +23,7 @@ export default function PhotoUploader({
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isCheckingFace, setIsCheckingFace] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -61,18 +63,46 @@ export default function PhotoUploader({
     setIsUploading(true);
     setUploadProgress(0);
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          onFileSelect(file);
-          return 100;
-        }
-        return prev + Math.random() * 20;
+    try {
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          resolve(base64String.split(',')[1]); // Remove data:image/jpeg;base64, prefix
+        };
+        reader.readAsDataURL(file);
       });
-    }, 200);
+
+      // Quick face check
+      setIsCheckingFace(true);
+      const response = await fetch(API_ENDPOINTS.photo.validate, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64, filename: file.name })
+      });
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        alert(result.recommendation || 'No face detected in the image. Please try another photo.');
+        setIsUploading(false);
+        setIsCheckingFace(false);
+        return;
+      }
+
+      // If face check passes, complete the upload
+      setUploadProgress(100);
+      setIsUploading(false);
+      setIsCheckingFace(false);
+      onFileSelect(file);
+      //onValidatePhoto(); TODO
+    } catch (error) {
+      console.error('Error during upload:', error);
+      alert('Error uploading photo. Please try again.');
+      setIsUploading(false);
+      setIsCheckingFace(false);
+    }
   };
 
   const openFileDialog = () => {
@@ -137,7 +167,7 @@ export default function PhotoUploader({
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
                 onClick={onValidatePhoto}
-                disabled={isValidating}
+                disabled={isValidating || isCheckingFace}
                 className="flex-1 bg-official-blue hover:bg-blue-700 text-white"
               >
                 {isValidating ? (
@@ -145,10 +175,15 @@ export default function PhotoUploader({
                     <div className="animate-spin rounded-full w-4 h-4 border-b-2 border-white mr-2" />
                     Validating...
                   </>
+                ) : isCheckingFace ? (
+                  <>
+                    <div className="animate-spin rounded-full w-4 h-4 border-b-2 border-white mr-2" />
+                    Checking Face...
+                  </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    Validate Photo
+                    
                   </>
                 )}
               </Button>

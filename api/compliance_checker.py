@@ -6,7 +6,6 @@ Coordinates the complete photo validation workflow.
 import os
 import json
 import base64
-import tempfile
 import cv2
 import numpy as np
 from .config import Config
