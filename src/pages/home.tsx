@@ -5,6 +5,8 @@ import ValidationResults from "@/components/validation-results";
 import { useState } from "react";
 import ICAOCountries from "@/components/countries";
 import type { ValidationResult } from "@/types/validation";
+import { validatePhoto } from "@/api/client";
+import type { ValidationResponse } from "@/types/api";
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -21,51 +23,73 @@ export default function Home() {
     setValidationResult(null);
   };
 
+  // Convert API response to frontend ValidationResult format
+  const convertApiResponseToValidationResult = (apiResponse: ValidationResponse): ValidationResult => {
+    const allLogs = [...apiResponse.logs.preprocessing, ...apiResponse.logs.validation];
+    
+    // Determine overall status
+    const hasFailures = allLogs.some(log => log.status === 'FAIL');
+    const hasWarnings = allLogs.some(log => log.status === 'WARNING');
+    
+    let status: 'success' | 'warning' | 'error';
+    if (hasFailures) {
+      status = 'error';
+    } else if (hasWarnings) {
+      status = 'warning';
+    } else {
+      status = 'success';
+    }
+
+    // Calculate overall score (simplified)
+    const totalChecks = allLogs.filter(log => ['PASS', 'FAIL', 'WARNING'].includes(log.status)).length;
+    const passedChecks = allLogs.filter(log => log.status === 'PASS').length;
+    const score = totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 0;
+
+    // Convert logs to checks format
+    const checks = allLogs
+      .filter(log => ['PASS', 'FAIL', 'WARNING'].includes(log.status))
+      .map(log => ({
+        name: log.step,
+        description: log.message,
+        score: log.status === 'PASS' ? 100 : log.status === 'WARNING' ? 70 : 0,
+        status: log.status.toLowerCase() as 'pass' | 'warning' | 'fail'
+      }));
+
+    return {
+      status,
+      score,
+      checks,
+      recommendations: [apiResponse.recommendation]
+    };
+  };
+
   const handleValidatePhoto = async () => {
     if (!selectedFile) return;
     
     setIsValidating(true);
     
-    // Simulate validation API call
-    setTimeout(() => {
-      const mockResult: ValidationResult = {
-        status: 'success',
-        score: 94,
-        checks: [
-          {
-            name: 'Background Quality',
-            description: 'Plain white background detected, meets ICAO requirements',
-            score: 98,
-            status: 'pass'
-          },
-          {
-            name: 'Face Framing',
-            description: 'Full face visible from top of head to chin, properly centered',
-            score: 96,
-            status: 'pass'
-          },
-          {
-            name: 'Photo Quality',
-            description: 'High resolution, sharp focus with neutral lighting',
-            score: 92,
-            status: 'pass'
-          },
-          {
-            name: 'Baby Expression (Special Allowance)',
-            description: 'Eyes closed - acceptable for infants under 6 months per ICAO guidelines',
-            score: 88,
-            status: 'pass'
-          }
-        ],
-        recommendations: [
-          'Photo meets all ICAO requirements for baby passport photos',
-          'Special allowances applied for infant under 6 months'
-        ]
+    try {
+      const apiResponse = await validatePhoto(selectedFile);
+      const validationResult = convertApiResponseToValidationResult(apiResponse);
+      setValidationResult(validationResult);
+    } catch (error) {
+      console.error('Validation failed:', error);
+      // Create error result
+      const errorResult: ValidationResult = {
+        status: 'error',
+        score: 0,
+        checks: [{
+          name: 'API Error',
+          description: error instanceof Error ? error.message : 'Unknown error occurred',
+          score: 0,
+          status: 'fail'
+        }],
+        recommendations: ['Please try again or contact support if the problem persists.']
       };
-      
-      setValidationResult(mockResult);
+      setValidationResult(errorResult);
+    } finally {
       setIsValidating(false);
-    }, 2000);
+    }
   };
 
   return (
