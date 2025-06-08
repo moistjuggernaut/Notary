@@ -1,0 +1,10 @@
+# Exclude test files and directories
+api/tests/
+api/__pycache__/
+
+# Exclude cache and build files
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/ 

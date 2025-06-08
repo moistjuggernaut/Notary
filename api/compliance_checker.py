@@ -8,10 +8,10 @@ import json
 import base64
 import cv2
 import numpy as np
-from .config import Config
-from .face_analyzer import FaceAnalyzer
-from .image_preprocessor import ImagePreprocessor
-from .photo_validator import PhotoValidator
+from .lib.config import Config
+from .lib.face_analyzer import FaceAnalyzer
+from .lib.image_preprocessor import ImagePreprocessor
+from .lib.photo_validator import PhotoValidator
 
 
 class ComplianceChecker:
