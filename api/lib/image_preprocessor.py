@@ -8,13 +8,83 @@ import numpy as np
 from .config import Config
 from .face_analyzer import FaceAnalyzer
 
-try:
-    from rembg import remove as remove_background_rembg
-    REMBG_AVAILABLE = True  
-except ImportError:
-    REMBG_AVAILABLE = False
-    print("Warning: 'rembg' library not found. Background removal feature will be disabled.")
-    print("Install it with: pip install rembg[cv2]")
+# Custom lightweight background removal using OpenCV
+def simple_background_removal(image_bgr, face_bbox):
+    """
+    Simple background removal using edge detection and flood fill.
+    Much lighter than rembg but effective for passport photos with relatively uniform backgrounds.
+    
+    Args:
+        image_bgr (numpy.ndarray): Input image in BGR format
+        face_bbox (numpy.ndarray): Face bounding box to protect from removal
+        
+    Returns:
+        numpy.ndarray: Image with background replaced by white
+    """
+    try:
+        # Create a mask for the face area to protect it
+        h, w = image_bgr.shape[:2]
+        face_mask = np.zeros((h, w), dtype=np.uint8)
+        
+        # Expand face bbox slightly to protect more area
+        x1, y1, x2, y2 = face_bbox.astype(int)
+        padding = int(min(x2-x1, y2-y1) * 0.3)  # 30% padding
+        x1 = max(0, x1 - padding)
+        y1 = max(0, y1 - padding)
+        x2 = min(w, x2 + padding)
+        y2 = min(h, y2 + padding)
+        
+        cv2.rectangle(face_mask, (x1, y1), (x2, y2), 255, -1)
+        
+        # Convert to grayscale for processing
+        gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+        
+        # Apply GaussianBlur to reduce noise
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        
+        # Create edge detection mask
+        edges = cv2.Canny(blurred, 50, 150)
+        
+        # Dilate edges to close gaps
+        kernel = np.ones((3, 3), np.uint8)
+        edges = cv2.dilate(edges, kernel, iterations=1)
+        
+        # Create background mask using flood fill from corners
+        bg_mask = np.zeros((h + 2, w + 2), dtype=np.uint8)
+        result_image = image_bgr.copy()
+        
+        # Flood fill from corners to identify background
+        corners = [(0, 0), (0, h-1), (w-1, 0), (w-1, h-1)]
+        for x, y in corners:
+            if bg_mask[y+1, x+1] == 0:  # Not already filled
+                cv2.floodFill(gray, bg_mask, (x, y), 255, loDiff=30, upDiff=30, 
+                             flags=cv2.FLOODFILL_MASK_ONLY)
+        
+        # Remove padding from mask
+        bg_mask = bg_mask[1:-1, 1:-1]
+        
+        # Combine with edge information
+        bg_mask = cv2.bitwise_and(bg_mask, cv2.bitwise_not(edges))
+        
+        # Protect face area
+        bg_mask = cv2.bitwise_and(bg_mask, cv2.bitwise_not(face_mask))
+        
+        # Apply morphological operations to clean up mask
+        kernel = np.ones((5, 5), np.uint8)
+        bg_mask = cv2.morphologyEx(bg_mask, cv2.MORPH_CLOSE, kernel)
+        bg_mask = cv2.morphologyEx(bg_mask, cv2.MORPH_OPEN, kernel)
+        
+        # Smooth the mask edges
+        bg_mask = cv2.GaussianBlur(bg_mask, (5, 5), 0)
+        
+        # Apply mask to create white background
+        result_image[bg_mask > 128] = [255, 255, 255]
+        
+        return result_image
+        
+    except Exception as e:
+        print(f"Simple background removal failed: {e}")
+        return image_bgr  # Return original if processing fails
 
 
 class ImagePreprocessor:
@@ -30,79 +100,131 @@ class ImagePreprocessor:
         self.face_analyzer = face_analyzer
         self.config = Config()
 
-    def _get_face_details_for_crop(self, faces_on_original):
+    def _get_face_details_for_crop(self, faces):
         """
         Extract face details needed for cropping calculations.
         
         Args:
-            faces_on_original (list): List of detected faces on original image
+            faces (list): List of detected faces
             
         Returns:
-            tuple: (face_details dict, error_message)
+            tuple: (face_details_dict, error_message)
         """
-        if not faces_on_original or len(faces_on_original) == 0:
-            return None, "No face detected on original image."
+        if not faces:
+            return None, "No face detected in the image."
         
-        if len(faces_on_original) > 1:
-            return None, f"Multiple ({len(faces_on_original)}) faces detected."
+        if len(faces) > 1:
+            return None, "Multiple faces detected. Please use a photo with only one person."
         
-        face = faces_on_original[0]
-        if face.landmark_2d_106 is None or face.bbox is None:
-            return None, "Landmarks or bounding box missing."
-
-        landmarks = face.landmark_2d_106.astype(np.int32)
-        bbox = face.bbox.astype(np.int32)
-
-        chin_y = landmarks[self.config.CHIN_LANDMARK_INDEX][1]
-        crown_y = bbox[1]  # Using top of bbox as crown proxy
+        face = faces[0]
         
-        if chin_y <= crown_y:
-            return None, "Invalid landmark geometry (chin above crown)."
-
+        # Extract bounding box
+        bbox = face.bbox
+        if bbox is None:
+            return None, "Could not determine face bounding box."
+        
+        # Extract landmarks if available
+        landmarks = getattr(face, 'kps', None)
+        if landmarks is None or len(landmarks) < 5:
+            return None, "Could not extract sufficient facial landmarks."
+        
+        # For MediaPipe compatibility, we need to map landmarks differently
+        # MediaPipe provides 468 landmarks, we'll use specific ones for key features
+        if len(landmarks) > 100:  # MediaPipe format
+            # Map MediaPipe landmarks to our expected format
+            # These indices correspond to key facial features in MediaPipe's 468-point model
+            try:
+                chin_point = landmarks[152]  # Chin center
+                nose_tip = landmarks[1]      # Nose tip
+                left_eye = landmarks[33]     # Left eye center
+                right_eye = landmarks[263]   # Right eye center
+                forehead_top = landmarks[10] # Forehead top
+                
+                mapped_landmarks = np.array([
+                    left_eye, right_eye, nose_tip, 
+                    [landmarks[61][0], landmarks[61][1]],  # Left mouth corner
+                    [landmarks[291][0], landmarks[291][1]]  # Right mouth corner
+                ])
+            except (IndexError, KeyError):
+                # Fallback to first 5 landmarks if mapping fails
+                mapped_landmarks = landmarks[:5]
+        else:
+            # Assume already in expected format
+            mapped_landmarks = landmarks[:5] if len(landmarks) >= 5 else landmarks
+        
         return {
-            "chin_y_orig": chin_y,
-            "crown_y_orig_approx": crown_y,
-            "detected_chin_crown_orig_px": chin_y - crown_y,
-            "face_center_x_orig": (bbox[0] + bbox[2]) / 2
+            "bbox": bbox,
+            "landmarks": mapped_landmarks,
+            "chin_y": bbox[3],  # Bottom of bounding box as chin approximation
+            "crown_y": bbox[1]  # Top of bounding box as crown approximation
         }, None
 
-    def _calculate_crop_coordinates(self, img_shape, face_details):
+    def _calculate_crop_coordinates(self, original_shape, face_details):
         """
-        Calculate precise crop coordinates on the original image.
+        Calculate crop coordinates to achieve target aspect ratio and face positioning.
         
         Args:
-            img_shape (tuple): Shape of the original image (height, width, channels)
-            face_details (dict): Face details from _get_face_details_for_crop
+            original_shape (tuple): Shape of original image (h, w, c)
+            face_details (dict): Face information from _get_face_details_for_crop
             
         Returns:
-            tuple: (crop_coordinates, error_message)
+            tuple: (crop_coordinates, error_message) where crop_coordinates is (x1, y1, x2, y2)
         """
-        img_h, img_w = img_shape[:2]
-
-        target_chin_crown_px = self.config.CROP_TARGET_CHIN_TO_CROWN_RATIO * self.config.FINAL_OUTPUT_HEIGHT_PX
-        scale = target_chin_crown_px / face_details["detected_chin_crown_orig_px"]
+        orig_h, orig_w = original_shape[:2]
+        bbox = face_details["bbox"]
         
-        if scale <= 0:
-            return None, "Invalid crop scale factor."
-
-        crop_h_orig = self.config.FINAL_OUTPUT_HEIGHT_PX / scale
-        crop_w_orig = self.config.FINAL_OUTPUT_WIDTH_PX / scale
-
-        top_margin_orig = self.config.TOP_MARGIN_FINAL_PX / scale
+        # Face dimensions and center
+        face_center_x = (bbox[0] + bbox[2]) / 2
+        face_center_y = (bbox[1] + bbox[3]) / 2
+        face_height = bbox[3] - bbox[1]
         
-        y1 = int(face_details["crown_y_orig_approx"] - top_margin_orig)
-        y2 = int(y1 + crop_h_orig)
-        x1 = int(face_details["face_center_x_orig"] - (crop_w_orig / 2))
-        x2 = int(x1 + crop_w_orig)
-
-        # Boundary checks
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(img_w, x2), min(img_h, y2)
-
-        if (y2 - y1) <= 0 or (x2 - x1) <= 0:
-            return None, "Calculated crop dimensions are invalid."
-
-        return (x1, y1, x2, y2), None
+        # Calculate target dimensions maintaining aspect ratio
+        target_height = int(orig_w / self.config.TARGET_ASPECT_RATIO)
+        target_width = orig_w
+        
+        if target_height > orig_h:
+            # If calculated height exceeds image, use image height and adjust width
+            target_height = orig_h
+            target_width = int(orig_h * self.config.TARGET_ASPECT_RATIO)
+        
+        # Position face according to ICAO standards
+        # Face should be positioned so chin-to-crown is appropriate ratio of total height
+        desired_face_height_in_crop = target_height * self.config.CROP_TARGET_CHIN_TO_CROWN_RATIO
+        scale_factor = desired_face_height_in_crop / face_height
+        
+        # Calculate where the top of the crop should be
+        # Crown should be TOP_MARGIN_FINAL_PX from top of crop
+        crown_y_in_original = bbox[1]  # Approximate crown as top of face bbox
+        target_crown_y_in_crop = self.config.TOP_MARGIN_FINAL_PX / target_height * orig_h
+        
+        crop_top = crown_y_in_original - target_crown_y_in_crop
+        crop_bottom = crop_top + target_height
+        
+        # Center horizontally on face
+        crop_left = face_center_x - target_width / 2
+        crop_right = crop_left + target_width
+        
+        # Ensure crop stays within image boundaries
+        if crop_left < 0:
+            crop_right -= crop_left
+            crop_left = 0
+        if crop_right > orig_w:
+            crop_left -= (crop_right - orig_w)
+            crop_right = orig_w
+        if crop_top < 0:
+            crop_bottom -= crop_top
+            crop_top = 0
+        if crop_bottom > orig_h:
+            crop_top -= (crop_bottom - orig_h)
+            crop_bottom = orig_h
+        
+        # Final boundary checks
+        crop_left = max(0, crop_left)
+        crop_right = min(orig_w, crop_right)
+        crop_top = max(0, crop_top)
+        crop_bottom = min(orig_h, crop_bottom)
+        
+        return (int(crop_left), int(crop_top), int(crop_right), int(crop_bottom)), None
 
     def _preliminary_background_check(self, image_bgr, face_bbox):
         """
@@ -185,18 +307,12 @@ class ImagePreprocessor:
             logs.append(("INFO", "Preprocessing", f"Preliminary BG check: {reason}"))
             
             if not is_bg_ok:
-                if REMBG_AVAILABLE:
-                    logs.append(("INFO", "Preprocessing", "Attempting background removal."))
-                    try:
-                        output_rgba = remove_background_rembg(cv2.cvtColor(final_bgr, cv2.COLOR_BGR2RGB))
-                        alpha = output_rgba[:, :, 3:4] / 255.0
-                        white_bg = np.full(final_bgr.shape, 255, dtype=np.uint8)
-                        final_bgr = (cv2.cvtColor(output_rgba, cv2.COLOR_RGBA_BGR) * alpha + white_bg * (1 - alpha)).astype(np.uint8)
-                        logs.append(("INFO", "Preprocessing", "Background removal applied."))
-                    except Exception as e:
-                        logs.append(("WARNING", "Preprocessing", f"Background removal failed: {e}."))
-                else:
-                    logs.append(("WARNING", "Preprocessing", "Background may need removal, but 'rembg' is not available."))
+                logs.append(("INFO", "Preprocessing", "Attempting simple background removal."))
+                try:
+                    final_bgr = simple_background_removal(final_bgr, faces_final[0].bbox)
+                    logs.append(("INFO", "Preprocessing", "Simple background removal applied."))
+                except Exception as e:
+                    logs.append(("WARNING", "Preprocessing", f"Background removal failed: {e}."))
         
         # 5. Re-analyze final image for validation
         face_analysis_on_final = self.face_analyzer.analyze_image(final_bgr)

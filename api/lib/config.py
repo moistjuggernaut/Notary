@@ -47,6 +47,9 @@ class Config:
 
     # Face Detection Confidence
     MIN_DETECTION_SCORE = 0.6
+    
+    # MediaPipe-specific constants (replacing InsightFace landmarks)
+    CHIN_LANDMARK_INDEX = 152  # MediaPipe chin landmark index
 
     # Eye Aspect Ratio (EAR) threshold for detecting closed eyes.
     EYE_AR_THRESH = 0.18  # Lower values mean more likely to be closed.
