@@ -1,5 +1,5 @@
 opencv-python-headless==4.11.0.86
-numpy==2.2.4
+numpy==1.26.4
 mediapipe==0.10.21
 onnxruntime==1.22.0
 # rembg==2.0.66  # Replaced with custom background removal 
