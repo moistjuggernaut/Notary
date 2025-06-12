@@ -5,22 +5,45 @@ import ValidationResults from "@/components/validation-results";
 import { useState } from "react";
 import ICAOCountries from "@/components/countries";
 import type { ValidationResult } from "@/types/validation";
-import { validatePhoto } from "@/api/client";
-import type { ValidationResponse } from "@/types/api";
+import { validatePhoto, quickCheckPhoto } from "@/api/client";
+import type { ValidationResponse, QuickCheckResponse } from "@/types/api";
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  
+  // New state for the quick check
+  const [isQuickChecking, setIsQuickChecking] = useState(false);
+  const [quickCheckResult, setQuickCheckResult] = useState<QuickCheckResponse | null>(null);
+  const [quickCheckError, setQuickCheckError] = useState<string | null>(null);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
     setValidationResult(null);
+    setQuickCheckResult(null);
+    setQuickCheckError(null);
+    setIsQuickChecking(true);
+    
+    try {
+      const result = await quickCheckPhoto(file);
+      setQuickCheckResult(result);
+      if (!result.success) {
+        setQuickCheckError(result.message);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during quick check.';
+      setQuickCheckError(errorMessage);
+    } finally {
+      setIsQuickChecking(false);
+    }
   };
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
     setValidationResult(null);
+    setQuickCheckResult(null);
+    setQuickCheckError(null);
   };
 
   // Convert API response to frontend ValidationResult format
@@ -64,17 +87,16 @@ export default function Home() {
   };
 
   const handleValidatePhoto = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || !quickCheckResult?.success) return;
     
     setIsValidating(true);
     
     try {
       const apiResponse = await validatePhoto(selectedFile);
-      const validationResult = convertApiResponseToValidationResult(apiResponse);
-      setValidationResult(validationResult);
+      const validationResultData = convertApiResponseToValidationResult(apiResponse);
+      setValidationResult(validationResultData);
     } catch (error) {
       console.error('Validation failed:', error);
-      // Create error result
       const errorResult: ValidationResult = {
         status: 'error',
         score: 0,
@@ -91,6 +113,9 @@ export default function Home() {
       setIsValidating(false);
     }
   };
+
+  // Determine if the full validation button should be enabled
+  const isValidationAllowed = quickCheckResult?.success === true && !isQuickChecking && !isValidating;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -120,7 +145,9 @@ export default function Home() {
           onFileSelect={handleFileSelect}
           onRemoveFile={handleRemoveFile}
           onValidatePhoto={handleValidatePhoto}
-          isValidating={isValidating}
+          isValidating={isValidating || isQuickChecking}
+          isValidationAllowed={isValidationAllowed}
+          quickCheckError={quickCheckError}
         />
 
         {/* Validation Results */}
@@ -130,6 +157,8 @@ export default function Home() {
             onValidateAnother={() => {
               setSelectedFile(null);
               setValidationResult(null);
+              setQuickCheckResult(null);
+              setQuickCheckError(null);
             }}
           />
         )}

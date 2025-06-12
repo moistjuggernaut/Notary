@@ -46,5 +46,24 @@ export const API_ENDPOINTS = {
     photo: {
         validate: '/api/validate_photo',
         preprocess: '/api/preprocess_photo',
+        quickCheck: '/api/quick_check',
     },
-} as const; 
+} as const;
+
+// --- Quick Check ---
+export interface QuickCheckRequest {
+    image: string; // base64 encoded image
+    filename?: string;
+}
+
+export interface QuickCheckResponse {
+    success: boolean;
+    face_count: number;
+    message: string;
+}
+
+// --- Full Validation ---
+export interface ValidationRequest {
+    image: string; // base64 encoded image
+    filename?: string;
+} 

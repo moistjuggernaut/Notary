@@ -249,34 +249,38 @@ class ImagePreprocessor:
         mean_color = np.mean(bg_pixels, axis=0)
         std_dev_color = np.std(bg_pixels, axis=0)
 
-        is_light = np.all(mean_color >= self.config.BG_PRELIM_MIN_LIGHT_RGB)
+        is_light_enough = np.all(mean_color >= self.config.BG_PRELIM_MIN_LIGHT_RGB)
         is_uniform = np.all(std_dev_color <= self.config.BG_PRELIM_STD_DEV_MAX)
         
-        reason = []
-        if not is_light:
-            reason.append("not light enough")
-        if not is_uniform:
-            reason.append("not uniform")
-            
-        return is_light and is_uniform, f"BG check failed: {', '.join(reason)}." if reason else "BG appears OK."
+        if is_light_enough and is_uniform:
+            return True, "Background appears light and uniform."
+        
+        reasons = []
+        if not is_light_enough: reasons.append("not light enough")
+        if not is_uniform: reasons.append("not uniform")
+        return False, f"Background issues: {', '.join(reasons)}."
 
-    def process_image(self, original_image_bgr):
+    def process_image(self, original_image_bgr, faces):
         """
-        Main preprocessing function that crops, resizes, and optionally removes background.
+        Processes the image for validation: aligns, crops, and handles background.
         
         Args:
             original_image_bgr (numpy.ndarray): Original input image in BGR format
+            faces (list): List of detected faces
             
         Returns:
             tuple: (processed_image, face_data, logs, success_flag)
         """
         logs = []
         
-        # 1. Analyze face on original image
-        faces = self.face_analyzer.analyze_image(original_image_bgr)
-        face_details, err = self._get_face_details_for_crop(faces)
-        if err:
-            logs.append(("FAIL", "Preprocessing", err))
+        # We now receive the faces from the compliance checker
+        if not faces:
+            logs.append(("FAIL", "Face Detection", "No face data provided to preprocessor."))
+            return None, None, logs, False
+
+        face_details, error = self._get_face_details_for_crop(faces)
+        if error:
+            logs.append(("FAIL", "Face Details", error))
             return None, None, logs, False
         logs.append(("INFO", "Preprocessing", "Face details extracted from original image."))
 

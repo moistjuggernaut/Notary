@@ -171,15 +171,15 @@ class ComplianceChecker:
             }
 
         # Step 1: Quick Check
-        quick_check_faces = self.face_analyzer.quick_check(image_bgr)
-        if not quick_check_faces:
+        face_count = self.face_analyzer.quick_check(image_bgr)
+        if face_count == 0:
             all_logs["preprocessing"].append(("FAIL", "Quick Check", "No face detected"))
             return {
                 "success": False,
                 "recommendation": "REJECTED: No face detected",
                 "logs": all_logs
             }
-        elif len(quick_check_faces) > 1:
+        elif face_count > 1:
             all_logs["preprocessing"].append(("FAIL", "Quick Check", "Multiple faces detected"))
             return {
                 "success": False,
@@ -188,22 +188,35 @@ class ComplianceChecker:
             }
         else:
             all_logs["preprocessing"].append(("PASS", "Quick Check", "Single face detected"))
+
+        # Step 1.5: Full analysis with InsightFace
+        try:
+            faces = self.face_analyzer.analyze_image(image_bgr)
+            if not faces:
+                raise RuntimeError("Full analysis failed to find a face after quick check passed.")
+        except RuntimeError as e:
+            all_logs["preprocessing"].append(("FAIL", "Full Analysis", str(e)))
+            return {
+                "success": False,
+                "recommendation": "REJECTED: The full analysis model is not available or failed.",
+                "logs": all_logs
+            }
             
-            # Step 2: Preprocessing
-            processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(image_bgr)
-            all_logs["preprocessing"].extend(preprocess_logs)
-            
-            if not success or processed_bgr is None:
-                return {
-                    "success": False,
-                    "recommendation": "REJECTED: Preprocessing failed",
-                    "logs": all_logs
-                }
-            else:
-                # Step 3: Validation
-                validation_results = self.validator.validate_photo(processed_bgr, face_data)
-                all_logs["validation"].extend(validation_results)
-                recommendation = self._get_final_recommendation(validation_results)
+        # Step 2: Preprocessing
+        processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(image_bgr, faces)
+        all_logs["preprocessing"].extend(preprocess_logs)
+        
+        if not success or processed_bgr is None:
+            return {
+                "success": False,
+                "recommendation": "REJECTED: Preprocessing failed",
+                "logs": all_logs
+            }
+        else:
+            # Step 3: Validation
+            validation_results = self.validator.validate_photo(processed_bgr, face_data)
+            all_logs["validation"].extend(validation_results)
+            recommendation = self._get_final_recommendation(validation_results)
         
         # Prepare response
         result = {

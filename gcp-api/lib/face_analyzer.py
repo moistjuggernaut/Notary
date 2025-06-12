@@ -22,80 +22,89 @@ class FaceAnalyzer:
     
     def __init__(self, model_name='buffalo_l', providers=None):
         """
-        Initialize the FaceAnalyzer with InsightFace model.
+        Initialize the FaceAnalyzer. It will attempt to load the full InsightFace
+        model but will not fail if it's unavailable. A lightweight OpenCV
+        detector is always initialized for quick checks.
+        """
+        # Always initialize lightweight OpenCV Haar Cascade for quick checks
+        # This is fast and has no heavy dependencies.
+        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+        self.app = None
+        if INSIGHTFACE_AVAILABLE:
+            if providers is None:
+                providers = ['CPUExecutionProvider']
+            try:
+                self.app = FaceAnalysis(
+                    name=model_name,
+                    allowed_modules=['detection', 'landmark_2d_106', 'pose'],
+                    providers=providers
+                )
+                self.app.prepare(ctx_id=0, det_size=(640, 640))
+                print("FaceAnalyzer: InsightFace model loaded successfully.")
+            except Exception as e:
+                print(f"FaceAnalyzer WARNING: Could not initialize InsightFace: {e}")
+                print("Full analysis will not be available, but quick_check will work.")
+                self.app = None
+        else:
+            print("FaceAnalyzer INFO: InsightFace library not found.")
+            print("Full analysis will not be available, but quick_check will work.")
+
+    def quick_check(self, image_bgr):
+        """
+        Performs a fast check using OpenCV's Haar Cascade to count faces.
+        This method is lightweight and does not use InsightFace.
         
         Args:
-            model_name (str): InsightFace model name (e.g., 'buffalo_l')
-            providers (list): ONNX providers for inference (e.g., ['CPUExecutionProvider'])
+            image_bgr (numpy.ndarray): Input image in BGR format.
+            
+        Returns:
+            int: The number of faces detected.
         """
-        if not INSIGHTFACE_AVAILABLE:
-            raise ImportError("InsightFace is required for face analysis. Install with: pip install insightface")
+        if image_bgr is None:
+            return 0
         
-        if providers is None:
-            providers = ['CPUExecutionProvider']
+        # Convert to grayscale for the detector
+        gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
         
-        try:
-            # Initialize InsightFace
-            self.app = FaceAnalysis(
-                name=model_name,
-                allowed_modules=['detection', 'landmark_2d_106', 'pose'],
-                providers=providers
-            )
-            
-            # Prepare the model
-            self.app.prepare(ctx_id=0, det_size=(640, 640))
-            
-            print(f"FaceAnalyzer: InsightFace model '{model_name}' loaded successfully.")
-        except Exception as e:
-            print(f"FaceAnalyzer Error: Initializing InsightFace failed: {e}")
-            raise
+        # Downscale for performance
+        h, w = gray.shape
+        scale = 480 / max(h, w) # Target ~480px on longest side
+        if scale < 1:
+            dsize = (int(w * scale), int(h * scale))
+            gray_small = cv2.resize(gray, dsize, interpolation=cv2.INTER_AREA)
+        else:
+            gray_small = gray
+
+        faces = self.face_cascade.detectMultiScale(
+            gray_small,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(30, 30)
+        )
+        return len(faces)
 
     def analyze_image(self, image_bgr):
         """
-        Analyzes faces in an image.
+        Analyzes faces in an image using the full InsightFace model.
         
         Args:
             image_bgr (numpy.ndarray): Input image in BGR format
             
         Returns:
             list: List of detected faces with landmarks and pose information,
-                  or None if analysis fails
+                  or raises an exception if the model is not loaded.
         """
+        if self.app is None:
+            raise RuntimeError("InsightFace model is not available for full analysis.")
+
         if image_bgr is None:
             return None
         
         try:
-            # Convert BGR to RGB for InsightFace
             image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-            
-            # Run face detection and analysis
             faces = self.app.get(image_rgb)
-            
             return faces
-            
         except Exception as e:
-            print(f"FaceAnalyzer Error: Could not process image: {e}")
-            return None
-
-    def quick_check(self, image_bgr, max_dim=320):
-        """
-        Performs a fast check on a downscaled image to find faces.
-        
-        Args:
-            image_bgr (numpy.ndarray): Input image in BGR format
-            max_dim (int): Maximum dimension for downscaling
-            
-        Returns:
-            list: List of detected faces on the downscaled image
-        """
-        h, w = image_bgr.shape[:2]
-        scale = max_dim / max(h, w)
-        
-        if scale < 1:
-            # Downscale the image for faster processing
-            dsize = (int(w * scale), int(h * scale))
-            image_small = cv2.resize(image_bgr, dsize, interpolation=cv2.INTER_AREA)
-        else:
-            image_small = image_bgr
-        
-        return self.analyze_image(image_small) 
+            print(f"FaceAnalyzer Error: Could not process image with InsightFace: {e}")
+            return None 

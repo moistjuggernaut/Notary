@@ -71,35 +71,41 @@ def health_check():
 
 @app.route('/api/quick_check', methods=['POST', 'OPTIONS'])
 def quick_check():
-    """Fast face detection endpoint using the globally loaded model."""
+    """Fast face detection endpoint using the lightweight Haar Cascade detector."""
     if request.method == 'OPTIONS':
-        return jsonify({}), 200
+        # Handle CORS preflight requests
+        return jsonify(success=True), 200
     
     try:
         body = request.get_json()
         if not body or 'image' not in body:
             return jsonify({"error": "Missing 'image' field in request body"}), 400
         
+        # Decode the base64 image
         image_data = base64.b64decode(body['image'])
         nparr = np.frombuffer(image_data, np.uint8)
-        original_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        image_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        if original_bgr is None:
+        if image_bgr is None:
             return jsonify({"error": "Could not decode image data"}), 400
         
-        # Use the globally loaded analyzer via the compliance_checker instance
-        faces = compliance_checker.face_analyzer.quick_check(original_bgr)
+        # Use the globally loaded compliance_checker's face_analyzer instance
+        # This now calls the fast, OpenCV-only quick_check method.
+        face_count = compliance_checker.face_analyzer.quick_check(image_bgr)
         
-        face_count = len(faces) if faces else 0
-        face_detected = face_count > 0
-        
-        if face_count == 0: message = "No face detected"
-        elif face_count == 1: message = "Single face detected"
-        else: message = f"Multiple faces detected ({face_count})"
+        # Determine the message based on the face count
+        if face_count == 0:
+            message = "No face detected in the image."
+            success = False
+        elif face_count == 1:
+            message = "A single face was detected."
+            success = True
+        else:
+            message = f"Multiple faces ({face_count}) were detected. Please upload a photo with only one person."
+            success = False
         
         return jsonify({
-            "success": True,
-            "face_detected": face_detected,
+            "success": success,
             "face_count": face_count,
             "message": message
         }), 200
