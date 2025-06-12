@@ -1,6 +1,3 @@
-# Exclude API directory (deployed separately on GCP)
-api/
-
 # Exclude GCP deployment files
 gcp-api/
 Dockerfile
