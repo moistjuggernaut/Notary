@@ -4,7 +4,7 @@ Tests that all configuration constants are properly defined and within expected 
 """
 
 import unittest
-from config import Config
+from lib.config import Config
 
 
 class TestConfig(unittest.TestCase):

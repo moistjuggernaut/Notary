@@ -30,3 +30,38 @@ __pycache__/
 *.sln
 *.sw?
 .vercel
+
+# Python virtual environments
+venv/
+.venv/
+env/
+.env
+
+# Python cache and build artifacts
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# GCP and deployment files
+.gcloudignore
+*.tar.gz
+.docker/
+
+# ML Models (will be stored in GCP Cloud Storage)
+*.onnx
+*.pkl
+*.h5
+*.pb
+models/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

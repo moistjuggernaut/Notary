@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import cv2
 from unittest.mock import Mock, patch, MagicMock
-from face_analyzer import FaceAnalyzer
+from lib.face_analyzer import FaceAnalyzer
 
 
 class TestFaceAnalyzer(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestFaceAnalyzer(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
         # Create a mock FaceAnalysis to avoid loading actual model
-        with patch('face_analyzer.FaceAnalysis') as mock_face_analysis:
+        with patch('lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
             mock_app = Mock()
             mock_face_analysis.return_value = mock_app
             self.analyzer = FaceAnalyzer(model_name='buffalo_l')
@@ -24,7 +24,7 @@ class TestFaceAnalyzer(unittest.TestCase):
 
     def test_initialization_success(self):
         """Test successful initialization of FaceAnalyzer."""
-        with patch('face_analyzer.FaceAnalysis') as mock_face_analysis:
+        with patch('lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
             mock_app = Mock()
             mock_face_analysis.return_value = mock_app
             
@@ -42,7 +42,7 @@ class TestFaceAnalyzer(unittest.TestCase):
 
     def test_initialization_failure(self):
         """Test initialization failure handling."""
-        with patch('face_analyzer.FaceAnalysis') as mock_face_analysis:
+        with patch('lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
             mock_face_analysis.side_effect = Exception("Model loading failed")
             
             with self.assertRaises(Exception):
@@ -50,7 +50,7 @@ class TestFaceAnalyzer(unittest.TestCase):
 
     def test_default_providers(self):
         """Test that default providers are set correctly."""
-        with patch('face_analyzer.FaceAnalysis') as mock_face_analysis:
+        with patch('lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
             mock_app = Mock()
             mock_face_analysis.return_value = mock_app
             
