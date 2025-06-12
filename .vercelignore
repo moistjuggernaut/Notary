@@ -1,10 +1,35 @@
-# Exclude test files and directories
-api/tests/
-api/__pycache__/
+# Exclude API directory (deployed separately on GCP)
+api/
 
-# Exclude cache and build files
-*.pyc
+# Exclude GCP deployment files
+gcp-api/
+Dockerfile
+.gcloudignore
+
+# Exclude Python virtual environments
+venv/
+.venv/
 __pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Exclude test files and directories
+*/tests/
 .pytest_cache/
 .coverage
-htmlcov/ 
+htmlcov/
+
+# Exclude development files
+.env
+.env.local
+.env.*.local
+
+# Exclude system files
+.DS_Store
+Thumbs.db
+
+# Exclude editor files
+.vscode/*
+!.vscode/extensions.json
+.idea 

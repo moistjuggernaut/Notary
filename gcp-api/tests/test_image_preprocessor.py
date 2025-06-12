@@ -7,9 +7,9 @@ import unittest
 import numpy as np
 import cv2
 from unittest.mock import Mock, patch, MagicMock
-from image_preprocessor import ImagePreprocessor
-from face_analyzer import FaceAnalyzer
-from config import Config
+from lib.image_preprocessor import ImagePreprocessor
+from lib.face_analyzer import FaceAnalyzer
+from lib.config import Config
 
 
 class TestImagePreprocessor(unittest.TestCase):

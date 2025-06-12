@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "vercel --prod",
+    "gcp:build": "docker build -t baby-picture-validator-api ./gcp-api",
+    "gcp:run": "docker run -p 8080:8080 -e GCP_API_URL='http://localhost:8080' --rm baby-picture-validator-api",
+    "gcp:test": "docker build -t baby-picture-validator-test -f gcp-api/Dockerfile.test ./gcp-api && docker run --rm baby-picture-validator-test",
+    "gcp:logs": "gcloud logs tail --service=baby-picture-validator-api"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",

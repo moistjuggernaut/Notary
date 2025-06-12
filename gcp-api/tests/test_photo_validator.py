@@ -7,8 +7,8 @@ import unittest
 import numpy as np
 import cv2
 from unittest.mock import Mock, patch
-from photo_validator import PhotoValidator
-from config import Config
+from lib.photo_validator import PhotoValidator
+from lib.config import Config
 
 
 class TestPhotoValidator(unittest.TestCase):

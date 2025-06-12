@@ -8,8 +8,8 @@ import os
 import numpy as np
 import cv2
 from unittest.mock import patch, Mock
-from compliance_checker import ComplianceChecker
-from config import Config
+from api.compliance_checker import ComplianceChecker
+from api.lib.config import Config
 
 
 class TestIntegrationWithRealImages(unittest.TestCase):
