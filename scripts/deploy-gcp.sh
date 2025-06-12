@@ -8,7 +8,7 @@ set -e
 # --- Configuration ---
 PROJECT_ID="babypicturevalidator"
 SERVICE_NAME="baby-picture-validator-api"
-REGION="us-central1"
+REGION="europe-west1"
 IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
 GCP_API_DIR="gcp-api"
 
