@@ -14,6 +14,9 @@
     "gcp:test": "docker build -t baby-picture-validator-test -f gcp-api/Dockerfile.test ./gcp-api && docker run --rm baby-picture-validator-test",
     "gcp:logs": "gcloud logs tail --service=baby-picture-validator-api"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.11",

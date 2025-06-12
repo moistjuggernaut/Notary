@@ -5,7 +5,7 @@ import ValidationResults from "@/components/validation-results";
 import { useState } from "react";
 import ICAOCountries from "@/components/countries";
 import type { ValidationResult } from "@/types/validation";
-import { validatePhoto } from "../api/client";
+import { validatePhoto } from "@/api/client";
 import type { ValidationResponse } from "@/types/api";
 
 export default function Home() {
