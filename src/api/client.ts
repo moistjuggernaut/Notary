@@ -1,5 +1,5 @@
 // client.ts
-import { API_ENDPOINTS, ValidationRequest, ValidationResponse } from '../types/api';
+import { API_ENDPOINTS, ValidationRequest, ValidationResponse, QuickCheckRequest, QuickCheckResponse } from '@/types/api';
 
 // 1. Define a variable for the API base URL using Vite's import.meta.env
 //    VITE_ prefix is crucial. The '??' operator provides a fallback for local development.
@@ -42,6 +42,25 @@ function fileToBase64(file: File): Promise<string> {
         };
         reader.onerror = reject;
     });
+}
+
+// Quick check function
+export async function quickCheckPhoto(file: File): Promise<QuickCheckResponse> {
+    try {
+        const base64Image = await fileToBase64(file);
+        const request: QuickCheckRequest = {
+            image: base64Image,
+            filename: file.name
+        };
+
+        return await fetchApi<QuickCheckResponse>(API_ENDPOINTS.photo.quickCheck, {
+            method: 'POST',
+            body: JSON.stringify(request),
+        });
+    } catch (error) {
+        console.error('Quick check failed:', error);
+        throw error;
+    }
 }
 
 // Photo validation function
