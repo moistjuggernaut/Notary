@@ -4,4 +4,4 @@ Flask-Cors
 numpy
 opencv-python-headless
 onnxruntime
-# insightface==0.7.3  # Temporarily disabled - will use OpenCV fallback 
+insightface==0.7.3 
