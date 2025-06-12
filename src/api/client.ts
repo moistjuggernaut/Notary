@@ -1,5 +1,5 @@
 // client.ts
-import { API_ENDPOINTS, ValidationRequest, ValidationResponse, QuickCheckRequest, QuickCheckResponse } from '../types/api';
+import { API_ENDPOINTS, ValidationRequest, ValidationResponse, QuickCheckRequest, QuickCheckResponse } from '@/types/api';
 
 // 1. Define a variable for the API base URL using Vite's import.meta.env
 //    VITE_ prefix is crucial. The '??' operator provides a fallback for local development.
