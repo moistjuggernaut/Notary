@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # than downloading it during the build.
 COPY models/buffalo_m.zip /tmp/buffalo_m.zip
 RUN mkdir -p /root/.insightface/models/buffalo_m && \
-    unzip /tmp/buffalo_m.zip -d /root/.insightface/models/buffalo_m && \
+    unzip -j /tmp/buffalo_m.zip -d /root/.insightface/models/buffalo_m && \
     rm /tmp/buffalo_m.zip
 
 # Copy the rest of the application code
