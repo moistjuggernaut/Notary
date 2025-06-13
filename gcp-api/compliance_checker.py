@@ -1,45 +1,60 @@
 """
-Main compliance checker orchestrator and Vercel serverless handler.
+Main compliance checker orchestrator.
 Coordinates the complete photo validation workflow.
 """
-
-import os
-import json
+import logging
 import base64
 import cv2
-import numpy as np
-from lib.config import Config
-from lib.face_analyzer import FaceAnalyzer
-from lib.image_preprocessor import ImagePreprocessor
-from lib.photo_validator import PhotoValidator
+from threading import Lock
 
+from .lib.config import Config
+from .lib.image_preprocessor import ImagePreprocessor
+from .lib.photo_validator import PhotoValidator
+# FaceAnalyzer is imported dynamically for lazy loading
+
+log = logging.getLogger(__name__)
 
 class ComplianceChecker:
-    """Orchestrates the photo checking process."""
-    
-    def __init__(self, model_name='buffalo_l', providers=None):
+    """
+    Orchestrates the full photo validation process by lazy-loading
+    a heavyweight analyzer.
+    """
+    _full_analyzer = None
+    _full_analyzer_lock = Lock()
+
+    def __init__(self, model_name='buffalo_m', providers=None):
         """
-        Initialize the ComplianceChecker with all required components.
-        
-        Args:
-            model_name (str): InsightFace model name
-            providers (list): ONNX providers for inference
+        Initializes the ComplianceChecker orchestrator.
+        The heavyweight FaceAnalyzer is NOT loaded on initialization.
         """
-        self.face_analyzer = FaceAnalyzer(model_name, providers)
-        self.preprocessor = ImagePreprocessor(self.face_analyzer)
+        log.info("Initializing ComplianceChecker orchestrator...")
+        self._model_name = model_name
+        self._providers = providers
+        self.preprocessor = None
         self.validator = PhotoValidator()
         self.config = Config()
+        log.info("ComplianceChecker orchestrator initialized.")
+
+    def _get_full_analyzer(self):
+        """
+        Lazy-loads the heavyweight FaceAnalyzer on first use.
+        This method is thread-safe.
+        """
+        if self._full_analyzer is None:
+            with self._full_analyzer_lock:
+                if self._full_analyzer is None:
+                    log.info("First use: lazy-loading heavyweight FaceAnalyzer...")
+                    from .lib.face_analyzer import FaceAnalyzer
+                    self._full_analyzer = FaceAnalyzer(
+                        model_name=self._model_name,
+                        providers=self._providers
+                    )
+                    self.preprocessor = ImagePreprocessor(self._full_analyzer)
+                    log.info("Heavyweight FaceAnalyzer loaded and ready.")
+        return self._full_analyzer
 
     def _get_final_recommendation(self, validation_results_log):
-        """
-        Determine final recommendation based on validation results.
-        
-        Args:
-            validation_results_log (list): List of validation result tuples
-            
-        Returns:
-            str: Final recommendation message
-        """
+        """Determines the final recommendation based on all validation checks."""
         fails = sum(1 for status, _, _ in validation_results_log if status == "FAIL")
         warnings = sum(1 for status, _, _ in validation_results_log if status == "WARNING")
         
@@ -49,189 +64,63 @@ class ComplianceChecker:
             return f"NEEDS REVIEW: {warnings} warning(s) found."
         return "LOOKS PROMISING: All primary checks passed."
 
-    def _print_summary(self, image_path, all_logs, recommendation):
-        """
-        Print a detailed summary of the compliance check results.
-        
-        Args:
-            image_path (str): Path to the input image
-            all_logs (dict): Dictionary containing preprocessing and validation logs
-            recommendation (str): Final recommendation
-        """
-        print(f"\n--- Compliance Check Summary for: {image_path} ---")
-        print("\n** Preprocessing Log **")
-        for status, step, message in all_logs.get("preprocessing", []):
-            print(f"  [{status}] {step}: {message}")
-        print("\n** Validation Log **")
-        for status, check, msg in all_logs.get("validation", []):
-            print(f"  [{status}] {check}: {msg}")
-        print(f"\nOverall Recommendation: {recommendation}")
-        print("\n" + "="*70)
-        print("DISCLAIMER: This is a heuristic tool, not an official compliance checker.")
-        print("Always refer to official guidelines. Cannot detect hands, toys, or hats.")
-        print("="*70)
-
-    def run_check(self, image_path, output_path=None):
-        """
-        Run complete compliance check on an image file.
-        
-        Args:
-            image_path (str): Path to input image
-            output_path (str, optional): Path to save processed image
-            
-        Returns:
-            dict: Complete results including logs and recommendation
-        """
-        all_logs = {"preprocessing": [], "validation": []}
-        
-        original_bgr = cv2.imread(image_path)
-        if original_bgr is None:
-            all_logs["preprocessing"].append(("FAIL", "Image Load", f"Could not read: {image_path}"))
-            recommendation = "REJECTED: Could not load image"
-            self._print_summary(image_path, all_logs, recommendation)
-            return {"success": False, "recommendation": recommendation, "logs": all_logs}
-
-        # Step 1: Quick Check
-        quick_check_faces = self.face_analyzer.quick_check(original_bgr)
-        if not quick_check_faces:
-            all_logs["preprocessing"].append(("FAIL", "Quick Check", "No face detected in initial quick check."))
-            recommendation = "REJECTED: No face detected"
-            self._print_summary(image_path, all_logs, recommendation)
-            return {"success": False, "recommendation": recommendation, "logs": all_logs}
-            
-        if len(quick_check_faces) > 1:
-            all_logs["preprocessing"].append(("FAIL", "Quick Check", "Multiple faces detected in initial quick check."))
-            recommendation = "REJECTED: Multiple faces detected"
-            self._print_summary(image_path, all_logs, recommendation)
-            return {"success": False, "recommendation": recommendation, "logs": all_logs}
-            
-        all_logs["preprocessing"].append(("PASS", "Quick Check", "Single face detected."))
-
-        # Step 2: Preprocessing
-        processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(original_bgr)
-        all_logs["preprocessing"].extend(preprocess_logs)
-
-        if not success or processed_bgr is None:
-            recommendation = "REJECTED: Preprocessing failed"
-            self._print_summary(image_path, all_logs, recommendation)
-            return {"success": False, "recommendation": recommendation, "logs": all_logs}
-
-        # Step 3: Validation
-        validation_results = self.validator.validate_photo(processed_bgr, face_data)
-        all_logs["validation"].extend(validation_results)
-        
-        # Step 4: Final Recommendation
-        recommendation = self._get_final_recommendation(validation_results)
-        self._print_summary(image_path, all_logs, recommendation)
-
-        # Step 5: Save processed image if requested
-        result = {
-            "success": "REJECTED" not in recommendation,
-            "recommendation": recommendation,
-            "logs": all_logs
-        }
-        
-        if output_path and "REJECTED" not in recommendation:
-            try:
-                cv2.imwrite(output_path, processed_bgr)
-                print(f"Compliant processed image saved to: {output_path}")
-                result["output_path"] = output_path
-            except Exception as e:
-                print(f"Error saving processed image: {e}")
-        elif output_path:
-            # Save even failed images for debugging
-            debug_path = output_path.replace(".jpg", "_failed.jpg")
-            try:
-                cv2.imwrite(debug_path, processed_bgr)
-                print(f"Failed processed image saved for debugging to: {debug_path}")
-                result["debug_path"] = debug_path
-            except Exception as e:
-                print(f"Error saving debug image: {e}")
-        
-        return result
-
     def check_image_array(self, image_bgr):
         """
-        Run compliance check on an image array (for API usage).
-        
-        Args:
-            image_bgr (numpy.ndarray): Input image in BGR format
-            
-        Returns:
-            dict: Complete results including logs, recommendation, and processed image
+        Runs the full, heavyweight compliance check on an image array.
+        This will trigger the lazy-loading of the InsightFace model on first run.
         """
         all_logs = {"preprocessing": [], "validation": []}
         
         if image_bgr is None:
-            return {
-                "success": False,
-                "recommendation": "REJECTED: Invalid image data",
-                "logs": all_logs,
-                "error": "Could not decode image"
-            }
+            return {"success": False, "recommendation": "REJECTED: Invalid image data"}
 
-        # Step 1: Quick Check
-        face_count = self.face_analyzer.quick_check(image_bgr)
-        if face_count == 0:
-            all_logs["preprocessing"].append(("FAIL", "Quick Check", "No face detected"))
-            return {
-                "success": False,
-                "recommendation": "REJECTED: No face detected",
-                "logs": all_logs
-            }
-        elif face_count > 1:
-            all_logs["preprocessing"].append(("FAIL", "Quick Check", "Multiple faces detected"))
-            return {
-                "success": False,
-                "recommendation": "REJECTED: Multiple faces detected",
-                "logs": all_logs
-            }
-        else:
-            all_logs["preprocessing"].append(("PASS", "Quick Check", "Single face detected"))
-
-        # Step 1.5: Full analysis with InsightFace
         try:
-            faces = self.face_analyzer.analyze_image(image_bgr)
-            if not faces:
-                raise RuntimeError("Full analysis failed to find a face after quick check passed.")
-        except RuntimeError as e:
-            all_logs["preprocessing"].append(("FAIL", "Full Analysis", str(e)))
-            return {
-                "success": False,
-                "recommendation": "REJECTED: The full analysis model is not available or failed.",
-                "logs": all_logs
-            }
+            # Step 1: Get the heavyweight analyzer (lazy-loads on first call)
+            full_analyzer = self._get_full_analyzer()
             
-        # Step 2: Preprocessing
-        processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(image_bgr, faces)
-        all_logs["preprocessing"].extend(preprocess_logs)
-        
-        if not success or processed_bgr is None:
-            return {
-                "success": False,
-                "recommendation": "REJECTED: Preprocessing failed",
-                "logs": all_logs
-            }
-        else:
-            # Step 3: Validation
+            # Step 2: Perform high-accuracy face analysis
+            log.info("Performing full analysis with InsightFace model...")
+            faces = full_analyzer.analyze_image(image_bgr)
+            
+            if not faces:
+                all_logs["preprocessing"].append(("FAIL", "Full Analysis", "No face detected by the analysis model."))
+                return {"success": False, "recommendation": "REJECTED: No face detected", "logs": all_logs}
+            
+            if len(faces) > 1:
+                all_logs["preprocessing"].append(("FAIL", "Full Analysis", f"Multiple faces ({len(faces)}) detected."))
+                return {"success": False, "recommendation": "REJECTED: Multiple faces detected", "logs": all_logs}
+                
+            all_logs["preprocessing"].append(("PASS", "Full Analysis", "Single face detected."))
+
+            # Step 3: Preprocessing
+            processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(image_bgr, faces)
+            all_logs["preprocessing"].extend(preprocess_logs)
+            
+            if not success or processed_bgr is None:
+                return {"success": False, "recommendation": "REJECTED: Preprocessing failed", "logs": all_logs}
+
+            # Step 4: Validation
             validation_results = self.validator.validate_photo(processed_bgr, face_data)
             all_logs["validation"].extend(validation_results)
             recommendation = self._get_final_recommendation(validation_results)
-        
-        # Prepare response
-        result = {
-            "success": "REJECTED" not in recommendation,
-            "recommendation": recommendation,
-            "logs": all_logs
-        }
-        
-        # Include processed image if successful
-        if result["success"] and 'processed_bgr' in locals():
-            _, buffer = cv2.imencode('.jpg', processed_bgr)
-            processed_base64 = base64.b64encode(buffer).decode('utf-8')
-            result["processed_image"] = processed_base64
-        
-        return result
+            
+            # Step 5: Prepare and return final result
+            result = {
+                "success": "REJECTED" not in recommendation,
+                "recommendation": recommendation,
+                "logs": all_logs
+            }
+            
+            if result["success"]:
+                _, buffer = cv2.imencode('.jpg', processed_bgr)
+                processed_base64 = base64.b64encode(buffer).decode('utf-8')
+                result["processed_image"] = processed_base64
+            
+            return result
+
+        except Exception as e:
+            log.critical(f"A critical error occurred during full validation: {e}", exc_info=True)
+            return {"success": False, "error": f"Internal server error: {e}", "recommendation": "REJECTED: System error"}
 
 
 def handler(request, response):
@@ -291,7 +180,7 @@ def handler(request, response):
             return json.dumps({"error": "Could not decode image data"})
         
         # Run validation using the orchestrator
-        checker = ComplianceChecker(model_name='buffalo_l')
+        checker = ComplianceChecker(model_name='buffalo_m')
         result = checker.check_image_array(original_bgr)
         
         response.status_code = 200
@@ -321,8 +210,8 @@ if __name__ == "__main__":
             cv2.imwrite("dummy_baby_photo_for_check.jpg", dummy_img)
             input_image_path = "dummy_baby_photo_for_check.jpg"
             
-        checker = ComplianceChecker(model_name='buffalo_l')
-        result = checker.run_check(input_image_path, output_image_path)
+        checker = ComplianceChecker(model_name='buffalo_m')
+        result = checker.check_image_array(input_image_path)
 
         if input_image_path == "dummy_baby_photo_for_check.jpg":
             os.remove(input_image_path)

@@ -23,7 +23,7 @@ class TestComplianceChecker(unittest.TestCase):
              patch('compliance_checker.ImagePreprocessor') as MockImagePreprocessor, \
              patch('compliance_checker.PhotoValidator') as MockPhotoValidator:
             
-            self.checker = ComplianceChecker(model_name='buffalo_l')
+            self.checker = ComplianceChecker(model_name='buffalo_m')
             
             # Assign mocks to instance attributes for manipulation in tests
             self.checker.face_analyzer = MockFaceAnalyzer.return_value
@@ -190,6 +190,19 @@ class TestComplianceChecker(unittest.TestCase):
         self.checker._print_summary("test.jpg", logs, recommendation)
         mock_print.assert_called()
 
+    @patch('gcp-api.compliance_checker.FaceAnalyzer')
+    def test_check_image_array_multiple_faces(self, MockFaceAnalyzer):
+        """Test full check with multiple faces detected."""
+        checker = ComplianceChecker(model_name='buffalo_m')
+
+        # Mock the analyzer to return multiple faces
+        MockFaceAnalyzer.return_value.quick_check.return_value = [Mock(), Mock()]
+
+        result = checker.check_image_array(self.test_image)
+
+        self.assertFalse(result["success"])
+        self.assertIn("Multiple faces detected", result["recommendation"])
+
 
 class TestComplianceCheckerIntegration(unittest.TestCase):
     """
@@ -208,7 +221,7 @@ class TestComplianceCheckerIntegration(unittest.TestCase):
         mock_face.landmark_2d_106 = landmarks
         mock_face_analysis.return_value.get.return_value = [mock_face]
         
-        checker = ComplianceChecker(model_name='buffalo_l')
+        checker = ComplianceChecker(model_name='buffalo_m')
         result = checker.check_image_array(img)
         
         self.assertIn("success", result)
@@ -229,7 +242,7 @@ class TestComplianceCheckerIntegration(unittest.TestCase):
         mock_face.landmark_2d_106 = landmarks
         mock_face_analysis.return_value.get.return_value = [mock_face]
         
-        checker = ComplianceChecker(model_name='buffalo_l')
+        checker = ComplianceChecker(model_name='buffalo_m')
         result = checker.check_image_array(img)
         
         self.assertIn("preprocessing", result["logs"])
