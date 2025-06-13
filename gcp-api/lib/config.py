@@ -6,6 +6,12 @@ Contains all tunable parameters for face detection, validation, and processing.
 class Config:
     """Stores all configuration values for easy tuning."""
     
+    # --- Model Configuration ---
+    # The name of the InsightFace model to be used.
+    # 'buffalo_m' is recommended as it provides pose and 106 landmarks
+    # without the extra overhead of gender/age attributes.
+    RECOMMENDED_MODEL_NAME = 'buffalo_m'
+    
     # Target Photo Dimensions (mm) and DPI for high-resolution output
     TARGET_PHOTO_WIDTH_MM = 35
     TARGET_PHOTO_HEIGHT_MM = 45

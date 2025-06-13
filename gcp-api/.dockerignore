@@ -1,0 +1,22 @@
+# Git files
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local environment
+.env
+venv/
+.venv/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+
+# The model zip is handled by a specific COPY command, but should not be part of the general COPY . .
+# We are intentionally NOT ignoring the models directory itself. 

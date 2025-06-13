@@ -5,8 +5,8 @@ Handles cropping, resizing, and background removal operations.
 
 import cv2
 import numpy as np
-from .config import Config
-from .face_analyzer import FaceAnalyzer
+from lib.config import Config
+from lib.face_analyzer import FaceAnalyzer
 
 # Custom lightweight background removal using OpenCV
 def simple_background_removal(image_bgr, face_bbox):

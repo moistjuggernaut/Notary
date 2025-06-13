@@ -1,6 +1,6 @@
 """
 Flask application for GCP Cloud Run deployment.
-Wraps the existing compliance_checker and quick_check modules.
+Wraps the checker modules.
 """
 
 import os
@@ -12,26 +12,30 @@ import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Import our existing API modules using clean, absolute paths
-# This works because of the `ENV PYTHONPATH /app` in the Dockerfile.
 from compliance_checker import ComplianceChecker
-from lib.face_analyzer import FaceAnalyzer
+from lib.quick_checker import QuickChecker
+from lib.config import Config
 
 # --- Global Initialization ---
-# This is the most important optimization. We load the models once when the
-# application container starts, not on every request.
-# This single `compliance_checker` instance will be reused across all requests.
+# Initialize services. Both are lightweight at startup.
+# The heavy ML model is lazy-loaded by the ComplianceChecker.
 logging.basicConfig(level=logging.INFO)
 
-compliance_checker = None
 try:
-    logging.info("Global scope: Initializing ComplianceChecker and loading ML models...")
-    compliance_checker = ComplianceChecker(model_name='buffalo_l')
-    logging.info("Global scope: ML models loaded successfully.")
+    logging.info("Initializing lightweight QuickChecker service...")
+    quick_checker = QuickChecker()
+    logging.info("QuickChecker service initialized.")
 except Exception as e:
-    # If model loading fails, the container will likely fail to start,
-    # which is the desired behavior. We log this critical error.
-    logging.critical(f"FATAL: Could not initialize ComplianceChecker on startup: {e}", exc_info=True)
+    logging.critical(f"FATAL: Could not initialize QuickChecker: {e}", exc_info=True)
+    quick_checker = None
+
+try:
+    logging.info("Initializing ComplianceChecker orchestrator...")
+    compliance_checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
+    logging.info("ComplianceChecker orchestrator initialized.")
+except Exception as e:
+    logging.critical(f"FATAL: Could not initialize ComplianceChecker: {e}", exc_info=True)
+    compliance_checker = None
 # --- End Global Initialization ---
 
 app = Flask(__name__)
@@ -44,36 +48,43 @@ CORS(app, origins=[
 ])
 
 @app.before_request
-def check_model_loaded():
-    """
-    A request hook that runs before every request.
-    It checks if the global model failed to load and returns an error.
-    This prevents the app from trying to handle requests in a broken state.
-    """
-    if compliance_checker is None and request.endpoint not in ('health_check', 'static'):
-        # Return a "Service Unavailable" status code
-        return jsonify({"error": "ML model not loaded, the service is unavailable."}), 503
+def check_services_initialized():
+    """Checks if the essential global services were initialized."""
+    if quick_checker is None or compliance_checker is None:
+        # Check the specific endpoint to allow health checks to pass
+        # if only one of the two services failed.
+        if request.endpoint == 'quick_check' and quick_checker is None:
+            return jsonify({"error": "QuickCheck service is unavailable."}), 503
+        if request.endpoint == 'validate_photo' and compliance_checker is None:
+             return jsonify({"error": "Validation service is unavailable."}), 503
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """
     Health check endpoint for GCP Cloud Run.
-    Reports as unhealthy if the main checker failed to initialize.
+    Reports on the status of all initialized services.
     """
-    is_healthy = compliance_checker is not None
-    status_code = 200 if is_healthy else 503
+    quick_checker_healthy = quick_checker is not None
+    compliance_checker_healthy = compliance_checker is not None
+    is_fully_healthy = quick_checker_healthy and compliance_checker_healthy
+    
+    status_code = 200 if is_fully_healthy else 503
+
     return jsonify({
-        "status": "healthy" if is_healthy else "unhealthy",
+        "status": "healthy" if is_fully_healthy else "unhealthy",
         "service": "baby-picture-validator-api",
-        "version": "1.0.0",
-        "model_loaded": is_healthy
+        "version": "1.2.0", # Version bumped to reflect architecture change
+        "services": {
+            "quick_checker": "ok" if quick_checker_healthy else "failed",
+            "compliance_checker": "ok" if compliance_checker_healthy else "failed"
+        },
+        "heavy_model_lazy_loaded": compliance_checker._full_analyzer is not None if compliance_checker_healthy else False
     }), status_code
 
 @app.route('/api/quick_check', methods=['POST', 'OPTIONS'])
 def quick_check():
-    """Fast face detection endpoint using the lightweight Haar Cascade detector."""
+    """Fast face detection endpoint using the lightweight QuickChecker service."""
     if request.method == 'OPTIONS':
-        # Handle CORS preflight requests
         return jsonify(success=True), 200
     
     try:
@@ -81,7 +92,6 @@ def quick_check():
         if not body or 'image' not in body:
             return jsonify({"error": "Missing 'image' field in request body"}), 400
         
-        # Decode the base64 image
         image_data = base64.b64decode(body['image'])
         nparr = np.frombuffer(image_data, np.uint8)
         image_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -89,11 +99,9 @@ def quick_check():
         if image_bgr is None:
             return jsonify({"error": "Could not decode image data"}), 400
         
-        # Use the globally loaded compliance_checker's face_analyzer instance
-        # This now calls the fast, OpenCV-only quick_check method.
-        face_count = compliance_checker.face_analyzer.quick_check(image_bgr)
+        # Use the dedicated quick_checker service
+        face_count = quick_checker.count_faces(image_bgr)
         
-        # Determine the message based on the face count
         if face_count == 0:
             message = "No face detected in the image."
             success = False
@@ -101,7 +109,7 @@ def quick_check():
             message = "A single face was detected."
             success = True
         else:
-            message = f"Multiple faces ({face_count}) were detected. Please upload a photo with only one person."
+            message = f"Multiple faces ({face_count}) were detected."
             success = False
         
         return jsonify({
@@ -116,7 +124,10 @@ def quick_check():
 
 @app.route('/api/validate_photo', methods=['POST', 'OPTIONS'])
 def validate_photo():
-    """Full ICAO compliance validation using the globally loaded model."""
+    """
+    Full ICAO compliance validation.
+    This will trigger the lazy-loading of the heavyweight model on the first call.
+    """
     if request.method == 'OPTIONS':
         return jsonify({}), 200
     
@@ -132,7 +143,8 @@ def validate_photo():
         if original_bgr is None:
             return jsonify({"error": "Could not decode image data"}), 400
         
-        # Use the globally loaded checker instance
+        # Use the globally loaded checker instance. This call will now handle
+        # the lazy-loading of the full analyzer if it hasn't happened yet.
         result = compliance_checker.check_image_array(original_bgr)
         
         return jsonify(result), 200
@@ -152,4 +164,5 @@ def internal_error(error):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
+    # No special logic needed here anymore, global init is sufficient and fast.
     app.run(host='0.0.0.0', port=port, debug=False) 

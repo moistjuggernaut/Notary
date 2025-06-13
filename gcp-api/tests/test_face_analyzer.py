@@ -15,46 +15,37 @@ class TestFaceAnalyzer(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures before each test method."""
-        # Create a mock FaceAnalysis to avoid loading actual model
-        with patch('lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
-            mock_app = Mock()
-            mock_face_analysis.return_value = mock_app
-            self.analyzer = FaceAnalyzer(model_name='buffalo_l')
-            self.mock_app = mock_app
+        self.patcher = patch('gcp-api.lib.face_analyzer.FaceAnalysis')
+        self.MockFaceAnalysis = self.patcher.start()
+        self.mock_app = self.MockFaceAnalysis.return_value
+        self.analyzer = FaceAnalyzer(model_name='buffalo_m')
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def test_initialization_success(self):
-        """Test successful initialization of FaceAnalyzer."""
-        with patch('lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
-            mock_app = Mock()
-            mock_face_analysis.return_value = mock_app
-            
-            analyzer = FaceAnalyzer(model_name='buffalo_l', providers=['CPUExecutionProvider'])
-            
-            # Verify FaceAnalysis was called with correct parameters
-            mock_face_analysis.assert_called_once_with(
-                name='buffalo_l',
+        """Test that FaceAnalyzer initializes FaceAnalysis correctly."""
+        self.MockFaceAnalysis.assert_called_once_with(
+            name='buffalo_m',
                 allowed_modules=['detection', 'landmark_2d_106', 'pose'],
                 providers=['CPUExecutionProvider']
             )
-            
-            # Verify prepare was called
-            mock_app.prepare.assert_called_once_with(ctx_id=0, det_size=(640, 640))
 
     def test_initialization_failure(self):
         """Test initialization failure handling."""
-        with patch('lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
+        with patch('gcp-api.lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
             mock_face_analysis.side_effect = Exception("Model loading failed")
             
             with self.assertRaises(Exception):
-                FaceAnalyzer(model_name='buffalo_l')
+                FaceAnalyzer(model_name='buffalo_m')
 
     def test_default_providers(self):
         """Test that default providers are set correctly."""
-        with patch('lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
+        with patch('gcp-api.lib.face_analyzer.FaceAnalysis') as mock_face_analysis:
             mock_app = Mock()
             mock_face_analysis.return_value = mock_app
             
-            FaceAnalyzer(model_name='buffalo_l')  # No providers specified
+            FaceAnalyzer(model_name='buffalo_m')  # No providers specified
             
             # Verify default providers were used
             call_args = mock_face_analysis.call_args
@@ -210,6 +201,33 @@ class TestFaceAnalyzer(unittest.TestCase):
         mock_resize.assert_called_once()
         call_args = mock_resize.call_args
         self.assertEqual(call_args[1]['interpolation'], cv2.INTER_AREA)
+
+    def test_initialization_with_custom_providers(self):
+        """Test initialization with custom ONNX providers."""
+        custom_providers = ['TensorrtExecutionProvider', 'CUDAExecutionProvider']
+        FaceAnalyzer(model_name='buffalo_m', providers=custom_providers)
+        self.MockFaceAnalysis.assert_called_with(
+            name='buffalo_m',
+            allowed_modules=['detection', 'landmark_2d_106', 'pose'],
+            providers=custom_providers
+        )
+
+    def test_analyze_image_with_no_faces(self):
+        """Test analysis when the model finds no faces."""
+        self.mock_app.get.return_value = []
+        faces = self.analyzer.analyze_image(np.zeros((100, 100, 3), dtype=np.uint8))
+        self.assertEqual(faces, [])
+
+    def test_analyze_image_with_none_input(self):
+        """Test analysis with a None image input."""
+        faces = self.analyzer.analyze_image(None)
+        self.assertEqual(faces, [])
+
+    @patch('cv2.cvtColor', side_effect=Exception("Color Conversion Error"))
+    def test_analyze_image_handles_cv2_error(self, mock_cvt):
+        """Test that a CV2 error during analysis is handled gracefully."""
+        faces = self.analyzer.analyze_image(np.zeros((100, 100, 3), dtype=np.uint8))
+        self.assertEqual(faces, [])
 
 
 if __name__ == '__main__':

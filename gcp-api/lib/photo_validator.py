@@ -5,7 +5,7 @@ Validates processed photos against various quality and compliance criteria.
 
 import cv2
 import numpy as np
-from .config import Config
+from lib.config import Config
 
 
 class PhotoValidator:

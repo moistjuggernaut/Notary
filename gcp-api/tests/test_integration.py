@@ -10,6 +10,8 @@ import cv2
 from unittest.mock import patch, Mock
 from api.compliance_checker import ComplianceChecker
 from api.lib.config import Config
+from flask_app import app
+from unittest.mock import MagicMock
 
 
 class TestIntegrationWithRealImages(unittest.TestCase):
@@ -83,7 +85,7 @@ class TestIntegrationWithRealImages(unittest.TestCase):
             mock_validator.validate_photo.return_value = validation_results
             
             # Create checker and run test
-            checker = ComplianceChecker(model_name='buffalo_l')
+            checker = ComplianceChecker(model_name='buffalo_m')
             result = checker.check_image_array(image)
             
             # Verify result structure
@@ -136,7 +138,7 @@ class TestIntegrationWithRealImages(unittest.TestCase):
             mock_validator.validate_photo.return_value = validation_results
             
             # Create checker and run file-based test
-            checker = ComplianceChecker(model_name='buffalo_l')
+            checker = ComplianceChecker(model_name='buffalo_m')
             result = checker.run_check(self.test_image_path)
             
             # Verify result structure
@@ -168,7 +170,7 @@ class TestIntegrationWithRealImages(unittest.TestCase):
             mock_face2.bbox = np.array([300, 300, 400, 400])
             mock_face_analyzer.quick_check.return_value = [mock_face1, mock_face2]
             
-            checker = ComplianceChecker(model_name='buffalo_l')
+            checker = ComplianceChecker(model_name='buffalo_m')
             result = checker.check_image_array(image)
             
             # Should fail due to multiple faces
@@ -191,7 +193,7 @@ class TestIntegrationWithRealImages(unittest.TestCase):
             # Mock no faces detected
             mock_face_analyzer.quick_check.return_value = []
             
-            checker = ComplianceChecker(model_name='buffalo_l')
+            checker = ComplianceChecker(model_name='buffalo_m')
             result = checker.check_image_array(image)
             
             # Should fail due to no face
@@ -223,7 +225,7 @@ class TestIntegrationWithRealImages(unittest.TestCase):
             mock_preprocessor.process_image.return_value = (None, None, 
                                                           [("FAIL", "Preprocessing", "Failed to process")], False)
             
-            checker = ComplianceChecker(model_name='buffalo_l')
+            checker = ComplianceChecker(model_name='buffalo_m')
             result = checker.check_image_array(image)
             
             # Should fail due to preprocessing failure
@@ -267,7 +269,7 @@ class TestIntegrationWithRealImages(unittest.TestCase):
             ]
             mock_validator.validate_photo.return_value = validation_results
             
-            checker = ComplianceChecker(model_name='buffalo_l')
+            checker = ComplianceChecker(model_name='buffalo_m')
             result = checker.check_image_array(image)
             
             # Should fail due to validation issues
@@ -295,6 +297,48 @@ class TestIntegrationWithRealImages(unittest.TestCase):
         # The image doesn't need to match exactly, but should be reasonable
         self.assertGreater(image_aspect_ratio, 0.3, "Image aspect ratio should be reasonable")
         self.assertLess(image_aspect_ratio, 3.0, "Image aspect ratio should be reasonable")
+
+
+class TestApiEndpoints(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """Set up the Flask test client."""
+        app.config['TESTING'] = True
+        cls.client = app.test_client()
+
+        # Mock the compliance checker to avoid real model loading during tests
+        cls.patcher = patch('app.compliance_checker', MagicMock(spec=ComplianceChecker))
+        cls.mock_checker = cls.patcher.start()
+
+    def test_quick_check_endpoint(self):
+        """Test the /api/quick_check endpoint."""
+        # Configure the mock to return a specific face count
+        self.mock_checker.quick_check_image_array.return_value = 1
+
+        response = self.client.post('/api/quick_check', json=self.test_payload)
+        self.mock_checker.quick_check_image_array.assert_called_once()
+
+    def test_validate_photo_endpoint(self):
+        """Test the /api/validate_photo endpoint."""
+        # Configure the mock to return a successful validation result
+        self.mock_checker.check_image_array.return_value = {
+            "success": True,
+            "recommendation": "LOOKS PROMISING"
+        }
+
+        response = self.client.post('/api/validate_photo', json=self.test_payload)
+        self.assertEqual(response.status_code, 200)
+        json_data = response.get_json()
+        self.assertTrue(json_data['success'])
+        self.mock_checker.check_image_array.assert_called_once()
+
+    def test_health_check_endpoint(self):
+        """Test the /health endpoint."""
+        response = self.client.get('/health')
+        self.assertEqual(response.status_code, 200)
+        json_data = response.get_json()
+        self.assertEqual(json_data['status'], 'healthy')
 
 
 if __name__ == '__main__':

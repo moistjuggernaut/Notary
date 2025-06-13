@@ -5,17 +5,32 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
-ENV PYTHONPATH /app
+ENV PYTHONPATH=/app
+# Tell insightface to not check for the latest version
+ENV INSIGHTFACE_ROUTING_SILENT=1
 
 # Create and set the working directory
 WORKDIR /app
 
-# Install system dependencies needed for building Python packages
-RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+# wget and unzip are for manually downloading and extracting the model.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file and install dependencies
+# Copy the requirements file and install dependencies first to leverage caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# --- Manually Cache ML Model by Copying ---
+# Copy the pre-downloaded model from the build context. This is more robust
+# than downloading it during the build.
+COPY models/buffalo_m.zip /tmp/buffalo_m.zip
+RUN mkdir -p /root/.insightface/models/buffalo_m && \
+    unzip -j /tmp/buffalo_m.zip -d /root/.insightface/models/buffalo_m && \
+    rm /tmp/buffalo_m.zip
 
 # Copy the rest of the application code
 COPY . .
