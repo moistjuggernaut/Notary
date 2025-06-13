@@ -14,6 +14,7 @@ from flask_cors import CORS
 
 from compliance_checker import ComplianceChecker
 from lib.quick_checker import QuickChecker
+from lib.config import Config
 
 # --- Global Initialization ---
 # Initialize services. Both are lightweight at startup.
@@ -30,7 +31,7 @@ except Exception as e:
 
 try:
     logging.info("Initializing ComplianceChecker orchestrator...")
-    compliance_checker = ComplianceChecker(model_name='buffalo_m')
+    compliance_checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
     logging.info("ComplianceChecker orchestrator initialized.")
 except Exception as e:
     logging.critical(f"FATAL: Could not initialize ComplianceChecker: {e}", exc_info=True)

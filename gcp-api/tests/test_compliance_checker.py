@@ -4,11 +4,12 @@ Tests the complete orchestration workflow and API functionality.
 """
 
 import unittest
+from unittest.mock import patch, Mock, MagicMock
 import numpy as np
 import cv2
 import json
 import base64
-from unittest.mock import Mock, patch, MagicMock
+
 from compliance_checker import ComplianceChecker
 from lib.config import Config
 
@@ -17,20 +18,16 @@ class TestComplianceChecker(unittest.TestCase):
     """Test cases for the ComplianceChecker class."""
 
     def setUp(self):
+        """Create a dummy image for tests."""
+        self.test_image = np.zeros((600, 400, 3), dtype=np.uint8)
+
+    @patch('compliance_checker.PhotoValidator')
+    @patch('compliance_checker.ImagePreprocessor')
+    @patch('compliance_checker.FaceAnalyzer')
+    def setUp(self, MockFaceAnalyzer, MockImagePreprocessor, MockPhotoValidator):
         """Set up test fixtures before each test method."""
-        # Patch the dependencies of ComplianceChecker
-        with patch('compliance_checker.FaceAnalyzer') as MockFaceAnalyzer, \
-             patch('compliance_checker.ImagePreprocessor') as MockImagePreprocessor, \
-             patch('compliance_checker.PhotoValidator') as MockPhotoValidator:
-            
-            self.checker = ComplianceChecker(model_name='buffalo_m')
-            
-            # Assign mocks to instance attributes for manipulation in tests
-            self.checker.face_analyzer = MockFaceAnalyzer.return_value
-            self.checker.preprocessor = MockImagePreprocessor.return_value
-            self.checker.validator = MockPhotoValidator.return_value
-            
-        self.test_image = np.random.randint(0, 255, (800, 600, 3), dtype=np.uint8)
+        self.checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
+        # ... more setup if needed
 
     def test_initialization(self):
         """Test ComplianceChecker initialization."""
@@ -149,9 +146,9 @@ class TestComplianceChecker(unittest.TestCase):
         self.assertIn("Invalid image data", result["recommendation"])
         self.assertIn("error", result)
 
-    def test_check_image_array_no_face(self):
+    def test_check_image_array_no_face(self, MockFaceAnalyzer):
         """Test check_image_array when no face is detected."""
-        self.checker.face_analyzer.quick_check.return_value = []
+        MockFaceAnalyzer.return_value.analyze_image.return_value = []
         
         result = self.checker.check_image_array(self.test_image)
         
@@ -190,18 +187,39 @@ class TestComplianceChecker(unittest.TestCase):
         self.checker._print_summary("test.jpg", logs, recommendation)
         mock_print.assert_called()
 
-    @patch('gcp-api.compliance_checker.FaceAnalyzer')
+    @patch('compliance_checker.FaceAnalyzer')
     def test_check_image_array_multiple_faces(self, MockFaceAnalyzer):
         """Test full check with multiple faces detected."""
-        checker = ComplianceChecker(model_name='buffalo_m')
+        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
 
         # Mock the analyzer to return multiple faces
-        MockFaceAnalyzer.return_value.quick_check.return_value = [Mock(), Mock()]
+        mock_analyzer_instance = MockFaceAnalyzer.return_value
+        mock_analyzer_instance.quick_check.return_value = [Mock(), Mock()]
 
         result = checker.check_image_array(self.test_image)
 
         self.assertFalse(result["success"])
         self.assertIn("Multiple faces detected", result["recommendation"])
+
+    @patch('compliance_checker.FaceAnalyzer')
+    def test_lazy_loading_of_analyzer(self, MockFaceAnalyzer):
+        """Ensure FaceAnalyzer is only loaded when check_image_array is called."""
+        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
+        # At this point, the full analyzer should not have been initialized.
+        self.assertIsNone(checker._full_analyzer)
+        
+        # Mock the return value of analyze_image to stop the chain
+        MockFaceAnalyzer.return_value.analyze_image.return_value = []
+        
+        # Now, call the method that triggers the lazy load
+        checker.check_image_array(self.test_image)
+        
+        # Check that the analyzer was finally called and initialized
+        MockFaceAnalyzer.assert_called_once_with(
+            model_name=Config.RECOMMENDED_MODEL_NAME,
+            providers=None
+        )
+        self.assertIsNotNone(checker._full_analyzer)
 
 
 class TestComplianceCheckerIntegration(unittest.TestCase):
@@ -221,7 +239,7 @@ class TestComplianceCheckerIntegration(unittest.TestCase):
         mock_face.landmark_2d_106 = landmarks
         mock_face_analysis.return_value.get.return_value = [mock_face]
         
-        checker = ComplianceChecker(model_name='buffalo_m')
+        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
         result = checker.check_image_array(img)
         
         self.assertIn("success", result)
@@ -242,7 +260,7 @@ class TestComplianceCheckerIntegration(unittest.TestCase):
         mock_face.landmark_2d_106 = landmarks
         mock_face_analysis.return_value.get.return_value = [mock_face]
         
-        checker = ComplianceChecker(model_name='buffalo_m')
+        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
         result = checker.check_image_array(img)
         
         self.assertIn("preprocessing", result["logs"])

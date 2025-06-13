@@ -7,15 +7,16 @@ import logging
 import cv2
 import numpy as np
 from insightface.app import FaceAnalysis
+from .config import Config
 
 log = logging.getLogger(__name__)
-
+                
 class FaceAnalyzer:
     """
     Handles detailed face analysis using the InsightFace model.
     This includes detection, landmark extraction, and pose estimation.
     """
-    def __init__(self, model_name='buffalo_m', providers=None):
+    def __init__(self, model_name=Config.RECOMMENDED_MODEL_NAME, providers=None):
         """
         Initializes the FaceAnalyzer by loading the full InsightFace model.
         This is a slow operation and should not be done at application startup.
@@ -41,10 +42,10 @@ class FaceAnalyzer:
     def analyze_image(self, image_bgr: np.ndarray) -> list:
         """
         Analyzes faces in an image using the full InsightFace model.
-
+        
         Args:
             image_bgr (numpy.ndarray): Input image in BGR format.
-
+            
         Returns:
             list: A list of detected face objects from InsightFace.
                   Returns an empty list if no faces are found.

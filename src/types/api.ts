@@ -48,7 +48,7 @@ export const API_ENDPOINTS = {
         preprocess: '/api/preprocess_photo',
         quickCheck: '/api/quick_check',
     },
-} as const;
+} as const; 
 
 // --- Quick Check ---
 export interface QuickCheckRequest {

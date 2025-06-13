@@ -27,9 +27,9 @@ class TestFaceAnalyzer(unittest.TestCase):
         """Test that FaceAnalyzer initializes FaceAnalysis correctly."""
         self.MockFaceAnalysis.assert_called_once_with(
             name='buffalo_m',
-            allowed_modules=['detection', 'landmark_2d_106', 'pose'],
-            providers=['CPUExecutionProvider']
-        )
+                allowed_modules=['detection', 'landmark_2d_106', 'pose'],
+                providers=['CPUExecutionProvider']
+            )
 
     def test_initialization_failure(self):
         """Test initialization failure handling."""

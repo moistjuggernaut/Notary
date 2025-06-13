@@ -21,8 +21,8 @@ class ComplianceChecker:
     """
     _full_analyzer = None
     _full_analyzer_lock = Lock()
-
-    def __init__(self, model_name='buffalo_m', providers=None):
+    
+    def __init__(self, model_name=Config.RECOMMENDED_MODEL_NAME, providers=None):
         """
         Initializes the ComplianceChecker orchestrator.
         The heavyweight FaceAnalyzer is NOT loaded on initialization.
@@ -91,7 +91,7 @@ class ComplianceChecker:
                 return {"success": False, "recommendation": "REJECTED: Multiple faces detected", "logs": all_logs}
                 
             all_logs["preprocessing"].append(("PASS", "Full Analysis", "Single face detected."))
-
+            
             # Step 3: Preprocessing
             processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(image_bgr, faces)
             all_logs["preprocessing"].extend(preprocess_logs)
@@ -103,19 +103,19 @@ class ComplianceChecker:
             validation_results = self.validator.validate_photo(processed_bgr, face_data)
             all_logs["validation"].extend(validation_results)
             recommendation = self._get_final_recommendation(validation_results)
-            
+        
             # Step 5: Prepare and return final result
             result = {
                 "success": "REJECTED" not in recommendation,
                 "recommendation": recommendation,
                 "logs": all_logs
             }
-            
+        
             if result["success"]:
                 _, buffer = cv2.imencode('.jpg', processed_bgr)
                 processed_base64 = base64.b64encode(buffer).decode('utf-8')
                 result["processed_image"] = processed_base64
-            
+        
             return result
 
         except Exception as e:
@@ -180,7 +180,7 @@ def handler(request, response):
             return json.dumps({"error": "Could not decode image data"})
         
         # Run validation using the orchestrator
-        checker = ComplianceChecker(model_name='buffalo_m')
+        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
         result = checker.check_image_array(original_bgr)
         
         response.status_code = 200
@@ -210,7 +210,7 @@ if __name__ == "__main__":
             cv2.imwrite("dummy_baby_photo_for_check.jpg", dummy_img)
             input_image_path = "dummy_baby_photo_for_check.jpg"
             
-        checker = ComplianceChecker(model_name='buffalo_m')
+        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
         result = checker.check_image_array(input_image_path)
 
         if input_image_path == "dummy_baby_photo_for_check.jpg":

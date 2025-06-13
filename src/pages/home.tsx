@@ -12,7 +12,7 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  
+
   // New state for the quick check
   const [isQuickChecking, setIsQuickChecking] = useState(false);
   const [quickCheckResult, setQuickCheckResult] = useState<QuickCheckResponse | null>(null);
