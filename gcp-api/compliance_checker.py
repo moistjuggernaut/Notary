@@ -7,9 +7,9 @@ import base64
 import cv2
 from threading import Lock
 
-from .lib.config import Config
-from .lib.image_preprocessor import ImagePreprocessor
-from .lib.photo_validator import PhotoValidator
+from lib.config import Config
+from lib.image_preprocessor import ImagePreprocessor
+from lib.photo_validator import PhotoValidator
 # FaceAnalyzer is imported dynamically for lazy loading
 
 log = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ class ComplianceChecker:
             with self._full_analyzer_lock:
                 if self._full_analyzer is None:
                     log.info("First use: lazy-loading heavyweight FaceAnalyzer...")
-                    from .lib.face_analyzer import FaceAnalyzer
+                    from lib.face_analyzer import FaceAnalyzer
                     self._full_analyzer = FaceAnalyzer(
                         model_name=self._model_name,
                         providers=self._providers

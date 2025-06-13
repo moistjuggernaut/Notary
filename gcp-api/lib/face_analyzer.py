@@ -7,7 +7,7 @@ import logging
 import cv2
 import numpy as np
 from insightface.app import FaceAnalysis
-from .config import Config
+from lib.config import Config
 
 log = logging.getLogger(__name__)
                 
