@@ -5,6 +5,7 @@ Coordinates the complete photo validation workflow.
 import logging
 import base64
 import cv2
+import json
 from threading import Lock
 
 from lib.config import Config
