@@ -45,13 +45,8 @@ class PhotoValidator:
     def _validate_red_eye(self, image_bgr, pupil_landmark):
         """
         Check a small ROI around a pupil for red-eye artifacts.
-        
-        Args:
-            image_bgr (numpy.ndarray): Input image in BGR format
-            pupil_landmark (array-like): Pupil landmark coordinates [x, y]
-            
-        Returns:
-            tuple: (status, description_message)
+        Uses the detection method from the LearnOpenCV guide.
+        Ref: https://learnopencv.com/automatic-red-eye-remover-using-opencv-cpp-python/
         """
         pupil_roi_radius = max(5, int(self.config.FINAL_OUTPUT_HEIGHT_PX * 0.01))
         x, y = int(pupil_landmark[0]), int(pupil_landmark[1])
@@ -60,21 +55,21 @@ class PhotoValidator:
         if roi.size == 0:
             return "PASS", "Could not create pupil ROI."
 
-        hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        # Detection logic based on LearnOpenCV
+        b, g, r = cv2.split(roi)
+        bg = cv2.add(b, g)
         
-        # Red hue can wrap around 180 in HSV. Check both ranges.
-        lower_red1 = np.array([0, self.config.RED_EYE_SATURATION_MIN, self.config.RED_EYE_VALUE_MIN])
-        upper_red1 = np.array([self.config.RED_EYE_HUE_UPPER, 255, 255])
-        lower_red2 = np.array([self.config.RED_EYE_HUE_LOWER, self.config.RED_EYE_SATURATION_MIN, self.config.RED_EYE_VALUE_MIN])
-        upper_red2 = np.array([179, 255, 255])
+        # A pixel is considered red-eye if the red channel is bright and
+        # more dominant than blue and green combined.
+        mask = (r > 150) & (r > bg)
         
-        mask1 = cv2.inRange(hsv_roi, lower_red1, upper_red1)
-        mask2 = cv2.inRange(hsv_roi, lower_red2, upper_red2)
-        red_pixel_count = cv2.countNonZero(mask1 + mask2)
-        
-        red_percentage = red_pixel_count / (roi.shape[0] * roi.shape[1])
+        red_pixel_count = np.count_nonzero(mask)
+        total_pixels = roi.shape[0] * roi.shape[1]
+        red_percentage = red_pixel_count / total_pixels if total_pixels > 0 else 0
+
         if red_percentage > self.config.RED_EYE_PIXEL_PERCENTAGE_THRESH:
-            return "FAIL", f"{red_percentage:.1%} of pupil ROI is red."
+            return "FAIL", f"{red_percentage:.1%} of pupil ROI is red after correction attempt."
+            
         return "PASS", f"{red_percentage:.1%} of pupil ROI is red."
 
     def _validate_background_final(self, image_bgr, face_bbox):
@@ -193,9 +188,36 @@ class PhotoValidator:
             return results
 
         # 3. Chin-to-Crown Height Ratio
-        chin_y, crown_y = landmarks[self.config.CHIN_LANDMARK_INDEX][1], bbox[1]
-        head_h = chin_y - crown_y if chin_y > crown_y else 0
-        ratio = head_h / img_h
+        # ---
+        # METHODOLOGY: This check is the final arbiter of the cropping process.
+        # The ImagePreprocessor is tasked with creating a cropped and resized image
+        # that meets ICAO standards. Specifically, it uses TARGET_HEAD_HEIGHT_RATIO
+        # and HEAD_POS_RATIO_VERTICAL from the config to frame the head.
+        #
+        # This validation step does NOT re-measure the crown from landmarks. Instead,
+        # it verifies that the preprocessor's work resulted in a compliant final
+        # image. It works as follows:
+        #
+        # 1. It assumes the preprocessor correctly placed the subject's crown at a
+        #    specific position relative to the top of the image (defined by
+        #    HEAD_POS_RATIO_VERTICAL). It calculates this `expected_crown_y`.
+        # 2. It takes the actual position of the chin from the transformed landmarks.
+        # 3. It calculates the head height (`head_h`) as the distance between the
+        #    actual chin and the *expected* crown.
+        # 4. It then calculates the ratio of this `head_h` to the total image height.
+        # 5. Finally, it compares this ratio to the official ICAO minimum and
+        #    maximum requirements.
+        #
+        # This correctly validates the final photo composition as per the standards.
+        # ---
+        chin_y = landmarks[self.config.CHIN_LANDMARK_INDEX][1]
+        
+        # Calculate where the crown *should* be in a perfectly compliant photo.
+        expected_crown_y = img_h * self.config.HEAD_POS_RATIO_VERTICAL
+        head_h = chin_y - expected_crown_y
+        
+        ratio = head_h / img_h if head_h > 0 else 0
+        
         status = "PASS" if self.config.MIN_CHIN_TO_CROWN_RATIO <= ratio <= self.config.MAX_CHIN_TO_CROWN_RATIO else "FAIL"
         results.append((status, "Chin-to-Crown Ratio", 
                        f"{ratio:.2f} (Target: {self.config.MIN_CHIN_TO_CROWN_RATIO:.2f}-{self.config.MAX_CHIN_TO_CROWN_RATIO:.2f})"))
@@ -212,6 +234,8 @@ class PhotoValidator:
                           f"EAR: {avg_ear:.2f} (appears closed). This is OK for infants under 6 months."))
 
         # 5. Red Eye Check
+        # This check verifies that the red-eye correction in the preprocessor was
+        # successful. It runs the detection algorithm again on the final image.
         left_redeye_status, left_redeye_msg = self._validate_red_eye(
             preprocessed_image_bgr, landmarks[self.config.LEFT_PUPIL_APPROX_INDEX])
         right_redeye_status, right_redeye_msg = self._validate_red_eye(

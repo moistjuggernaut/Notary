@@ -117,6 +117,23 @@ export default function ValidationResults({ result, onValidateAnother }: Validat
           </div>
         )}
 
+        {/* Processed Image */}
+        {result.processedImage && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+            <h4 className="font-semibold text-dark-slate mb-3">Processed Image</h4>
+            <div className="flex justify-center">
+              <img 
+                src={`data:image/jpeg;base64,${result.processedImage}`}
+                alt="Processed passport photo"
+                className="max-w-full max-h-96 rounded-lg shadow-sm border border-gray-200"
+              />
+            </div>
+            <p className="text-sm text-slate-grey mt-2 text-center">
+              This is how your photo was processed and analyzed by the system.
+            </p>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
           <Button 

@@ -27,10 +27,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # --- Manually Cache ML Model by Copying ---
 # Copy the pre-downloaded model from the build context. This is more robust
 # than downloading it during the build.
-COPY models/buffalo_m.zip /tmp/buffalo_m.zip
-RUN mkdir -p /root/.insightface/models/buffalo_m && \
-    unzip -j /tmp/buffalo_m.zip -d /root/.insightface/models/buffalo_m && \
-    rm /tmp/buffalo_m.zip
+COPY models/buffalo_l.zip /tmp/buffalo_l.zip
+RUN mkdir -p /root/.insightface/models/buffalo_l && \
+    unzip -j /tmp/buffalo_l.zip -d /root/.insightface/models/buffalo_l && \
+    rm /tmp/buffalo_l.zip
 
 # Copy the rest of the application code
 COPY . .
