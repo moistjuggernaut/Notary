@@ -5,85 +5,76 @@ Runs all unit tests and provides a comprehensive report.
 """
 
 import unittest
-import sys
 import os
-from io import StringIO
+import sys
 
-# Add the api directory to Python path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the parent directory ('gcp-api') to the Python path
+# to allow for absolute imports of the 'lib' modules.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-def run_all_tests(verbosity=2):
+def run_all_tests():
     """
-    Discover and run all tests in the tests directory.
-    
-    Args:
-        verbosity (int): Test output verbosity level (0-2)
-        
-    Returns:
-        unittest.TestResult: Test results
+    Discover and run all tests in the 'gcp-api/tests' directory.
     """
-    # Discover all test modules
+    # Create a TestLoader instance
     loader = unittest.TestLoader()
-    test_dir = os.path.dirname(os.path.abspath(__file__))
-    test_suite = loader.discover(test_dir, pattern='test_*.py')
     
-    # Create a test runner with custom result formatting
-    stream = StringIO()
-    runner = unittest.TextTestRunner(
-        stream=stream,
-        verbosity=verbosity,
-        buffer=True
-    )
+    # Define the directory to discover tests in
+    # __file__ is the path to this script (run_tests.py)
+    start_dir = os.path.dirname(os.path.abspath(__file__))
     
-    print("=" * 70)
-    print("PASSPORT PHOTO VALIDATION SYSTEM - UNIT TEST SUITE")
-    print("=" * 70)
-    print()
+    # Discover all test cases in the directory
+    suite = loader.discover(start_dir, pattern='test_*.py')
     
-    # Run the tests
-    result = runner.run(test_suite)
+    # Create a TestResult object
+    result = unittest.TestResult()
     
-    # Print results
-    output = stream.getvalue()
-    print(output)
+    # Run the test suite
+    suite.run(result)
     
-    # Print summary
-    print("\n" + "=" * 70)
-    print("TEST SUMMARY")
-    print("=" * 70)
+    # --- Print a formatted summary ---
+    print("\n" + "="*70)
+    print(" " * 28 + "TEST SUMMARY")
+    print("="*70)
     
     total_tests = result.testsRun
     failures = len(result.failures)
     errors = len(result.errors)
-    skipped = len(result.skipped) if hasattr(result, 'skipped') else 0
-    success = total_tests - failures - errors - skipped
+    successes = total_tests - failures - errors
     
     print(f"Total Tests:     {total_tests}")
-    print(f"Successful:      {success}")
+    print(f"Successful:      {successes}")
     print(f"Failed:          {failures}")
     print(f"Errors:          {errors}")
-    print(f"Skipped:         {skipped}")
     
-    if failures > 0 or errors > 0:
-        print(f"\nSuccess Rate:    {(success/total_tests)*100:.1f}%")
-        print("Status:          ❌ SOME TESTS FAILED")
-        
-        if failures > 0:
-            print(f"\nFAILURES ({failures}):")
-            for test, traceback in result.failures:
-                print(f"  - {test}")
-        
-        if errors > 0:
-            print(f"\nERRORS ({errors}):")
-            for test, traceback in result.errors:
-                print(f"  - {test}")
-    else:
-        print(f"\nSuccess Rate:    100.0%")
+    success_rate = (successes / total_tests) * 100 if total_tests > 0 else 0
+    print(f"\nSuccess Rate:    {success_rate:.1f}%")
+    
+    if failures == 0 and errors == 0:
         print("Status:          ✅ ALL TESTS PASSED")
+    else:
+        print("Status:          ❌ SOME TESTS FAILED")
     
-    print("=" * 70)
-    
-    return result
+    print("="*70 + "\n")
+
+    # Print details of failures
+    if result.failures:
+        print("\n" + "-"*30 + " FAILURES " + "-"*30)
+        for test, traceback_text in result.failures:
+            print(f"\n[FAIL] {test.id()}")
+            print(traceback_text)
+        print("-" * 70)
+
+    # Print details of errors
+    if result.errors:
+        print("\n" + "-"*30 + " ERRORS " + "-"*30)
+        for test, traceback_text in result.errors:
+            print(f"\n[ERROR] {test.id()}")
+            print(traceback_text)
+        print("-" * 70)
+        
+    # Return a status code for automation
+    return len(result.failures) + len(result.errors)
 
 def run_specific_module(module_name, verbosity=2):
     """
@@ -150,10 +141,10 @@ def main():
     if args.module:
         result = run_specific_module(args.module, verbosity)
     else:
-        result = run_all_tests(verbosity)
+        result = run_all_tests()
     
     # Exit with appropriate code
-    if result and (result.failures or result.errors):
+    if result:
         sys.exit(1)
     else:
         sys.exit(0)

@@ -8,4 +8,5 @@ export interface ValidationResult {
     status: 'pass' | 'warning' | 'fail';
   }[];
   recommendations?: string[];
+  processedImage?: string; // Base64 encoded processed image
 } 

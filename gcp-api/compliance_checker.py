@@ -5,6 +5,8 @@ Coordinates the complete photo validation workflow.
 import logging
 import base64
 import cv2
+import json
+import os
 from threading import Lock
 
 from lib.config import Config
@@ -93,16 +95,21 @@ class ComplianceChecker:
             all_logs["preprocessing"].append(("PASS", "Full Analysis", "Single face detected."))
             
             # Step 3: Preprocessing
+            log.info("Starting image preprocessing...")
             processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(image_bgr, faces)
             all_logs["preprocessing"].extend(preprocess_logs)
+            log.info("Image preprocessing finished.")
             
             if not success or processed_bgr is None:
+                log.warning("Preprocessing failed. Aborting validation.")
                 return {"success": False, "recommendation": "REJECTED: Preprocessing failed", "logs": all_logs}
 
             # Step 4: Validation
+            log.info("Starting photo validation...")
             validation_results = self.validator.validate_photo(processed_bgr, face_data)
             all_logs["validation"].extend(validation_results)
             recommendation = self._get_final_recommendation(validation_results)
+            log.info("Photo validation finished.")
         
             # Step 5: Prepare and return final result
             result = {
@@ -110,11 +117,13 @@ class ComplianceChecker:
                 "recommendation": recommendation,
                 "logs": all_logs
             }
+            log.info(f"Final result: {all_logs}")
         
-            if result["success"]:
-                _, buffer = cv2.imencode('.jpg', processed_bgr)
-                processed_base64 = base64.b64encode(buffer).decode('utf-8')
-                result["processed_image"] = processed_base64
+            #if result["success"]:
+            _, buffer = cv2.imencode('.jpg', processed_bgr)
+            processed_base64 = base64.b64encode(buffer).decode('utf-8')
+            result["processed_image"] = processed_base64
+            log.info(f"Image length: {len(processed_base64)}")
         
             return result
 
@@ -193,30 +202,47 @@ def handler(request, response):
 
 # CLI usage
 if __name__ == "__main__":
+    # Configure basic logging for CLI use
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(name)s:%(message)s')
+
     input_image_path = "./images/valid1.jpg"  # <--- CHANGE THIS
     output_image_path = "processed_baby_photo.jpg"  # Set to None to disable saving
 
     try:
         if not os.path.exists(input_image_path):
-            print(f"Warning: Test image '{input_image_path}' not found. Creating a dummy image.")
+            log.warning(f"Test image '{input_image_path}' not found. Creating a dummy image.")
             dummy_h, dummy_w = int(Config.FINAL_OUTPUT_HEIGHT_PX * 1.5), int(Config.FINAL_OUTPUT_WIDTH_PX * 1.5)
             dummy_img = np.full((dummy_h, dummy_w, 3), (225, 225, 225), dtype=np.uint8)
-            # Simplified dummy face
             fh, fw = int(dummy_h * 0.6), int(dummy_w * 0.6)
             fy, fx = (dummy_h - fh) // 2, (dummy_w - fw) // 2
             cv2.rectangle(dummy_img, (fx, fy), (fx + fw, fy + fh), (180, 190, 200), -1)
-            cv2.circle(dummy_img, (fx + fw // 3, fy + fh // 3), 10, (50, 50, 50), -1)  # "eye"
-            cv2.circle(dummy_img, (fx + 2*fw // 3, fy + fh // 3), 10, (50, 50, 50), -1)  # "eye"
-            cv2.imwrite("dummy_baby_photo_for_check.jpg", dummy_img)
-            input_image_path = "dummy_baby_photo_for_check.jpg"
+            cv2.circle(dummy_img, (fx + fw // 3, fy + fh // 3), 10, (50, 50, 50), -1)
+            cv2.circle(dummy_img, (fx + 2*fw // 3, fy + fh // 3), 10, (50, 50, 50), -1)
+            cv2.imwrite("dummy_photo_for_check.jpg", dummy_img)
+            input_image_path = "dummy_photo_for_check.jpg"
             
-        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
-        result = checker.check_image_array(input_image_path)
+        log.info(f"Loading image from: {input_image_path}")
+        image_to_check = cv2.imread(input_image_path)
+        if image_to_check is None:
+            raise FileNotFoundError(f"Could not read the image file at {input_image_path}")
 
-        if input_image_path == "dummy_baby_photo_for_check.jpg":
+        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
+        result = checker.check_image_array(image_to_check)
+
+        log.info(f"Final Recommendation: {result.get('recommendation')}")
+        print("\n--- Detailed Logs ---")
+        print(json.dumps(result.get('logs'), indent=4))
+
+        if output_image_path and 'processed_image' in result:
+            img_data = base64.b64decode(result['processed_image'])
+            with open(output_image_path, 'wb') as f:
+                f.write(img_data)
+            log.info(f"Saved processed image to {output_image_path}")
+
+        if "dummy_photo_for_check.jpg" in input_image_path:
             os.remove(input_image_path)
 
     except Exception as e:
-        print(f"A critical error occurred: {e}")
+        log.critical(f"A critical error occurred: {e}", exc_info=True)
         import traceback
         traceback.print_exc() 

@@ -8,9 +8,8 @@ class Config:
     
     # --- Model Configuration ---
     # The name of the InsightFace model to be used.
-    # 'buffalo_m' is recommended as it provides pose and 106 landmarks
-    # without the extra overhead of gender/age attributes.
-    RECOMMENDED_MODEL_NAME = 'buffalo_m'
+    # 'buffalo_l' is recommended as it provides pose and 106 landmarks
+    RECOMMENDED_MODEL_NAME = 'buffalo_l'
     
     # Target Photo Dimensions (mm) and DPI for high-resolution output
     TARGET_PHOTO_WIDTH_MM = 35
@@ -25,8 +24,8 @@ class Config:
     ASPECT_RATIO_TOLERANCE = 0.05
 
     # Chin to Crown Height Ratio (of the final photo height) based on ICAO
-    MIN_CHIN_TO_CROWN_RATIO = 31 / 45  # Approx 0.688
-    MAX_CHIN_TO_CROWN_RATIO = 36 / 45  # 0.8
+    MIN_CHIN_TO_CROWN_RATIO = 0.69
+    MAX_CHIN_TO_CROWN_RATIO = 0.80
     # Target for cropping logic (aims for the middle of the acceptable range)
     CROP_TARGET_CHIN_TO_CROWN_RATIO = (MIN_CHIN_TO_CROWN_RATIO + MAX_CHIN_TO_CROWN_RATIO) / 2  # Approx 0.744
 
@@ -44,7 +43,7 @@ class Config:
     BABY_MOUTH_OPENING_WARN_RATIO = 0.15
 
     # Background Check Parameters
-    BG_PRELIM_MIN_LIGHT_RGB = (200, 200, 200)  # For preliminary check before removal
+    BG_PRELIM_MIN_LIGHT_RGB = 150
     BG_PRELIM_STD_DEV_MAX = 30
     BG_FINAL_MIN_LIGHT_RGB = (180, 180, 180)   # For final validation
     BG_FINAL_MAX_RGB = (255, 255, 255)
@@ -54,22 +53,36 @@ class Config:
     # Face Detection Confidence
     MIN_DETECTION_SCORE = 0.6
     
+    # --- Infant-Specific Crop Logic ---
+    # When estimating an infant's crown position, we multiply the eye-to-chin
+    # distance by this value. A larger value creates more space.
+    INFANT_CROWN_ESTIMATION_MULTIPLIER = 2.0
+    
     # Eye Aspect Ratio (EAR) threshold for detecting closed eyes.
-    EYE_AR_THRESH = 0.18  # Lower values mean more likely to be closed.
+    EYE_AR_THRESH = 0.35
 
     # Red-eye detection parameters
     RED_EYE_HUE_LOWER = 160
     RED_EYE_HUE_UPPER = 10
     RED_EYE_SATURATION_MIN = 100
     RED_EYE_VALUE_MIN = 100
-    RED_EYE_PIXEL_PERCENTAGE_THRESH = 0.15  # % of pupil area that can be red
+    RED_EYE_PIXEL_PERCENTAGE_THRESH = 0.1
 
-    # InsightFace landmark indices (for 106-point model)
+    # --- Landmark Indices (106-point model) ---
     CHIN_LANDMARK_INDEX = 16
-    # Left eye landmarks for EAR
+    # Left eye landmarks for EAR calculation
     LEFT_EYE_LANDMARKS = [35, 36, 33, 37, 39, 42]
-    # Right eye landmarks for EAR
+    # Right eye landmarks for EAR calculation
     RIGHT_EYE_LANDMARKS = [74, 93, 90, 94, 96, 97]
-    # Pupil approximations for red-eye check
+    # Pupil approximations for red-eye correction
     LEFT_PUPIL_APPROX_INDEX = 35
-    RIGHT_PUPIL_APPROX_INDEX = 74 
+    RIGHT_PUPIL_APPROX_INDEX = 74
+
+    # --- Face Alignment & Cropping Ratios ---
+    # Target head height as a ratio of image height (ICAO: 0.69-0.80)
+    TARGET_HEAD_HEIGHT_RATIO = 0.70  
+    # Target space above the head as a ratio of total image height
+    HEAD_POS_RATIO_VERTICAL = 0.12
+
+    # Landmark indices (based on InsightFace 106-point model)
+    # CHIN_LANDMARK_INDEX = 16 

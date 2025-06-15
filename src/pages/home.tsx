@@ -82,7 +82,8 @@ export default function Home() {
       status,
       score,
       checks,
-      recommendations: [apiResponse.recommendation]
+      recommendations: [apiResponse.recommendation],
+      processedImage: apiResponse.processed_image
     };
   };
 
