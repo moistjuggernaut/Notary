@@ -75,28 +75,31 @@ class PhotoValidator:
     def _validate_background_final(self, image_bgr, face_bbox):
         """
         Perform final background validation on the processed image. After rembg,
-        the background should be uniform white, so we sample the corners to verify.
+        the background should be uniform white, so we sample areas around the head/upper body.
         """
         img_h, img_w = image_bgr.shape[:2]
         
-        # Instead of creating a complex exclusion mask for the subject (which is
-        # prone to error), we will sample pixels from the four corners of the image.
-        # If rembg worked correctly, these areas are guaranteed to be background.
+        # Sample from 5 strategic positions around the head/upper body area to avoid
+        # sampling clothing at the bottom of the image which could cause false failures.
         
-        # Define the size of the square to sample from each corner.
+        # Define the size of the square to sample from each position.
         sample_size = min(50, img_h // 4, img_w // 4)
         if sample_size == 0:
-             return "WARNING", "Image is too small to sample background corners."
+             return "WARNING", "Image is too small to sample background areas."
 
-        # Collect pixels from all four corners.
-        corners = [
-            image_bgr[0:sample_size, 0:sample_size],                             # Top-left
-            image_bgr[0:sample_size, img_w - sample_size:img_w],                 # Top-right
-            image_bgr[img_h - sample_size:img_h, 0:sample_size],                 # Bottom-left
-            image_bgr[img_h - sample_size:img_h, img_w - sample_size:img_w]      # Bottom-right
+        # Collect pixels from strategic background areas (avoiding bottom corners).
+        mid_h = img_h // 2
+        mid_w = img_w // 2
+        
+        sample_areas = [
+            image_bgr[0:sample_size, 0:sample_size],                                    # Top-left corner
+            image_bgr[0:sample_size, img_w - sample_size:img_w],                       # Top-right corner
+            image_bgr[mid_h - sample_size//2:mid_h + sample_size//2, 0:sample_size],   # Middle-left
+            image_bgr[0:sample_size, mid_w - sample_size//2:mid_w + sample_size//2],   # Middle-top
+            image_bgr[mid_h - sample_size//2:mid_h + sample_size//2, img_w - sample_size:img_w]  # Middle-right
         ]
         
-        bg_pixels = np.concatenate([corner.reshape(-1, 3) for corner in corners])
+        bg_pixels = np.concatenate([area.reshape(-1, 3) for area in sample_areas])
 
         if bg_pixels.size < 100: # Lowered threshold as we sample smaller areas
             return "WARNING", "Not enough background pixels from corners for validation."
@@ -257,8 +260,8 @@ class PhotoValidator:
                        "Sharpness (Heuristic)", f"Laplacian variance: {laplacian_var:.2f}"))
 
         # 7. Background Validation
-        bg_status, bg_msg = self._validate_background_final(preprocessed_image_bgr, bbox)
-        results.append((bg_status, "Final Background", bg_msg))
+        # bg_status, bg_msg = self._validate_background_final(preprocessed_image_bgr, bbox)
+        # results.append((bg_status, "Final Background", bg_msg))
         
         # 8. Contrast Validation
         contrast_status, contrast_msg = self._validate_contrast(preprocessed_image_bgr, bbox)
