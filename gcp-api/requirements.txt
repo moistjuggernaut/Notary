@@ -4,4 +4,5 @@ Flask-Cors
 numpy
 opencv-python-headless
 onnxruntime
-insightface==0.7.3 
+insightface==0.7.3
+rembg 

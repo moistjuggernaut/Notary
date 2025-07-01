@@ -74,25 +74,32 @@ class PhotoValidator:
 
     def _validate_background_final(self, image_bgr, face_bbox):
         """
-        Perform final background validation on processed image.
-        
-        Args:
-            image_bgr (numpy.ndarray): Processed image in BGR format
-            face_bbox (numpy.ndarray): Face bounding box coordinates
-            
-        Returns:
-            tuple: (status, description_message)
+        Perform final background validation on the processed image. After rembg,
+        the background should be uniform white, so we sample the corners to verify.
         """
         img_h, img_w = image_bgr.shape[:2]
         
-        # Create mask for background (exclude face area with some padding)
-        face_mask = np.zeros((img_h, img_w), dtype=np.uint8)
-        cv2.rectangle(face_mask, tuple(face_bbox[:2]), tuple(face_bbox[2:]), 255, -1)
-        bg_mask = cv2.bitwise_not(cv2.dilate(face_mask, np.ones((15, 15), np.uint8)))
+        # Instead of creating a complex exclusion mask for the subject (which is
+        # prone to error), we will sample pixels from the four corners of the image.
+        # If rembg worked correctly, these areas are guaranteed to be background.
+        
+        # Define the size of the square to sample from each corner.
+        sample_size = min(50, img_h // 4, img_w // 4)
+        if sample_size == 0:
+             return "WARNING", "Image is too small to sample background corners."
 
-        bg_pixels = image_bgr[bg_mask == 255]
-        if bg_pixels.size < 1000:
-            return "WARNING", "Not enough background pixels for validation."
+        # Collect pixels from all four corners.
+        corners = [
+            image_bgr[0:sample_size, 0:sample_size],                             # Top-left
+            image_bgr[0:sample_size, img_w - sample_size:img_w],                 # Top-right
+            image_bgr[img_h - sample_size:img_h, 0:sample_size],                 # Bottom-left
+            image_bgr[img_h - sample_size:img_h, img_w - sample_size:img_w]      # Bottom-right
+        ]
+        
+        bg_pixels = np.concatenate([corner.reshape(-1, 3) for corner in corners])
+
+        if bg_pixels.size < 100: # Lowered threshold as we sample smaller areas
+            return "WARNING", "Not enough background pixels from corners for validation."
 
         mean_color = np.mean(bg_pixels, axis=0)
         std_dev_color = np.std(bg_pixels, axis=0)

@@ -23,6 +23,7 @@ class ComplianceChecker:
     """
     _full_analyzer = None
     _full_analyzer_lock = Lock()
+    _rembg_remove_func = None
     
     def __init__(self, model_name=Config.RECOMMENDED_MODEL_NAME, providers=None):
         """
@@ -45,14 +46,29 @@ class ComplianceChecker:
         if self._full_analyzer is None:
             with self._full_analyzer_lock:
                 if self._full_analyzer is None:
-                    log.info("First use: lazy-loading heavyweight FaceAnalyzer...")
+                    log.info("First use: lazy-loading heavyweight models...")
+                    
+                    # Lazy-load FaceAnalyzer
                     from lib.face_analyzer import FaceAnalyzer
                     self._full_analyzer = FaceAnalyzer(
                         model_name=self._model_name,
                         providers=self._providers
                     )
-                    self.preprocessor = ImagePreprocessor(self._full_analyzer)
-                    log.info("Heavyweight FaceAnalyzer loaded and ready.")
+                    
+                    # Lazy-load rembg
+                    try:
+                        from rembg import remove as rembg_remove
+                        self._rembg_remove_func = rembg_remove
+                        log.info("rembg library loaded successfully.")
+                    except ImportError:
+                        log.warning("rembg library not found. Background removal will be skipped.")
+
+                    # Inject dependencies into the preprocessor
+                    self.preprocessor = ImagePreprocessor(
+                        self._full_analyzer, 
+                        rembg_func=self._rembg_remove_func
+                    )
+                    log.info("Heavyweight models loaded and ready.")
         return self._full_analyzer
 
     def _get_final_recommendation(self, validation_results_log):

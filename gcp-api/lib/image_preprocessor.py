@@ -9,97 +9,21 @@ from lib.config import Config
 from lib.face_analyzer import FaceAnalyzer
 from types import SimpleNamespace
 
-# Custom lightweight background removal using OpenCV
-def simple_background_removal(image_bgr, face_bbox):
-    """
-    Simple background removal using edge detection and flood fill.
-    Much lighter than rembg but effective for passport photos with relatively uniform backgrounds.
-    
-    Args:
-        image_bgr (numpy.ndarray): Input image in BGR format
-        face_bbox (numpy.ndarray): Face bounding box to protect from removal
-        
-    Returns:
-        numpy.ndarray: Image with background replaced by white
-    """
-    try:
-        # Create a mask for the face area to protect it
-        h, w = image_bgr.shape[:2]
-        face_mask = np.zeros((h, w), dtype=np.uint8)
-        
-        # Expand face bbox slightly to protect more area
-        x1, y1, x2, y2 = face_bbox.astype(int)
-        padding = int(min(x2-x1, y2-y1) * 0.3)  # 30% padding
-        x1 = max(0, x1 - padding)
-        y1 = max(0, y1 - padding)
-        x2 = min(w, x2 + padding)
-        y2 = min(h, y2 + padding)
-        
-        cv2.rectangle(face_mask, (x1, y1), (x2, y2), 255, -1)
-        
-        # Convert to grayscale for processing
-        gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
-        
-        # Apply GaussianBlur to reduce noise
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        
-        # Create edge detection mask
-        edges = cv2.Canny(blurred, 50, 150)
-        
-        # Dilate edges to close gaps
-        kernel = np.ones((3, 3), np.uint8)
-        edges = cv2.dilate(edges, kernel, iterations=1)
-        
-        # Create background mask using flood fill from corners
-        bg_mask = np.zeros((h + 2, w + 2), dtype=np.uint8)
-        result_image = image_bgr.copy()
-        
-        # Flood fill from corners to identify background
-        corners = [(0, 0), (0, h-1), (w-1, 0), (w-1, h-1)]
-        for x, y in corners:
-            if bg_mask[y+1, x+1] == 0:  # Not already filled
-                cv2.floodFill(gray, bg_mask, (x, y), 255, loDiff=40, upDiff=40, 
-                             flags=cv2.FLOODFILL_MASK_ONLY)
-        
-        # Remove padding from mask
-        bg_mask = bg_mask[1:-1, 1:-1]
-        
-        # Combine with edge information
-        bg_mask = cv2.bitwise_and(bg_mask, cv2.bitwise_not(edges))
-        
-        # Protect face area
-        bg_mask = cv2.bitwise_and(bg_mask, cv2.bitwise_not(face_mask))
-        
-        # Apply morphological operations to clean up mask
-        kernel = np.ones((5, 5), np.uint8)
-        bg_mask = cv2.morphologyEx(bg_mask, cv2.MORPH_CLOSE, kernel)
-        bg_mask = cv2.morphologyEx(bg_mask, cv2.MORPH_OPEN, kernel)
-        
-        # Smooth the mask edges
-        bg_mask = cv2.GaussianBlur(bg_mask, (5, 5), 0)
-        
-        # Apply mask to create white background
-        result_image[bg_mask > 128] = [255, 255, 255]
-        
-        return result_image
-        
-    except Exception as e:
-        print(f"Simple background removal failed: {e}")
-        return image_bgr  # Return original if processing fails
-
-
 class ImagePreprocessor:
     """Handles image cropping, resizing, and conditional background removal."""
     
-    def __init__(self, face_analyzer: FaceAnalyzer):
+    def __init__(self, face_analyzer: FaceAnalyzer, rembg_func=None):
         """
         Initialize the ImagePreprocessor.
         
         Args:
-            face_analyzer (FaceAnalyzer): Initialized face analyzer instance
+            face_analyzer (FaceAnalyzer): Initialized face analyzer instance.
+            rembg_func (function, optional): The 'remove' function from the rembg
+                                             library. Defaults to None.
         """
         self.face_analyzer = face_analyzer
         self.config = Config()
+        self.rembg_func = rembg_func
 
     def _get_face_details_for_crop(self, faces):
         """
@@ -343,7 +267,8 @@ class ImagePreprocessor:
     def process_image(self, original_image_bgr, faces):
         """
         Processes the image for validation by performing a single, robust analysis,
-        then transforming the results through the processing pipeline.
+        then transforming the results through the processing pipeline in the correct order:
+        Crop -> Background Removal -> Resize.
         """
         logs = []
         
@@ -354,6 +279,7 @@ class ImagePreprocessor:
             return None, None, logs, False
         
         original_face_data = faces[0]
+        original_landmarks = original_face_data.landmark_2d_106
         logs.append(("INFO", "Preprocessing", "Initial face details extracted."))
 
         # 2. Calculate crop box from original analysis
@@ -362,54 +288,73 @@ class ImagePreprocessor:
             logs.append(("FAIL", "Preprocessing", f"Crop calculation failed: {err}"))
             return None, None, logs, False
         
-        # 3. Crop and resize the image
+        # 3. CROP the original image
         x1_c, y1_c, x2_c, y2_c = crop_coords
         cropped_bgr = original_image_bgr[y1_c:y2_c, x1_c:x2_c]
         if cropped_bgr.size == 0:
             logs.append(("FAIL", "Preprocessing", "Cropped image is empty."))
             return None, None, logs, False
+        logs.append(("INFO", "Preprocessing", "Image cropped to ICAO standards."))
             
+        # 4. REMOVE BACKGROUND on the cropped, full-resolution image.
+        #    First, we need landmarks relative to the cropped image space.
+        landmarks_in_cropped_space = original_landmarks - [x1_c, y1_c]
+        bbox_in_cropped_space = np.array([
+            np.min(landmarks_in_cropped_space[:, 0]), np.min(landmarks_in_cropped_space[:, 1]),
+            np.max(landmarks_in_cropped_space[:, 0]), np.max(landmarks_in_cropped_space[:, 1])
+        ]).astype(int)
+        
+        is_bg_ok, reason = self._preliminary_background_check(cropped_bgr, bbox_in_cropped_space)
+        logs.append(("INFO", "Preprocessing", f"Preliminary BG check: {reason}"))
+        if not is_bg_ok:
+            if self.rembg_func:
+                logs.append(("INFO", "Preprocessing", "Attempting background removal with rembg."))
+                try:
+                    # rembg expects RGB, but OpenCV uses BGR, so we convert.
+                    output_rgba = self.rembg_func(cv2.cvtColor(cropped_bgr, cv2.COLOR_BGR2RGB))
+                    
+                    # Create a white background of the same size.
+                    white_bg = np.full(cropped_bgr.shape, 255, dtype=np.uint8)
+                    
+                    # Use the alpha channel from rembg's output to blend the images.
+                    alpha = output_rgba[:, :, 3:4] / 255.0
+                    
+                    # Convert rembg's RGBA output back to BGR for blending.
+                    foreground_bgr = cv2.cvtColor(output_rgba, cv2.COLOR_RGBA2BGR)
+                    
+                    # Blend the original subject with the new white background.
+                    cropped_bgr = (foreground_bgr * alpha + white_bg * (1 - alpha)).astype(np.uint8)
+                    logs.append(("INFO", "Preprocessing", "rembg background removal applied."))
+                except Exception as e:
+                    logs.append(("WARNING", "Preprocessing", f"rembg background removal failed: {e}."))
+            else:
+                logs.append(("WARNING", "Preprocessing", "Background may need removal, but 'rembg' is not available."))
+
+        # 5. RESIZE the processed image to its final dimensions.
         final_shape = (self.config.FINAL_OUTPUT_WIDTH_PX, self.config.FINAL_OUTPUT_HEIGHT_PX)
         processed_bgr = cv2.resize(cropped_bgr, final_shape, interpolation=cv2.INTER_AREA)
-        logs.append(("INFO", "Preprocessing", "Image cropped and resized."))
+        logs.append(("INFO", "Preprocessing", "Image resized to final dimensions."))
 
-        # 4. Transform original landmarks to the new, processed image's coordinate space
-        original_landmarks = original_face_data.landmark_2d_106
+        # 6. Transform original landmarks to the final, PROCESSED image's coordinate space for validation.
         transformed_landmarks = self._transform_landmarks(original_landmarks, crop_coords, final_shape)
-        
         if transformed_landmarks is None:
             logs.append(("FAIL", "Preprocessing", "Landmark transformation failed after crop."))
             return processed_bgr, None, logs, False
+        logs.append(("INFO", "Preprocessing", "Landmarks transformed to new image space."))
         
-        # 5. Create a new, definitive face_data object for the processed image
-        # This carries over pose data and uses the newly transformed landmarks
+        # 7. Create a new, definitive face_data object for the processed image
         final_face_data = SimpleNamespace(
             pose=original_face_data.pose,
             landmark_2d_106=transformed_landmarks
         )
-        
-        # Recalculate bounding box based on the new landmark positions
         x_coords = transformed_landmarks[:, 0]
         y_coords = transformed_landmarks[:, 1]
         final_face_data.bbox = np.array([min(x_coords), min(y_coords), max(x_coords), max(y_coords)])
         
-        logs.append(("INFO", "Preprocessing", "Landmarks transformed to new image space."))
-
-        # 6. Perform all corrections on the final image using the transformed data
-        face_bbox_for_correction = final_face_data.bbox.astype(int)
-        
-        # Background check and removal
-        is_bg_ok, reason = self._preliminary_background_check(processed_bgr, face_bbox_for_correction)
-        logs.append(("INFO", "Preprocessing", f"Preliminary BG check: {reason}"))
-        if not is_bg_ok:
-            logs.append(("INFO", "Preprocessing", "Attempting simple background removal."))
-            processed_bgr = simple_background_removal(processed_bgr, face_bbox_for_correction)
-            logs.append(("INFO", "Preprocessing", "Simple background removal applied."))
-        
-        # Red-eye correction
+        # 8. Perform final corrections (like red-eye) on the resized image.
         processed_bgr, red_eye_logs = self._correct_red_eye(processed_bgr, transformed_landmarks)
         logs.extend(red_eye_logs)
 
-        # 7. Return the final, corrected image and the definitive analysis data
+        # 9. Return the final, corrected image and the definitive analysis data
         logs.append(("PASS", "Preprocessing", "Image fully preprocessed and ready for validation."))
         return processed_bgr, final_face_data, logs, True 
