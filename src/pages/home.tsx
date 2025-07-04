@@ -149,16 +149,11 @@ export default function Home() {
             ICAO Baby Passport Photo Validator
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
-            Ensure your baby's passport photo meets International Civil Aviation Organization (ICAO) standards 
-            with special allowances for infants under 6 months.
+            Ensure your baby's passport photo meets International Civil Aviation Organization (ICAO) standards.
           </p>
 
           {/* Quick Navigation */}
           <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <Link href="/how-it-works" className="flex items-center text-blue-600 hover:text-blue-700 transition-colors">
-              <HelpCircle className="w-4 h-4 mr-1" />
-              How It Works
-            </Link>
             <Link href="/countries" className="flex items-center text-blue-600 hover:text-blue-700 transition-colors">
               <ExternalLink className="w-4 h-4 mr-1" />
               Supported Countries
@@ -166,6 +161,10 @@ export default function Home() {
             <Link href="/requirements" className="flex items-center text-blue-600 hover:text-blue-700 transition-colors">
               <FileText className="w-4 h-4 mr-1" />
               ICAO Requirements
+            </Link>
+            <Link href="/how-it-works" className="flex items-center text-blue-600 hover:text-blue-700 transition-colors">
+              <HelpCircle className="w-4 h-4 mr-1" />
+              How It Works
             </Link>
           </div>
         </div>

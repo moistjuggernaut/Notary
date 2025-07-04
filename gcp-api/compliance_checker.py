@@ -7,6 +7,7 @@ import base64
 import cv2
 import json
 import os
+import numpy as np
 from threading import Lock
 
 from lib.config import Config
