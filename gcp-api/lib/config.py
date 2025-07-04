@@ -43,8 +43,8 @@ class Config:
     BABY_MOUTH_OPENING_WARN_RATIO = 0.15
 
     # Background Check Parameters
-    BG_PRELIM_MIN_LIGHT_RGB = 150
-    BG_PRELIM_STD_DEV_MAX = 30
+    BG_PRELIM_MIN_LIGHT_RGB = 240  # Very strict - only near-white backgrounds accepted
+    BG_PRELIM_STD_DEV_MAX = 15     # Also tightened uniformity requirement
     BG_FINAL_MIN_LIGHT_RGB = (180, 180, 180)   # For final validation
     BG_FINAL_MAX_RGB = (255, 255, 255)
     BG_FINAL_STD_DEV_MAX = 25

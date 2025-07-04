@@ -91,10 +91,10 @@ class ImagePreprocessor:
             "crown_y": crown_y_final
         }, None
 
-    def _calculate_crop_coordinates(self, original_shape, face_details):
+    def _calculate_crop_coordinates(self, original_shape, face_details, subject_mask=None):
         """
-        Calculates a robust crop box around the face based on ICAO standards,
-        using precise landmark locations for head height.
+        Calculates a robust crop box around the face based on ICAO standards.
+        It uses the subject mask for centering if available for higher accuracy.
         """
         orig_h, orig_w = original_shape[:2]
         bbox = face_details["bbox"]
@@ -103,6 +103,7 @@ class ImagePreprocessor:
         
         head_height_px = chin_y - crown_y
         if head_height_px <= 0:
+            # Fallback to bbox height if landmark/mask calculation is invalid
             head_height_px = bbox[3] - bbox[1]
 
         # ICAO spec: head height should be a specific ratio of the photo height.
@@ -112,9 +113,13 @@ class ImagePreprocessor:
         # Calculate target width based on the passport aspect ratio
         target_crop_w = target_crop_h * self.config.TARGET_ASPECT_RATIO
 
-        # Center the crop box horizontally on the face's bounding box center
+        # Center the crop box horizontally on the face center.
+        # For passport photos, we want to center on the face/head, not the entire subject extent.
         face_cx = (bbox[0] + bbox[2]) / 2
-        crop_x1 = face_cx - (target_crop_w / 2)
+        subject_cx = face_cx
+        method_log = " (Center: face bbox)"
+        
+        crop_x1 = subject_cx - (target_crop_w / 2)
         crop_x2 = crop_x1 + target_crop_w
         
         # Position the crop vertically. ICAO mandates space above the head.
@@ -129,25 +134,33 @@ class ImagePreprocessor:
         # Clip coordinates to the image dimensions
         x1, y1, x2, y2 = max(0, x1), max(0, y1), min(orig_w, x2), min(orig_h, y2)
 
-        return (x1, y1, x2, y2), None
+        return (x1, y1, x2, y2), method_log
 
-    def _preliminary_background_check(self, image_bgr, face_bbox):
+    def _preliminary_background_check(self, image_bgr, face_bbox, rembg_mask=None):
         """
         Quick check if background is light and uniform, or needs removal.
         
         Args:
             image_bgr (numpy.ndarray): Input image in BGR format
-            face_bbox (numpy.ndarray): Face bounding box coordinates
+            face_bbox (numpy.ndarray, optional): Face bounding box coordinates
+            rembg_mask (numpy.ndarray, optional): Binary mask from rembg (subject=True, background=False)
             
         Returns:
             tuple: (is_background_ok, reason_message)
         """
         img_h, img_w = image_bgr.shape[:2]
-        face_mask = np.zeros((img_h, img_w), dtype=np.uint8)
-        cv2.rectangle(face_mask, tuple(face_bbox[:2]), tuple(face_bbox[2:]), 255, -1)
-        bg_mask = cv2.bitwise_not(cv2.dilate(face_mask, np.ones((10, 10), np.uint8)))
+        
+        # Use rembg mask if available for more accurate background sampling
+        if rembg_mask is not None:
+            bg_mask = ~rembg_mask  # Invert to get background only
+            bg_pixels = image_bgr[bg_mask]
+        else:
+            # Fallback to face bbox method
+            face_mask = np.zeros((img_h, img_w), dtype=np.uint8)
+            cv2.rectangle(face_mask, tuple(face_bbox[:2]), tuple(face_bbox[2:]), 255, -1)
+            bg_mask = cv2.bitwise_not(cv2.dilate(face_mask, np.ones((10, 10), np.uint8)))
+            bg_pixels = image_bgr[bg_mask == 255]
 
-        bg_pixels = image_bgr[bg_mask == 255]
         if bg_pixels.size < 1000:
             return False, "Not enough background pixels to check."
 
@@ -264,6 +277,27 @@ class ImagePreprocessor:
 
         return corrected_image, logs
 
+    def _create_subject_mask(self, image_bgr, logs):
+        """Runs rembg on an image to get a precise subject mask."""
+        if not self.rembg_func:
+            logs.append(("INFO", "Preprocessing", "rembg not available, skipping mask creation."))
+            return None
+        try:
+            logs.append(("INFO", "Preprocessing", "Running rembg to create subject mask..."))
+            output_rgba = self.rembg_func(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB))
+            mask = (output_rgba[:, :, 3] > 128)
+            logs.append(("INFO", "Preprocessing", "Subject mask created successfully."))
+            return mask
+        except Exception as e:
+            logs.append(("WARNING", "Preprocessing", f"rembg failed: {e}"))
+            return None
+
+    def _apply_background_removal(self, image_bgr, mask):
+        """Applies a white background to an image using a subject mask."""
+        white_bg = np.full(image_bgr.shape, 255, dtype=np.uint8)
+        mask_3d = mask[..., np.newaxis]
+        return np.where(mask_3d, image_bgr, white_bg)
+
     def process_image(self, original_image_bgr, faces):
         """
         Processes the image for validation by performing a single, robust analysis,
@@ -272,89 +306,80 @@ class ImagePreprocessor:
         """
         logs = []
         
-        # 1. Get face details from the initial analysis of the original image
+        # Step 1: Get initial face data
         face_details, error = self._get_face_details_for_crop(faces)
         if error:
-            logs.append(("FAIL", "Preprocessing", f"Could not get face details: {error}"))
-            return None, None, logs, False
+            logs.append(("FAIL", "Preprocessing", error))
+            return None, None, logs, False, None
         
         original_face_data = faces[0]
         original_landmarks = original_face_data.landmark_2d_106
         logs.append(("INFO", "Preprocessing", "Initial face details extracted."))
 
-        # 2. Calculate crop box from original analysis
-        crop_coords, err = self._calculate_crop_coordinates(original_image_bgr.shape, face_details)
-        if err:
-            logs.append(("FAIL", "Preprocessing", f"Crop calculation failed: {err}"))
-            return None, None, logs, False
-        
-        # 3. CROP the original image
-        x1_c, y1_c, x2_c, y2_c = crop_coords
-        cropped_bgr = original_image_bgr[y1_c:y2_c, x1_c:x2_c]
+        # Step 2: Create a precise subject mask from the original image
+        original_rembg_mask = self._create_subject_mask(original_image_bgr, logs)
+
+        # Step 3: Refine crop details with the mask
+        if original_rembg_mask is not None and np.any(original_rembg_mask):
+            subject_pixels_y = np.where(original_rembg_mask)[0]
+            face_details["crown_y"] = np.min(subject_pixels_y)
+            logs.append(("INFO", "Preprocessing", "Updated crown position using rembg mask."))
+
+        # Step 4: Calculate and apply crop
+        crop_coords, crop_log = self._calculate_crop_coordinates(original_image_bgr.shape, face_details, original_rembg_mask)
+        logs.append(("INFO", "Preprocessing", f"Crop box calculated{crop_log}"))
+        if not crop_coords:
+            logs.append(("FAIL", "Preprocessing", "Crop calculation failed."))
+            return None, None, logs, False, None
+
+        x1, y1, x2, y2 = crop_coords
+        cropped_bgr = original_image_bgr[y1:y2, x1:x2]
         if cropped_bgr.size == 0:
             logs.append(("FAIL", "Preprocessing", "Cropped image is empty."))
-            return None, None, logs, False
+            return None, None, logs, False, None
         logs.append(("INFO", "Preprocessing", "Image cropped to ICAO standards."))
-            
-        # 4. REMOVE BACKGROUND on the cropped, full-resolution image.
-        #    First, we need landmarks relative to the cropped image space.
-        landmarks_in_cropped_space = original_landmarks - [x1_c, y1_c]
-        bbox_in_cropped_space = np.array([
-            np.min(landmarks_in_cropped_space[:, 0]), np.min(landmarks_in_cropped_space[:, 1]),
-            np.max(landmarks_in_cropped_space[:, 0]), np.max(landmarks_in_cropped_space[:, 1])
-        ]).astype(int)
-        
-        is_bg_ok, reason = self._preliminary_background_check(cropped_bgr, bbox_in_cropped_space)
-        logs.append(("INFO", "Preprocessing", f"Preliminary BG check: {reason}"))
-        if not is_bg_ok:
-            if self.rembg_func:
-                logs.append(("INFO", "Preprocessing", "Attempting background removal with rembg."))
-                try:
-                    # rembg expects RGB, but OpenCV uses BGR, so we convert.
-                    output_rgba = self.rembg_func(cv2.cvtColor(cropped_bgr, cv2.COLOR_BGR2RGB))
-                    
-                    # Create a white background of the same size.
-                    white_bg = np.full(cropped_bgr.shape, 255, dtype=np.uint8)
-                    
-                    # Use the alpha channel from rembg's output to blend the images.
-                    alpha = output_rgba[:, :, 3:4] / 255.0
-                    
-                    # Convert rembg's RGBA output back to BGR for blending.
-                    foreground_bgr = cv2.cvtColor(output_rgba, cv2.COLOR_RGBA2BGR)
-                    
-                    # Blend the original subject with the new white background.
-                    cropped_bgr = (foreground_bgr * alpha + white_bg * (1 - alpha)).astype(np.uint8)
-                    logs.append(("INFO", "Preprocessing", "rembg background removal applied."))
-                except Exception as e:
-                    logs.append(("WARNING", "Preprocessing", f"rembg background removal failed: {e}."))
-            else:
-                logs.append(("WARNING", "Preprocessing", "Background may need removal, but 'rembg' is not available."))
 
-        # 5. RESIZE the processed image to its final dimensions.
+        # Step 5: Process background on the cropped image
+        cropped_rembg_mask = original_rembg_mask[y1:y2, x1:x2] if original_rembg_mask is not None else None
+        
+        is_bg_ok, reason = self._preliminary_background_check(cropped_bgr, None, cropped_rembg_mask)
+        logs.append(("INFO", "Preprocessing", f"Preliminary BG check: {reason}"))
+        
+        if not is_bg_ok:
+            if cropped_rembg_mask is None:
+                cropped_rembg_mask = self._create_subject_mask(cropped_bgr, logs)
+            
+            if cropped_rembg_mask is not None:
+                cropped_bgr = self._apply_background_removal(cropped_bgr, cropped_rembg_mask)
+                logs.append(("INFO", "Preprocessing", "Background removal applied."))
+        
+        # Step 6: Resize to final dimensions
         final_shape = (self.config.FINAL_OUTPUT_WIDTH_PX, self.config.FINAL_OUTPUT_HEIGHT_PX)
         processed_bgr = cv2.resize(cropped_bgr, final_shape, interpolation=cv2.INTER_AREA)
         logs.append(("INFO", "Preprocessing", "Image resized to final dimensions."))
 
-        # 6. Transform original landmarks to the final, PROCESSED image's coordinate space for validation.
+        # Step 7: Transform artifacts to the final coordinate space
         transformed_landmarks = self._transform_landmarks(original_landmarks, crop_coords, final_shape)
         if transformed_landmarks is None:
-            logs.append(("FAIL", "Preprocessing", "Landmark transformation failed after crop."))
-            return processed_bgr, None, logs, False
-        logs.append(("INFO", "Preprocessing", "Landmarks transformed to new image space."))
+            logs.append(("FAIL", "Preprocessing", "Landmark transformation failed."))
+            return processed_bgr, None, logs, False, None
         
-        # 7. Create a new, definitive face_data object for the processed image
+        final_rembg_mask = None
+        if cropped_rembg_mask is not None:
+            final_rembg_mask = cv2.resize(cropped_rembg_mask.astype(np.uint8), final_shape, interpolation=cv2.INTER_NEAREST).astype(bool)
+        
+        # Step 8: Create final face data object
         final_face_data = SimpleNamespace(
             pose=original_face_data.pose,
             landmark_2d_106=transformed_landmarks
         )
-        x_coords = transformed_landmarks[:, 0]
-        y_coords = transformed_landmarks[:, 1]
+        x_coords, y_coords = transformed_landmarks[:, 0], transformed_landmarks[:, 1]
         final_face_data.bbox = np.array([min(x_coords), min(y_coords), max(x_coords), max(y_coords)])
         
-        # 8. Perform final corrections (like red-eye) on the resized image.
+        # Step 9: Perform final corrections
         processed_bgr, red_eye_logs = self._correct_red_eye(processed_bgr, transformed_landmarks)
         logs.extend(red_eye_logs)
 
-        # 9. Return the final, corrected image and the definitive analysis data
+        # Step 10: Return final results
         logs.append(("PASS", "Preprocessing", "Image fully preprocessed and ready for validation."))
-        return processed_bgr, final_face_data, logs, True 
+        return processed_bgr, final_face_data, logs, True, final_rembg_mask 

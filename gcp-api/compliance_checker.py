@@ -112,7 +112,7 @@ class ComplianceChecker:
             
             # Step 3: Preprocessing
             log.info("Starting image preprocessing...")
-            processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(image_bgr, faces)
+            processed_bgr, face_data, preprocess_logs, success, rembg_mask = self.preprocessor.process_image(image_bgr, faces)
             all_logs["preprocessing"].extend(preprocess_logs)
             log.info("Image preprocessing finished.")
             
@@ -122,7 +122,7 @@ class ComplianceChecker:
 
             # Step 4: Validation
             log.info("Starting photo validation...")
-            validation_results = self.validator.validate_photo(processed_bgr, face_data)
+            validation_results = self.validator.validate_photo(processed_bgr, face_data, rembg_mask)
             all_logs["validation"].extend(validation_results)
             recommendation = self._get_final_recommendation(validation_results)
             log.info("Photo validation finished.")

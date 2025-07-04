@@ -72,37 +72,39 @@ class PhotoValidator:
             
         return "PASS", f"{red_percentage:.1%} of pupil ROI is red."
 
-    def _validate_background_final(self, image_bgr, face_bbox):
+    def _validate_background_final(self, image_bgr, face_bbox, rembg_mask=None):
         """
         Perform final background validation on the processed image. After rembg,
-        the background should be uniform white, so we sample areas around the head/upper body.
+        the background should be uniform white.
         """
         img_h, img_w = image_bgr.shape[:2]
-        
-        # Sample from 5 strategic positions around the head/upper body area to avoid
-        # sampling clothing at the bottom of the image which could cause false failures.
-        
-        # Define the size of the square to sample from each position.
-        sample_size = min(50, img_h // 4, img_w // 4)
-        if sample_size == 0:
-             return "WARNING", "Image is too small to sample background areas."
 
-        # Collect pixels from strategic background areas (avoiding bottom corners).
-        mid_h = img_h // 2
-        mid_w = img_w // 2
-        
-        sample_areas = [
-            image_bgr[0:sample_size, 0:sample_size],                                    # Top-left corner
-            image_bgr[0:sample_size, img_w - sample_size:img_w],                       # Top-right corner
-            image_bgr[mid_h - sample_size//2:mid_h + sample_size//2, 0:sample_size],   # Middle-left
-            image_bgr[0:sample_size, mid_w - sample_size//2:mid_w + sample_size//2],   # Middle-top
-            image_bgr[mid_h - sample_size//2:mid_h + sample_size//2, img_w - sample_size:img_w]  # Middle-right
-        ]
-        
-        bg_pixels = np.concatenate([area.reshape(-1, 3) for area in sample_areas])
+        if rembg_mask is not None and np.any(rembg_mask):
+            # Method 1: Use the precise rembg mask to sample the background.
+            # This is the most accurate method.
+            bg_mask = ~rembg_mask
+            bg_pixels = image_bgr[bg_mask]
+        else:
+            # Method 2: Fallback to sampling strategic corners if no mask is available.
+            # This is less accurate as it might sample clothing.
+            sample_size = min(50, img_h // 4, img_w // 4)
+            if sample_size == 0:
+                return "WARNING", "Image is too small to sample background areas."
 
-        if bg_pixels.size < 100: # Lowered threshold as we sample smaller areas
-            return "WARNING", "Not enough background pixels from corners for validation."
+            mid_h = img_h // 2
+            mid_w = img_w // 2
+            
+            sample_areas = [
+                image_bgr[0:sample_size, 0:sample_size],
+                image_bgr[0:sample_size, img_w - sample_size:img_w],
+                image_bgr[mid_h - sample_size//2:mid_h + sample_size//2, 0:sample_size],
+                image_bgr[0:sample_size, mid_w - sample_size//2:mid_w + sample_size//2],
+                image_bgr[mid_h - sample_size//2:mid_h + sample_size//2, img_w - sample_size:img_w]
+            ]
+            bg_pixels = np.concatenate([area.reshape(-1, 3) for area in sample_areas])
+
+        if bg_pixels.size < 100:
+            return "WARNING", "Not enough background pixels for final validation."
 
         mean_color = np.mean(bg_pixels, axis=0)
         std_dev_color = np.std(bg_pixels, axis=0)
@@ -125,13 +127,14 @@ class PhotoValidator:
         
         return "PASS", f"Background appears compliant (mean: {mean_color.astype(int)}, std: {std_dev_color.astype(int)})"
 
-    def _validate_contrast(self, image_bgr, face_bbox):
+    def _validate_contrast(self, image_bgr, face_bbox, rembg_mask=None):
         """
         Validate contrast between face and background.
         
         Args:
             image_bgr (numpy.ndarray): Input image in BGR format
             face_bbox (numpy.ndarray): Face bounding box coordinates
+            rembg_mask (numpy.ndarray, optional): Binary mask from rembg (subject=True, background=False)
             
         Returns:
             tuple: (status, description_message)
@@ -143,13 +146,18 @@ class PhotoValidator:
         face_region = gray[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
         face_mean = np.mean(face_region) if face_region.size > 0 else 0
         
-        # Get background region (exclude face area)
-        img_h, img_w = gray.shape
-        face_mask = np.zeros((img_h, img_w), dtype=np.uint8)
-        cv2.rectangle(face_mask, tuple(face_bbox[:2]), tuple(face_bbox[2:]), 255, -1)
-        bg_mask = cv2.bitwise_not(cv2.dilate(face_mask, np.ones((10, 10), np.uint8)))
+        # Get background region - use rembg mask if available for more accurate separation
+        if rembg_mask is not None:
+            bg_mask = ~rembg_mask  # Invert to get background only
+            bg_pixels = gray[bg_mask]
+        else:
+            # Fallback to face bbox method
+            img_h, img_w = gray.shape
+            face_mask = np.zeros((img_h, img_w), dtype=np.uint8)
+            cv2.rectangle(face_mask, tuple(face_bbox[:2]), tuple(face_bbox[2:]), 255, -1)
+            bg_mask = cv2.bitwise_not(cv2.dilate(face_mask, np.ones((10, 10), np.uint8)))
+            bg_pixels = gray[bg_mask == 255]
         
-        bg_pixels = gray[bg_mask == 255]
         bg_mean = np.mean(bg_pixels) if bg_pixels.size > 0 else 255
         
         contrast = abs(bg_mean - face_mean)
@@ -159,13 +167,14 @@ class PhotoValidator:
         else:
             return "WARNING", f"Low contrast: {contrast:.1f} (face: {face_mean:.1f}, bg: {bg_mean:.1f})"
 
-    def validate_photo(self, preprocessed_image_bgr, face_data):
+    def validate_photo(self, preprocessed_image_bgr, face_data, rembg_mask=None):
         """
         Run all validation checks on the preprocessed photo.
         
         Args:
             preprocessed_image_bgr (numpy.ndarray): Preprocessed image in BGR format
             face_data: Face analysis data from InsightFace
+            rembg_mask (numpy.ndarray, optional): Binary mask from rembg (subject=True, background=False)
             
         Returns:
             list: List of validation results as (status, check_name, message) tuples
@@ -199,38 +208,39 @@ class PhotoValidator:
 
         # 3. Chin-to-Crown Height Ratio
         # ---
-        # METHODOLOGY: This check is the final arbiter of the cropping process.
-        # The ImagePreprocessor is tasked with creating a cropped and resized image
-        # that meets ICAO standards. Specifically, it uses TARGET_HEAD_HEIGHT_RATIO
-        # and HEAD_POS_RATIO_VERTICAL from the config to frame the head.
-        #
-        # This validation step does NOT re-measure the crown from landmarks. Instead,
-        # it verifies that the preprocessor's work resulted in a compliant final
-        # image. It works as follows:
-        #
-        # 1. It assumes the preprocessor correctly placed the subject's crown at a
-        #    specific position relative to the top of the image (defined by
-        #    HEAD_POS_RATIO_VERTICAL). It calculates this `expected_crown_y`.
-        # 2. It takes the actual position of the chin from the transformed landmarks.
-        # 3. It calculates the head height (`head_h`) as the distance between the
-        #    actual chin and the *expected* crown.
-        # 4. It then calculates the ratio of this `head_h` to the total image height.
-        # 5. Finally, it compares this ratio to the official ICAO minimum and
-        #    maximum requirements.
-        #
-        # This correctly validates the final photo composition as per the standards.
+        # METHODOLOGY: This check uses a hybrid approach for maximum accuracy.
+        # 1. REMBG MASK FOR CROWN: If a `rembg_mask` is available, it is used
+        #    to find the true top of the head (crown), which accurately
+        #    accounts for hair volume. This is more reliable than geometric
+        #    estimations or landmark points near the hairline.
+        # 2. LANDMARKS FOR CHIN: Facial landmarks are highly accurate for
+        #    locating the chin, so we continue to use them for the bottom
+        #    of the head measurement.
+        # 3. FALLBACK: If no rembg_mask is available, it reverts to the
+        #    original method of validating the crop box based on expected
+        #    head position ratios.
         # ---
-        chin_y = landmarks[self.config.CHIN_LANDMARK_INDEX][1]
-        
-        # Calculate where the crown *should* be in a perfectly compliant photo.
-        expected_crown_y = img_h * self.config.HEAD_POS_RATIO_VERTICAL
-        head_h = chin_y - expected_crown_y
-        
+        if rembg_mask is not None and np.any(rembg_mask):
+            # Hybrid approach: rembg for crown, landmarks for chin
+            subject_pixels_y = np.where(rembg_mask)[0]
+            crown_y = np.min(subject_pixels_y)
+            chin_y = landmarks[self.config.CHIN_LANDMARK_INDEX][1]
+            head_h = chin_y - crown_y
+            
+            # Add a log for which method was used
+            method_log = " (Method: rembg+landmarks)"
+        else:
+            # Fallback to validating the preprocessor's crop logic
+            chin_y = landmarks[self.config.CHIN_LANDMARK_INDEX][1]
+            expected_crown_y = img_h * self.config.HEAD_POS_RATIO_VERTICAL
+            head_h = chin_y - expected_crown_y
+            method_log = " (Method: crop-box validation)"
+
         ratio = head_h / img_h if head_h > 0 else 0
         
         status = "PASS" if self.config.MIN_CHIN_TO_CROWN_RATIO <= ratio <= self.config.MAX_CHIN_TO_CROWN_RATIO else "FAIL"
         results.append((status, "Chin-to-Crown Ratio", 
-                       f"{ratio:.2f} (Target: {self.config.MIN_CHIN_TO_CROWN_RATIO:.2f}-{self.config.MAX_CHIN_TO_CROWN_RATIO:.2f})"))
+                       f"{ratio:.2f} (Target: {self.config.MIN_CHIN_TO_CROWN_RATIO:.2f}-{self.config.MAX_CHIN_TO_CROWN_RATIO:.2f}){method_log}"))
         
         # 4. Eyes Open Validation (using EAR)
         left_ear = self._get_eye_aspect_ratio(landmarks[self.config.LEFT_EYE_LANDMARKS])
@@ -260,11 +270,11 @@ class PhotoValidator:
                        "Sharpness (Heuristic)", f"Laplacian variance: {laplacian_var:.2f}"))
 
         # 7. Background Validation
-        # bg_status, bg_msg = self._validate_background_final(preprocessed_image_bgr, bbox)
-        # results.append((bg_status, "Final Background", bg_msg))
+        bg_status, bg_msg = self._validate_background_final(preprocessed_image_bgr, bbox, rembg_mask)
+        results.append((bg_status, "Final Background", bg_msg))
         
         # 8. Contrast Validation
-        contrast_status, contrast_msg = self._validate_contrast(preprocessed_image_bgr, bbox)
+        contrast_status, contrast_msg = self._validate_contrast(preprocessed_image_bgr, bbox, rembg_mask)
         results.append((contrast_status, "Face-Background Contrast", contrast_msg))
         
         return results 
