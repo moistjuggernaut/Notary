@@ -7,6 +7,7 @@ import base64
 import cv2
 import json
 import os
+import numpy as np
 from threading import Lock
 
 from lib.config import Config
@@ -23,6 +24,7 @@ class ComplianceChecker:
     """
     _full_analyzer = None
     _full_analyzer_lock = Lock()
+    _rembg_remove_func = None
     
     def __init__(self, model_name=Config.RECOMMENDED_MODEL_NAME, providers=None):
         """
@@ -45,14 +47,29 @@ class ComplianceChecker:
         if self._full_analyzer is None:
             with self._full_analyzer_lock:
                 if self._full_analyzer is None:
-                    log.info("First use: lazy-loading heavyweight FaceAnalyzer...")
+                    log.info("First use: lazy-loading heavyweight models...")
+                    
+                    # Lazy-load FaceAnalyzer
                     from lib.face_analyzer import FaceAnalyzer
                     self._full_analyzer = FaceAnalyzer(
                         model_name=self._model_name,
                         providers=self._providers
                     )
-                    self.preprocessor = ImagePreprocessor(self._full_analyzer)
-                    log.info("Heavyweight FaceAnalyzer loaded and ready.")
+                    
+                    # Lazy-load rembg
+                    try:
+                        from rembg import remove as rembg_remove
+                        self._rembg_remove_func = rembg_remove
+                        log.info("rembg library loaded successfully.")
+                    except ImportError:
+                        log.warning("rembg library not found. Background removal will be skipped.")
+
+                    # Inject dependencies into the preprocessor
+                    self.preprocessor = ImagePreprocessor(
+                        self._full_analyzer, 
+                        rembg_func=self._rembg_remove_func
+                    )
+                    log.info("Heavyweight models loaded and ready.")
         return self._full_analyzer
 
     def _get_final_recommendation(self, validation_results_log):
@@ -96,7 +113,7 @@ class ComplianceChecker:
             
             # Step 3: Preprocessing
             log.info("Starting image preprocessing...")
-            processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(image_bgr, faces)
+            processed_bgr, face_data, preprocess_logs, success, rembg_mask = self.preprocessor.process_image(image_bgr, faces)
             all_logs["preprocessing"].extend(preprocess_logs)
             log.info("Image preprocessing finished.")
             
@@ -106,7 +123,7 @@ class ComplianceChecker:
 
             # Step 4: Validation
             log.info("Starting photo validation...")
-            validation_results = self.validator.validate_photo(processed_bgr, face_data)
+            validation_results = self.validator.validate_photo(processed_bgr, face_data, rembg_mask)
             all_logs["validation"].extend(validation_results)
             recommendation = self._get_final_recommendation(validation_results)
             log.info("Photo validation finished.")

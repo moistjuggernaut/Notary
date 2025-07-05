@@ -12,8 +12,8 @@ export default function HowItWorks() {
             How Baby Photo Validation Works
           </h2>
           <p className="text-lg text-slate-grey max-w-2xl mx-auto leading-relaxed">
-            Our AI-powered system validates your baby's passport photo against ICAO international standards 
-            with special allowances for infants under 6 months.
+            Our AI-powered system validates your baby's passport photo against EU biometric standards 
+            (Regulations 2252/2004 & 444/2009) with special allowances for infants under 6 months.
           </p>
         </div>
 
@@ -34,7 +34,7 @@ export default function HowItWorks() {
             </div>
             <h3 className="text-xl font-semibold text-dark-slate mb-4">2. AI Analysis</h3>
             <p className="text-slate-grey leading-relaxed">
-              Our AI system analyzes the photo against ICAO standards, checking facial positioning, background, lighting, and quality.
+              Our AI system analyzes the photo against EU biometric standards, checking facial positioning, background, lighting, and quality.
             </p>
           </div>
 
@@ -105,9 +105,9 @@ export default function HowItWorks() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="font-semibold text-blue-800 mb-3">Important Note</h3>
           <p className="text-blue-700 text-sm leading-relaxed">
-            This tool is designed to help ensure compliance with ICAO standards but does not guarantee acceptance 
-            by passport authorities. Always verify requirements with your local passport office. For children under 6 years old, 
-            some requirements may be relaxed at the discretion of issuing authorities.
+            This tool is designed to help ensure compliance with EU biometric standards but does not guarantee acceptance 
+            by national passport authorities. Always verify requirements with your local passport office. For children under 12 years old, 
+            fingerprint requirements are exempt but facial image requirements still apply.
           </p>
         </div>
       </main>
