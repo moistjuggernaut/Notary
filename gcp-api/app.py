@@ -42,9 +42,10 @@ app = Flask(__name__)
 
 # Configure CORS for Vercel frontend
 CORS(app, origins=[
-    "https://*.vercel.app",
+    "https://passport-validator.vercel.app",
+    "https://*.vercel.app",  # Keep for Vercel preview builds
     "http://localhost:3000",  # Local development
-    os.environ.get('CORS_ORIGINS', '*')
+    os.environ.get('CORS_ORIGINS') # Get origin from env var
 ])
 
 @app.before_request
@@ -81,12 +82,9 @@ def health_check():
         "heavy_model_lazy_loaded": compliance_checker._full_analyzer is not None if compliance_checker_healthy else False
     }), status_code
 
-@app.route('/api/quick_check', methods=['POST', 'OPTIONS'])
+@app.route('/api/quick_check', methods=['POST'])
 def quick_check():
     """Fast face detection endpoint using the lightweight QuickChecker service."""
-    if request.method == 'OPTIONS':
-        return jsonify(success=True), 200
-    
     try:
         body = request.get_json()
         if not body or 'image' not in body:
@@ -122,15 +120,12 @@ def quick_check():
         logging.error(f"Error in /api/quick_check: {e}", exc_info=True)
         return jsonify({"success": False, "error": f"Internal server error: {str(e)}"}), 500
 
-@app.route('/api/validate_photo', methods=['POST', 'OPTIONS'])
+@app.route('/api/validate_photo', methods=['POST'])
 def validate_photo():
     """
     Full ICAO compliance validation.
     This will trigger the lazy-loading of the heavyweight model on the first call.
     """
-    if request.method == 'OPTIONS':
-        return jsonify({}), 200
-    
     try:
         body = request.get_json()
         if not body or 'image' not in body:
