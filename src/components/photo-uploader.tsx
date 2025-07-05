@@ -406,7 +406,7 @@ export default function PhotoUploader({
                     ) : (
                       <>
                         <Upload className="w-4 h-4 mr-2" />
-                        Run ICAO Validation
+                        Run EU Validation
                       </>
                     )}
                   </Button>

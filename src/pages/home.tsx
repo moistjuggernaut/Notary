@@ -5,7 +5,7 @@ import type { ValidationResult } from "@/types/validation";
 import { validatePhoto, quickCheckPhoto } from "@/api/client";
 import type { ValidationResponse, QuickCheckResponse } from "@/types/api";
 import { Link } from "wouter";
-import { ExternalLink, FileText, HelpCircle } from "lucide-react";
+import { FileText, HelpCircle } from "lucide-react";
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -58,13 +58,13 @@ export default function Home() {
     
     if (hasFailures) {
       status = 'error';
-      summary = 'Photo does not meet ICAO requirements. Please review the issues below and submit a corrected photo.';
+      summary = 'Photo does not meet EU biometric requirements. Please review the issues below and submit a corrected photo.';
     } else if (hasWarnings) {
       status = 'warning';
       summary = 'Photo mostly meets requirements but has minor issues. Review recommendations for best results.';
     } else {
       status = 'success';
-      summary = 'Photo meets all ICAO requirements and is ready for passport application submission.';
+      summary = 'Photo meets all EU biometric requirements and is ready for passport application submission.';
     }
 
     // Convert logs to checks format with categories
@@ -146,21 +146,18 @@ export default function Home() {
         {/* Page Header */}
         <div className="text-center mb-12 sm:mb-16">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
-            ICAO Baby Passport Photo Validator
+            EU Photo ID Validator
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
-            Ensure your baby's passport photo meets International Civil Aviation Organization (ICAO) standards.
+            Ensure your baby's passport photo meets European Union biometric standards. 
+            Valid for all EU member states under Regulations 2252/2004 & 444/2009.
           </p>
 
           {/* Quick Navigation */}
           <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <Link href="/countries" className="flex items-center text-blue-600 hover:text-blue-700 transition-colors">
-              <ExternalLink className="w-4 h-4 mr-1" />
-              Supported Countries
-            </Link>
             <Link href="/requirements" className="flex items-center text-blue-600 hover:text-blue-700 transition-colors">
               <FileText className="w-4 h-4 mr-1" />
-              ICAO Requirements
+              EU Requirements
             </Link>
             <Link href="/how-it-works" className="flex items-center text-blue-600 hover:text-blue-700 transition-colors">
               <HelpCircle className="w-4 h-4 mr-1" />
@@ -224,7 +221,7 @@ export default function Home() {
               <span className="text-xl font-semibold text-gray-900">Photo ID Validator</span>
             </div>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Professional ICAO compliance validation for baby passport photographs with specialized infant requirements.
+              Professional EU biometric compliance validation for baby passport photographs valid across all EU member states.
             </p>
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-sm text-gray-500 mb-6">
               <a href="#" className="hover:text-blue-600 transition-colors">Privacy Policy</a>
@@ -233,8 +230,8 @@ export default function Home() {
             </div>
             <div className="pt-6 border-t border-gray-200">
               <p className="text-xs text-gray-500 max-w-3xl mx-auto">
-                This tool provides guidance based on ICAO Document 9303. 
-                Final photo acceptance is determined by issuing authorities. 
+                This tool provides guidance based on EU Regulations 2252/2004 & 444/2009 and ICAO Document 9303. 
+                Final photo acceptance is determined by national passport issuing authorities. 
                 Results are for informational purposes only.
               </p>
             </div>

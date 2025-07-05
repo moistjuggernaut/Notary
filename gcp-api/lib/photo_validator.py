@@ -167,6 +167,37 @@ class PhotoValidator:
         else:
             return "WARNING", f"Low contrast: {contrast:.1f} (face: {face_mean:.1f}, bg: {bg_mean:.1f})"
 
+    def _validate_eye_level_positioning(self, landmarks, img_h):
+        """
+        Validate that eye level is positioned correctly from the bottom edge of the photo.
+        For baby photos, eyes should be 18-29mm from the bottom edge.
+        
+        Args:
+            landmarks (numpy.ndarray): Facial landmarks
+            img_h (int): Image height in pixels
+            
+        Returns:
+            tuple: (status, description_message)
+        """
+        # Get average eye level from landmarks
+        eye_indices = np.concatenate([
+            self.config.LEFT_EYE_LANDMARKS,
+            self.config.RIGHT_EYE_LANDMARKS
+        ])
+        avg_eye_y = np.mean(landmarks[eye_indices, 1])
+        
+        # Calculate distance from bottom edge (in pixels)
+        distance_from_bottom_px = img_h - avg_eye_y
+        
+        # Check if within acceptable range
+        if self.config.EYE_LEVEL_MIN_FROM_BOTTOM_PX <= distance_from_bottom_px <= self.config.EYE_LEVEL_MAX_FROM_BOTTOM_PX:
+            # Convert back to mm for display
+            distance_mm = (distance_from_bottom_px / self.config.TARGET_DPI) * 25.4
+            return "PASS", f"Eye level: {distance_mm:.1f}mm from bottom (Target: {self.config.EYE_LEVEL_MIN_FROM_BOTTOM_MM}-{self.config.EYE_LEVEL_MAX_FROM_BOTTOM_MM}mm)"
+        else:
+            distance_mm = (distance_from_bottom_px / self.config.TARGET_DPI) * 25.4
+            return "FAIL", f"Eye level: {distance_mm:.1f}mm from bottom (Target: {self.config.EYE_LEVEL_MIN_FROM_BOTTOM_MM}-{self.config.EYE_LEVEL_MAX_FROM_BOTTOM_MM}mm)"
+
     def validate_photo(self, preprocessed_image_bgr, face_data, rembg_mask=None):
         """
         Run all validation checks on the preprocessed photo.
@@ -276,5 +307,9 @@ class PhotoValidator:
         # 8. Contrast Validation
         contrast_status, contrast_msg = self._validate_contrast(preprocessed_image_bgr, bbox, rembg_mask)
         results.append((contrast_status, "Face-Background Contrast", contrast_msg))
+        
+        # 9. Eye Level Positioning Validation
+        eye_level_status, eye_level_msg = self._validate_eye_level_positioning(landmarks, img_h)
+        results.append((eye_level_status, "Eye Level Positioning", eye_level_msg))
         
         return results 

@@ -1,5 +1,5 @@
 import Header from "@/components/header";
-import ICAORequirements from "@/components/icao-requirements";
+import EURequirements from "@/components/eu-requirements";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
@@ -23,16 +23,17 @@ export default function Requirements() {
         {/* Page Header */}
         <div className="text-center mb-12 sm:mb-16">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
-            ICAO Photo Requirements
+            EU Photo Requirements
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-            Complete guide to International Civil Aviation Organization (ICAO) standards 
-            for baby passport photographs, including special allowances for infants.
+            Complete guide to European Union requirements for baby passport photographs, 
+            based on EU Regulations 2252/2004 & 444/2009 and ICAO Doc 9303 biometric standards 
+            that all EU member states follow.
           </p>
         </div>
 
         {/* Requirements Component */}
-        <ICAORequirements />
+        <EURequirements />
 
         {/* Ready to Validate */}
         <div className="mt-12 bg-green-50 border border-green-200 rounded-lg p-6 text-center">
@@ -40,8 +41,8 @@ export default function Requirements() {
             Ready to Validate Your Photo?
           </h3>
           <p className="text-green-800 mb-4">
-            Now that you understand the requirements, upload your baby's photo 
-            to check compliance with ICAO standards.
+            Now that you understand the EU requirements, upload your baby's photo 
+            to check compliance with European biometric passport standards.
           </p>
           <Link 
             href="/" 

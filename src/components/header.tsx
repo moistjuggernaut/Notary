@@ -14,8 +14,8 @@ export default function Header() {
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Photo ID Validator</h1>
-              <p className="text-sm text-gray-600">Baby Passport Photo Verification</p>
+              <h1 className="text-xl font-semibold text-gray-900">EU Photo ID Validator</h1>
+              <p className="text-sm text-gray-600">EU Baby Passport Photo Verification</p>
             </div>
           </Link>
           
@@ -40,16 +40,7 @@ export default function Header() {
             >
               How It Works
             </Link>
-            <Link 
-              href="/countries" 
-              className={`font-medium transition-colors duration-200 ${
-                location === '/countries' 
-                  ? 'text-blue-600' 
-                  : 'text-gray-600 hover:text-blue-600'
-              }`}
-            >
-              Countries
-            </Link>
+
           </nav>
         </div>
       </div>
