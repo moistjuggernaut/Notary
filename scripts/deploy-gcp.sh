@@ -59,7 +59,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --timeout 300s \
     --concurrency 80 \
     --max-instances 10 \
-    --set-env-vars "CORS_ORIGINS=https://*.vercel.app"
+    --set-env-vars "CORS_ORIGINS=https://passport-validator.vercel.app"
 
 # --- Final Output ---
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --platform managed --region="$REGION" --format="value(status.url)")
