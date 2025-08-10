@@ -82,11 +82,5 @@ export async function validatePhoto(file: File): Promise<ValidationResponse> {
     }
 }
 
-export async function preprocessPhoto(file: File): Promise<Blob> {
-    // This would be implemented similar to validatePhoto
-    // For now, just return the original file as a blob
-    return new Blob([file], { type: file.type });
-}
-
 // Existing document functions...
 // ... rest of your existing API functions
