@@ -20,3 +20,5 @@ venv/
 
 # The model zip is handled by a specific COPY command, but should not be part of the general COPY . .
 # We are intentionally NOT ignoring the models directory itself. 
+# Exclude unused model(s) from build context to speed up builds
+models/buffalo_m.zip 

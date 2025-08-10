@@ -269,9 +269,11 @@ class ImagePreprocessor:
                 # Correction logic from LearnOpenCV
                 mean_channel = cv2.divide(bg, 2)
                 
-                # Apply the fix
-                for i in range(3): # B, G, R channels
-                    eye_roi[:,:,i] = cv2.bitwise_and(eye_roi[:,:,i], 255-mask) + cv2.bitwise_and(mean_channel, mask)
+                # Apply the fix with proper dtype handling
+                mean_channel_u8 = mean_channel.astype(eye_roi.dtype)
+                inv_mask = (255 - mask).astype(eye_roi.dtype)
+                for i in range(3):  # B, G, R channels
+                    eye_roi[:,:,i] = cv2.bitwise_and(eye_roi[:,:,i], inv_mask) + cv2.bitwise_and(mean_channel_u8, mask)
                 
                 logs.append(("INFO", "Red-Eye Correction", f"Applied correction to {eye_name} eye."))
 

@@ -6,6 +6,7 @@ Wraps the checker modules.
 import os
 import json
 import base64
+import re
 import cv2
 import numpy as np
 import logging
@@ -39,14 +40,21 @@ except Exception as e:
 # --- End Global Initialization ---
 
 app = Flask(__name__)
+# Limit request size to ~10MB
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 
 # Configure CORS for Vercel frontend
-CORS(app, origins=[
+allowed_origins = [
     "https://passport-validator.vercel.app",
-    "https://*.vercel.app",  # Keep for Vercel preview builds
-    "http://localhost:3000",  # Local development
-    os.environ.get('CORS_ORIGINS') # Get origin from env var
-])
+    "http://localhost:3000",
+    "http://localhost:5173",
+]
+# Allow env override (comma-separated list)
+extra_origins = os.environ.get('CORS_ORIGINS')
+if extra_origins:
+    allowed_origins.extend([o.strip() for o in extra_origins.split(',') if o.strip()])
+# Enable wildcard subdomains for Vercel via regex (anchor for safety)
+CORS(app, origins=allowed_origins + [r"^https://.*\.vercel\.app$"])
 
 @app.before_request
 def check_services_initialized():
@@ -55,9 +63,9 @@ def check_services_initialized():
         # Check the specific endpoint to allow health checks to pass
         # if only one of the two services failed.
         if request.endpoint == 'quick_check' and quick_checker is None:
-            return jsonify({"error": "QuickCheck service is unavailable."}), 503
+            return jsonify({"error": "QuickCheck service is unavailable.", "message": "QuickCheck service is unavailable."}), 503
         if request.endpoint == 'validate_photo' and compliance_checker is None:
-             return jsonify({"error": "Validation service is unavailable."}), 503
+             return jsonify({"error": "Validation service is unavailable.", "message": "Validation service is unavailable."}), 503
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -88,14 +96,17 @@ def quick_check():
     try:
         body = request.get_json()
         if not body or 'image' not in body:
-            return jsonify({"error": "Missing 'image' field in request body"}), 400
+            return jsonify({"error": "Missing 'image' field in request body", "message": "Missing 'image' field in request body"}), 400
         
-        image_data = base64.b64decode(body['image'])
+        try:
+            image_data = base64.b64decode(body['image'])
+        except Exception as e:
+            return jsonify({"error": f"Invalid base64 image data: {str(e)}", "message": f"Invalid base64 image data: {str(e)}"}), 400
         nparr = np.frombuffer(image_data, np.uint8)
         image_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         if image_bgr is None:
-            return jsonify({"error": "Could not decode image data"}), 400
+            return jsonify({"error": "Could not decode image data", "message": "Could not decode image data"}), 400
         
         # Use the dedicated quick_checker service
         face_count = quick_checker.count_faces(image_bgr)
@@ -118,7 +129,7 @@ def quick_check():
         
     except Exception as e:
         logging.error(f"Error in /api/quick_check: {e}", exc_info=True)
-        return jsonify({"success": False, "error": f"Internal server error: {str(e)}"}), 500
+        return jsonify({"success": False, "error": f"Internal server error: {str(e)}", "message": f"Internal server error: {str(e)}"}), 500
 
 @app.route('/api/validate_photo', methods=['POST'])
 def validate_photo():
@@ -129,14 +140,17 @@ def validate_photo():
     try:
         body = request.get_json()
         if not body or 'image' not in body:
-            return jsonify({"error": "Missing 'image' field in request body"}), 400
+            return jsonify({"error": "Missing 'image' field in request body", "message": "Missing 'image' field in request body"}), 400
         
-        image_data = base64.b64decode(body['image'])
+        try:
+            image_data = base64.b64decode(body['image'])
+        except Exception as e:
+            return jsonify({"error": f"Invalid base64 image data: {str(e)}", "message": f"Invalid base64 image data: {str(e)}"}), 400
         nparr = np.frombuffer(image_data, np.uint8)
         original_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         if original_bgr is None:
-            return jsonify({"error": "Could not decode image data"}), 400
+            return jsonify({"error": "Could not decode image data", "message": "Could not decode image data"}), 400
         
         # Use the globally loaded checker instance. This call will now handle
         # the lazy-loading of the full analyzer if it hasn't happened yet.
@@ -146,16 +160,16 @@ def validate_photo():
         
     except Exception as e:
         logging.error(f"Error in /api/validate_photo: {e}", exc_info=True)
-        return jsonify({"success": False, "error": f"Internal server error: {str(e)}"}), 500
+        return jsonify({"success": False, "error": f"Internal server error: {str(e)}", "message": f"Internal server error: {str(e)}"}), 500
 
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({"error": "Endpoint not found"}), 404
+    return jsonify({"error": "Endpoint not found", "message": "Endpoint not found"}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     logging.error(f"Caught unhandled exception: {error}", exc_info=True)
-    return jsonify({"error": "An unexpected internal server error occurred"}), 500
+    return jsonify({"error": "An unexpected internal server error occurred", "message": "An unexpected internal server error occurred"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
