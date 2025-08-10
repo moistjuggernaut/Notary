@@ -128,13 +128,6 @@ export default function Home() {
     }
   };
 
-  const handleValidateAnother = () => {
-    setSelectedFile(null);
-    setValidationResult(null);
-    setQuickCheckResult(null);
-    setQuickCheckError(null);
-  };
-
   // Determine if the full validation button should be enabled
   const isValidationAllowed = quickCheckResult?.success === true && !isQuickChecking && !isValidating;
 
@@ -177,7 +170,6 @@ export default function Home() {
             isValidationAllowed={isValidationAllowed}
             quickCheckError={quickCheckError}
             validationResult={validationResult}
-            onValidateAnother={handleValidateAnother}
           />
         </div>
 

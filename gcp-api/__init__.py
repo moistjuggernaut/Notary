@@ -10,6 +10,6 @@ __author__ = "Baby Picture Validator Team"
 
 # Make main modules available at package level
 from .compliance_checker import ComplianceChecker
-from .quick_check import handler as quick_check_handler
+from .compliance_checker import handler as quick_check_handler
 
 __all__ = ['ComplianceChecker', 'quick_check_handler'] 

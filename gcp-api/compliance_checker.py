@@ -44,14 +44,14 @@ class ComplianceChecker:
         Lazy-loads the heavyweight FaceAnalyzer on first use.
         This method is thread-safe.
         """
-        if self._full_analyzer is None:
-            with self._full_analyzer_lock:
-                if self._full_analyzer is None:
+        if ComplianceChecker._full_analyzer is None:
+            with ComplianceChecker._full_analyzer_lock:
+                if ComplianceChecker._full_analyzer is None:
                     log.info("First use: lazy-loading heavyweight models...")
                     
                     # Lazy-load FaceAnalyzer
                     from lib.face_analyzer import FaceAnalyzer
-                    self._full_analyzer = FaceAnalyzer(
+                    ComplianceChecker._full_analyzer = FaceAnalyzer(
                         model_name=self._model_name,
                         providers=self._providers
                     )
@@ -59,18 +59,19 @@ class ComplianceChecker:
                     # Lazy-load rembg
                     try:
                         from rembg import remove as rembg_remove
-                        self._rembg_remove_func = rembg_remove
+                        ComplianceChecker._rembg_remove_func = rembg_remove
                         log.info("rembg library loaded successfully.")
                     except ImportError:
                         log.warning("rembg library not found. Background removal will be skipped.")
 
-                    # Inject dependencies into the preprocessor
-                    self.preprocessor = ImagePreprocessor(
-                        self._full_analyzer, 
-                        rembg_func=self._rembg_remove_func
-                    )
-                    log.info("Heavyweight models loaded and ready.")
-        return self._full_analyzer
+        # Inject dependencies into the preprocessor (idempotent)
+        if self.preprocessor is None:
+            self.preprocessor = ImagePreprocessor(
+                ComplianceChecker._full_analyzer,
+                rembg_func=ComplianceChecker._rembg_remove_func
+            )
+            log.debug("ImagePreprocessor initialized with shared analyzer.")
+        return ComplianceChecker._full_analyzer
 
     def _get_final_recommendation(self, validation_results_log):
         """Determines the final recommendation based on all validation checks."""
@@ -134,13 +135,13 @@ class ComplianceChecker:
                 "recommendation": recommendation,
                 "logs": all_logs
             }
-            log.info(f"Final result: {all_logs}")
+            log.debug(f"Final logs: {all_logs}")
         
-            #if result["success"]:
+            # Return processed image preview
             _, buffer = cv2.imencode('.jpg', processed_bgr)
             processed_base64 = base64.b64encode(buffer).decode('utf-8')
             result["processed_image"] = processed_base64
-            log.info(f"Image length: {len(processed_base64)}")
+            log.debug(f"Processed image base64 length: {len(processed_base64)}")
         
             return result
 

@@ -1,8 +1,9 @@
 import { useRef } from "react";
-import { Upload, X, CloudUpload, FileImage, AlertTriangle, Camera, CheckCircle, XCircle, Download, RotateCcw } from "lucide-react";
+import { Upload, X, CloudUpload, FileImage, AlertTriangle, Camera, CheckCircle, XCircle, Download, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatFileSize, validateImageFile } from "@/lib/file-utils";
 import type { ValidationResult } from "@/types/validation";
+import { toast } from "@/hooks/use-toast";
 
 interface PhotoUploaderProps {
   selectedFile: File | null;
@@ -13,7 +14,6 @@ interface PhotoUploaderProps {
   isValidationAllowed: boolean;
   quickCheckError: string | null;
   validationResult?: ValidationResult | null;
-  onValidateAnother: () => void;
 }
 
 const getErrorMessage = (error: string): { title: string; description: string; suggestions: string[] } => {
@@ -149,7 +149,6 @@ export default function PhotoUploader({
   isValidationAllowed,
   quickCheckError,
   validationResult,
-  onValidateAnother
 }: PhotoUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -207,6 +206,33 @@ export default function PhotoUploader({
     face_position: 'Face Position',
     framing: 'Framing',
     technical: 'Technical'
+  };
+
+  const handleDownload = () => {
+    if (!validationResult?.processedImage) return;
+    try {
+      const byteCharacters = atob(validationResult.processedImage);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/jpeg' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'processed_passport_photo.jpg';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast({ title: 'Download failed', description: 'Could not download the processed image.' });
+    }
+  };
+
+  const handleBuy = () => {
+    toast({ title: 'Purchase', description: 'Purchase flow coming soon.' });
   };
 
   return (
@@ -289,18 +315,19 @@ export default function PhotoUploader({
             <div className="flex flex-col sm:flex-row gap-3 pb-6 border-b border-gray-200">
               <Button 
                 className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white h-11"
-                disabled
+                onClick={handleDownload}
+                disabled={!validationResult?.processedImage}
               >
                 <Download className="w-4 h-4 mr-2" />
-                Download Report
+                Download
               </Button>
               <Button 
                 variant="outline" 
-                onClick={onValidateAnother}
+                onClick={handleBuy}
                 className="flex-1 sm:flex-none h-11"
               >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Validate Another Photo
+                <CreditCard className="w-4 h-4 mr-2" />
+                Buy
               </Button>
             </div>
           </div>
