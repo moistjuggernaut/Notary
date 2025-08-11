@@ -84,7 +84,7 @@ class ComplianceChecker:
             return f"NEEDS REVIEW: {warnings} warning(s) found."
         return "LOOKS PROMISING: All primary checks passed."
 
-    def check_image_array(self, image_bgr):
+    def check_image_array(self, image_bgr) -> tuple[dict, np.ndarray]:
         """
         Runs the full, heavyweight compliance check on an image array.
         This will trigger the lazy-loading of the InsightFace model on first run.
@@ -137,13 +137,7 @@ class ComplianceChecker:
             }
             log.debug(f"Final logs: {all_logs}")
         
-            # Return processed image preview
-            _, buffer = cv2.imencode('.jpg', processed_bgr)
-            processed_base64 = base64.b64encode(buffer).decode('utf-8')
-            result["processed_image"] = processed_base64
-            log.debug(f"Processed image base64 length: {len(processed_base64)}")
-        
-            return result
+            return result, processed_bgr
 
         except Exception as e:
             log.critical(f"A critical error occurred during full validation: {e}", exc_info=True)

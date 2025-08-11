@@ -6,4 +6,5 @@ opencv-python-headless
 onnxruntime
 insightface==0.7.3
 rembg
-pydantic~=2.8 
+pydantic~=2.8
+google-cloud-storage==3.3.0

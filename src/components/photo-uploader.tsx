@@ -208,26 +208,37 @@ export default function PhotoUploader({
     technical: 'Technical'
   };
 
-  const handleDownload = () => {
-    if (!validationResult?.processedImage) return;
+  const handleDownload = async () => {
+    if (!validationResult?.validatedImageUrl) return;
+  
     try {
-      const byteCharacters = atob(validationResult.processedImage);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      // Fetch the image data from the cross-origin URL
+      const response = await fetch(validationResult.validatedImageUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'image/jpeg' });
-      const url = URL.createObjectURL(blob);
+      const blob = await response.blob();
+  
+      // Create a local URL for the blob
+      const blobUrl = window.URL.createObjectURL(blob);
+  
+      // Create a temporary anchor element to trigger the download
       const a = document.createElement('a');
-      a.href = url;
-      a.download = 'processed_passport_photo.jpg';
+      a.href = blobUrl;
+      a.download = 'validated_passport_photo.jpg';
+      a.style.display = 'none';
+  
+      // Append to DOM, click, and remove
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      toast({ title: 'Download failed', description: 'Could not download the processed image.' });
+      document.body.removeChild(a);
+  
+      // Revoke the temporary URL after the download is initiated
+      window.URL.revokeObjectURL(blobUrl);
+  
+    } catch (error) {
+      console.error("Download failed:", error);
+      // You might want to show an error message to the user here
     }
   };
 
@@ -294,16 +305,16 @@ export default function PhotoUploader({
             </div>
 
             {/* Processed Image */}
-            {validationResult.processedImage && (
+            {validationResult.validatedImageUrl && (
               <div className="mb-6">
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-gray-900 mb-3">
-                    Processed Image
+                    Validated Image
                   </h4>
                   <div className="flex justify-center">
                     <img 
-                      src={`data:image/jpeg;base64,${validationResult.processedImage}`}
-                      alt="Processed passport photo"
+                      src={validationResult.validatedImageUrl}
+                      alt="Validated passport photo"
                       className="max-w-full max-h-64 rounded-lg shadow-sm border border-gray-200"
                     />
                   </div>
@@ -316,7 +327,7 @@ export default function PhotoUploader({
               <Button 
                 className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white h-11"
                 onClick={handleDownload}
-                disabled={!validationResult?.processedImage}
+                disabled={!validationResult?.validatedImageUrl}
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download
