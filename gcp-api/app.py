@@ -10,12 +10,14 @@ import re
 import cv2
 import numpy as np
 import logging
+import uuid
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 from compliance_checker import ComplianceChecker
 from lib.quick_checker import QuickChecker
 from lib.config import Config
+from lib.order_storage import OrderStorage
 
 # --- Global Initialization ---
 # Initialize services. Both are lightweight at startup.
@@ -154,7 +156,18 @@ def validate_photo():
         
         # Use the globally loaded checker instance. This call will now handle
         # the lazy-loading of the full analyzer if it hasn't happened yet.
-        result = compliance_checker.check_image_array(original_bgr)
+        result, processed_bgr = compliance_checker.check_image_array(original_bgr)
+        
+        # Handle storage if validation was successful
+        if result.get("success", False):
+            order_id = str(uuid.uuid4())
+            try:
+                storage_info = OrderStorage.store_validated_order(
+                    order_id, original_bgr, processed_bgr
+                )
+                result.update(storage_info)
+            except Exception as e:
+                return jsonify({"success": False, "error": "Failed to store images", "message": "Failed to store images"}), 500 
         
         return jsonify(result), 200
         

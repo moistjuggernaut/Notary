@@ -33,8 +33,9 @@ export interface ValidationResponse {
         preprocessing: ValidationLogEntry[];
         validation: ValidationLogEntry[];
     };
-    processed_image?: string; // Base64 encoded processed image (if successful)
-    error?: string;
+    order_id?: string; // UUID of the stored order
+    validated_image_url?: string; // Signed URL to access the validated image
+    error?: string; // Error message if validation failed or storage failed
 }
 
 export const API_ENDPOINTS = {

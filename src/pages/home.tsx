@@ -96,7 +96,8 @@ export default function Home() {
       summary,
       checks,
       recommendations: [apiResponse.recommendation].filter(Boolean),
-      processedImage: apiResponse.processed_image
+      orderId: apiResponse.order_id,
+      validatedImageUrl: apiResponse.validated_image_url
     };
   };
 

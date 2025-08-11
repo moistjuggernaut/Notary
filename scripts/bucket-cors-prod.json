@@ -1,0 +1,8 @@
+[
+    {
+      "origin": ["https://www.passportphotovalidator.com", "https://passport-validator.vercel.app"],
+      "method": ["GET"],
+      "responseHeader": ["Content-Type"],
+      "maxAgeSeconds": 3600
+    }
+]
