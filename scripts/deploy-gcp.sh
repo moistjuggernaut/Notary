@@ -13,6 +13,10 @@ ARTIFACT_REGISTRY_REPO="${SERVICE_NAME}-repo"
 IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${SERVICE_NAME}"
 GCP_API_DIR="gcp-api"
 
+# Allow configurable CORS origins via environment variable; fallback to production Vercel domain
+DEFAULT_CORS_ORIGINS="https://www.passportphotovalidator.com"
+CORS_ORIGINS_VALUE="${CORS_ORIGINS:-$DEFAULT_CORS_ORIGINS}"
+
 echo "🚀 Starting GCP deployment for service: ${SERVICE_NAME} in ${REGION}"
 
 # --- Pre-flight Checks ---
@@ -59,7 +63,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --timeout 300s \
     --concurrency 80 \
     --max-instances 10 \
-    --set-env-vars "CORS_ORIGINS=https://passport-validator.vercel.app"
+    --set-env-vars "CORS_ORIGINS=${CORS_ORIGINS_VALUE}"
 
 # --- Final Output ---
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --platform managed --region="$REGION" --format="value(status.url)")

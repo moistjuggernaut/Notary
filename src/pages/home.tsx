@@ -6,50 +6,21 @@ import { validatePhoto, quickCheckPhoto } from "@/api/client";
 import type { ValidationResponse, QuickCheckResponse } from "@/types/api";
 import { Link } from "wouter";
 import { FileText, HelpCircle } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [isValidating, setIsValidating] = useState(false);
 
   // Quick check state
-  const [isQuickChecking, setIsQuickChecking] = useState(false);
   const [quickCheckResult, setQuickCheckResult] = useState<QuickCheckResponse | null>(null);
   const [quickCheckError, setQuickCheckError] = useState<string | null>(null);
-
-  const handleFileSelect = async (file: File) => {
-    setSelectedFile(file);
-    setValidationResult(null);
-    setQuickCheckResult(null);
-    setQuickCheckError(null);
-    setIsQuickChecking(true);
-    
-    try {
-      const result = await quickCheckPhoto(file);
-      setQuickCheckResult(result);
-      if (!result.success) {
-        setQuickCheckError(result.message);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred during quick check.';
-      setQuickCheckError(errorMessage);
-    } finally {
-      setIsQuickChecking(false);
-    }
-  };
-
-  const handleRemoveFile = () => {
-    setSelectedFile(null);
-    setValidationResult(null);
-    setQuickCheckResult(null);
-    setQuickCheckError(null);
-  };
 
   // Convert API response to frontend ValidationResult format
   const convertApiResponseToValidationResult = (apiResponse: ValidationResponse): ValidationResult => {
     const allLogs = [...apiResponse.logs.preprocessing, ...apiResponse.logs.validation];
     
-    // Determine overall status
     const hasFailures = allLogs.some(log => log.status === 'FAIL');
     const hasWarnings = allLogs.some(log => log.status === 'WARNING');
     
@@ -67,7 +38,6 @@ export default function Home() {
       summary = 'Photo meets all EU biometric requirements and is ready for passport application submission.';
     }
 
-    // Convert logs to checks format with categories
     const categorizeCheck = (step: string): 'photo_quality' | 'face_position' | 'framing' | 'technical' => {
       const stepLower = step.toLowerCase();
       if (stepLower.includes('quality') || stepLower.includes('lighting') || stepLower.includes('exposure')) {
@@ -100,36 +70,71 @@ export default function Home() {
     };
   };
 
-  const handleValidatePhoto = async () => {
-    if (!selectedFile || !quickCheckResult?.success) return;
-    
-    setIsValidating(true);
-    
-    try {
-      const apiResponse = await validatePhoto(selectedFile);
+  // React Query mutations
+  const quickCheckMutation = useMutation({
+    mutationFn: quickCheckPhoto,
+    onSuccess: (result) => {
+      setQuickCheckResult(result);
+      if (!result.success) {
+        setQuickCheckError(result.message);
+        toast({ title: 'Quick check failed', description: result.message });
+      } else {
+        setQuickCheckError(null);
+      }
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'An error occurred during quick check.';
+      setQuickCheckError(message);
+      toast({ title: 'Quick check error', description: message });
+    }
+  });
+
+  const validationMutation = useMutation({
+    mutationFn: validatePhoto,
+    onSuccess: (apiResponse) => {
       const validationResultData = convertApiResponseToValidationResult(apiResponse);
       setValidationResult(validationResultData);
-    } catch (error) {
-      console.error('Validation failed:', error);
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
       const errorResult: ValidationResult = {
         status: 'error',
         summary: 'Validation failed due to a technical error. Please try again or contact support if the problem persists.',
         checks: [{
           name: 'API Error',
-          description: error instanceof Error ? error.message : 'Unknown error occurred',
+          description: message,
           status: 'fail',
           category: 'technical'
         }],
         recommendations: ['Please try again or contact support if the problem persists.']
       };
       setValidationResult(errorResult);
-    } finally {
-      setIsValidating(false);
+      toast({ title: 'Validation error', description: message });
     }
+  });
+
+  const handleFileSelect = async (file: File) => {
+    setSelectedFile(file);
+    setValidationResult(null);
+    setQuickCheckResult(null);
+    setQuickCheckError(null);
+    quickCheckMutation.mutate(file);
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setValidationResult(null);
+    setQuickCheckResult(null);
+    setQuickCheckError(null);
+  };
+
+  const handleValidatePhoto = async () => {
+    if (!selectedFile || !quickCheckResult?.success) return;
+    validationMutation.mutate(selectedFile);
   };
 
   // Determine if the full validation button should be enabled
-  const isValidationAllowed = quickCheckResult?.success === true && !isQuickChecking && !isValidating;
+  const isValidationAllowed = quickCheckResult?.success === true && !quickCheckMutation.isPending && !validationMutation.isPending;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -166,7 +171,7 @@ export default function Home() {
             onFileSelect={handleFileSelect}
             onRemoveFile={handleRemoveFile}
             onValidatePhoto={handleValidatePhoto}
-            isValidating={isValidating || isQuickChecking}
+            isValidating={validationMutation.isPending || quickCheckMutation.isPending}
             isValidationAllowed={isValidationAllowed}
             quickCheckError={quickCheckError}
             validationResult={validationResult}
