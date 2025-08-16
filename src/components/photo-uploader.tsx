@@ -242,10 +242,6 @@ export default function PhotoUploader({
     }
   };
 
-  const handleBuy = () => {
-    toast({ title: 'Purchase', description: 'Purchase flow coming soon.' });
-  };
-
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
@@ -332,14 +328,16 @@ export default function PhotoUploader({
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleBuy}
-                className="flex-1 sm:flex-none h-11"
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                Buy
-              </Button>
+              <form action="/api/stripe/create_checkout_session" method="POST" className="flex-1 sm:flex-none">
+                <Button 
+                  variant="outline" 
+                  type="submit"
+                  className="w-full h-11"
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Checkout
+                </Button>
+              </form>
             </div>
           </div>
         )}
