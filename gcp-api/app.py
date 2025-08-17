@@ -194,7 +194,6 @@ def create_checkout_session():
             "message": "Missing STRIPE_SECRET_KEY, STRIPE_PRICE_ID or APP_PUBLIC_BASE_URL"
         }), 503
     try:
-        data = request.get_json(silent=True) or {}
 
         session = stripe.checkout.Session.create(
             line_items=[{
