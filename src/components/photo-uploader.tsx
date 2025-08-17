@@ -3,7 +3,6 @@ import { Upload, X, CloudUpload, FileImage, AlertTriangle, Camera, CheckCircle, 
 import { Button } from "@/components/ui/button";
 import { formatFileSize, validateImageFile } from "@/lib/file-utils";
 import type { ValidationResult } from "@/types/validation";
-import { toast } from "@/hooks/use-toast";
 
 interface PhotoUploaderProps {
   selectedFile: File | null;
