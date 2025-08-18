@@ -42,31 +42,99 @@ echo "🔧 Enabling required GCP services..."
 gcloud services enable cloudbuild.googleapis.com run.googleapis.com artifactregistry.googleapis.com storage.googleapis.com storage-component.googleapis.com
 
 echo "🖼️  Creating Artifact Registry repository (if it doesn't exist)..."
-gcloud artifacts repositories create "${ARTIFACT_REGISTRY_REPO}" \
-    --repository-format=docker \
-    --location="${REGION}" \
-    --description="Docker repository for ${SERVICE_NAME}" >/dev/null 2>&1 || echo "✅ Repository '${ARTIFACT_REGISTRY_REPO}' already exists in '${REGION}'."
+if gcloud artifacts repositories describe "${ARTIFACT_REGISTRY_REPO}" --location="${REGION}" >/dev/null 2>&1; then
+    echo "✅ Repository '${ARTIFACT_REGISTRY_REPO}' already exists"
+else
+    echo "🖼️  Creating Artifact Registry repository..."
+    gcloud artifacts repositories create "${ARTIFACT_REGISTRY_REPO}" \
+        --repository-format=docker \
+        --location="${REGION}" \
+        --description="Docker repository for ${SERVICE_NAME}"
+    echo "✅ Repository '${ARTIFACT_REGISTRY_REPO}' created successfully"
+fi
 
 # --- Google Cloud Storage Setup ---
 echo "🗄️  Setting up Google Cloud Storage..."
 
-# Create storage bucket
-echo "📦 Creating storage bucket: ${STORAGE_BUCKET_NAME}"
-gcloud storage buckets create "gs://${STORAGE_BUCKET_NAME}" \
-    --location="${STORAGE_LOCATION}" \
-    --uniform-bucket-level-access \
-    --public-access-prevention \
-    --project="${PROJECT_ID}" >/dev/null 2>&1 || echo "✅ Bucket '${STORAGE_BUCKET_NAME}' already exists."
+# Create storage bucket (if it doesn't exist)
+echo "📦 Creating storage bucket (if it doesn't exist): ${STORAGE_BUCKET_NAME}"
+if gcloud storage buckets describe "gs://${STORAGE_BUCKET_NAME}" >/dev/null 2>&1; then
+    echo "✅ Bucket '${STORAGE_BUCKET_NAME}' already exists"
+else
+    echo "🪣 Creating storage bucket..."
+    gcloud storage buckets create "gs://${STORAGE_BUCKET_NAME}" \
+        --location="${STORAGE_LOCATION}" \
+        --uniform-bucket-level-access \
+        --public-access-prevention \
+        --project="${PROJECT_ID}"
+    echo "✅ Bucket '${STORAGE_BUCKET_NAME}' created successfully"
+fi
 
 # Configure CORS for the bucket to allow frontend access
 echo "🌐 Configuring CORS settings for frontend access..."
 gcloud storage buckets update "gs://${STORAGE_BUCKET_NAME}" \
-    --cors-file="scripts/bucket-cors-${STAGE}.json" >/dev/null 2>&1 || echo "⚠️  Could not set CORS policy (continuing anyway)"
+    --cors-file="scripts/bucket-cors-${STAGE}.json"
 
 # --- Build Docker Image ---
 echo "🏗️ Building Docker image with Cloud Build..."
 # We submit the gcp-api directory to Cloud Build
 gcloud builds submit "$GCP_API_DIR" --tag "$IMAGE_NAME"
+
+# --- Configure IAM Permissions ---
+echo "🔐 Configuring IAM permissions for storage access..."
+
+# Create a dedicated service account for this specific service
+SERVICE_ACCOUNT_NAME="validator-cloud-run-sa-${STAGE}"
+SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+
+echo "👤 Creating dedicated service account (if it doesn't exist): ${SERVICE_ACCOUNT_NAME}"
+if gcloud iam service-accounts describe "${SERVICE_ACCOUNT_EMAIL}" >/dev/null 2>&1; then
+    echo "✅ Service account '${SERVICE_ACCOUNT_NAME}' already exists"
+else
+    gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
+        --display-name="Service account for ${SERVICE_NAME}" \
+        --description="Dedicated service account for ${SERVICE_NAME} with minimal storage permissions"
+    echo "✅ Service account '${SERVICE_ACCOUNT_NAME}' created successfully"
+    echo "⏳ Waiting for service account propagation..."
+    sleep 10
+fi
+
+# Grant minimal storage permissions - only for the specific bucket
+echo "🔑 Granting minimal storage permissions for bucket: ${STORAGE_BUCKET_NAME}"
+# roles/storage.objectViewer
+if gcloud storage buckets get-iam-policy "gs://${STORAGE_BUCKET_NAME}" --format=json | grep -q "\"roles/storage.objectViewer\"" && \
+   gcloud storage buckets get-iam-policy "gs://${STORAGE_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
+    echo "✅ Viewer binding already exists for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
+else
+    gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET_NAME}" \
+        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+        --role="roles/storage.objectViewer"
+    echo "✅ Added viewer binding for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
+fi
+
+# roles/storage.objectCreator
+if gcloud storage buckets get-iam-policy "gs://${STORAGE_BUCKET_NAME}" --format=json | grep -q "\"roles/storage.objectCreator\"" && \
+   gcloud storage buckets get-iam-policy "gs://${STORAGE_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
+    echo "✅ Creator binding already exists for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
+else
+    gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET_NAME}" \
+        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+        --role="roles/storage.objectCreator"
+    echo "✅ Added creator binding for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
+fi
+
+# Grant roles/iam.serviceAccountTokenCreator (if not already bound)
+if gcloud projects get-iam-policy "${PROJECT_ID}" \
+    --flatten="bindings[].members" \
+    --filter="bindings.role=roles/iam.serviceAccountTokenCreator AND bindings.members=serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+    --format="value(bindings.role)" | grep -q "roles/iam.serviceAccountTokenCreator"; then
+    echo "✅ Project binding roles/iam.serviceAccountTokenCreator already exists for ${SERVICE_ACCOUNT_EMAIL}"
+else
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+        --role="roles/iam.serviceAccountTokenCreator"
+    echo "✅ Added project binding roles/iam.serviceAccountTokenCreator for ${SERVICE_ACCOUNT_EMAIL}"
+fi
 
 # --- Deploy to Cloud Run ---
 echo "🚀 Deploying to Cloud Run in ${REGION}..."
@@ -82,40 +150,8 @@ gcloud run deploy "$SERVICE_NAME" \
     --timeout 300s \
     --concurrency 80 \
     --max-instances 10 \
+    --service-account="${SERVICE_ACCOUNT_EMAIL}" \
     --set-env-vars "CORS_ORIGINS=https://passport-validator.vercel.app,GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME}"
-
-# --- Configure IAM Permissions ---
-echo "🔐 Configuring IAM permissions for storage access..."
-
-# Create a dedicated service account for this specific service
-SERVICE_ACCOUNT_NAME="${SERVICE_NAME}-sa"
-SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-
-echo "👤 Creating dedicated service account: ${SERVICE_ACCOUNT_NAME}"
-
-# Create the service account (ignore if it already exists)
-gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
-    --display-name="Service account for ${SERVICE_NAME}" \
-    --description="Dedicated service account for ${SERVICE_NAME} with minimal storage permissions" >/dev/null 2>&1 || echo "✅ Service account '${SERVICE_ACCOUNT_NAME}' already exists."
-
-# Grant minimal storage permissions - only for the specific bucket
-echo "🔑 Granting minimal storage permissions for bucket: ${STORAGE_BUCKET_NAME}"
-gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET_NAME}" \
-    --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-    --role="roles/storage.objectViewer" >/dev/null 2>&1 || echo "⚠️  Could not grant storage viewer permissions"
-
-gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET_NAME}" \
-    --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-    --role="roles/storage.objectCreator" >/dev/null 2>&1 || echo "⚠️  Could not grant storage creator permissions"
-
-# Update the Cloud Run service to use the dedicated service account
-echo "🔄 Updating Cloud Run service to use dedicated service account..."
-gcloud run services update "$SERVICE_NAME" \
-    --platform managed \
-    --region "$REGION" \
-    --service-account="${SERVICE_ACCOUNT_EMAIL}" >/dev/null 2>&1 || echo "⚠️  Could not update service account (may already be set)"
-
-echo "📋 Service account: ${SERVICE_ACCOUNT_EMAIL}"
 
 # --- Final Output ---
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --platform managed --region="$REGION" --format="value(status.url)")
