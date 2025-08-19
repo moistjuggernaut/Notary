@@ -7,7 +7,7 @@ import logging
 from typing import Optional, Union
 import cv2
 import numpy as np
-
+import google.auth
 from google.cloud import storage
 
 from lib.storage_config import StorageConfig
@@ -104,9 +104,31 @@ class StorageClient:
             expiration = StorageConfig.SIGNED_URL_EXPIRATION
 
         blob = self.bucket.blob(blob_name)
-        return blob.generate_signed_url(
-            version="v4", expiration=expiration, method="GET"
-        )
+        if StorageConfig.USE_SERVICE_ACCOUNT:
+            return blob.generate_signed_url(
+                version="v4",
+                expiration=expiration,
+                method="GET",
+            )
+        else:
+            try:
+                credentials, _ = google.auth.default()
+                credentials.refresh(google.auth.transport.requests.Request())
+                try:
+                    signed_url = blob.generate_signed_url(
+                        version="v4", 
+                        expiration=expiration,
+                        method="GET",
+                        service_account_email=credentials.service_account_email,
+                        access_token=credentials.token,
+                    )
+                except Exception as e:
+                    log.error(f"Failed to generate signed URL: {e}")
+                    raise e
+            except Exception as e:
+                log.error(f"Failed to get service account information: {e}")
+
+            return signed_url
 
     def _encode_image(self, image_bgr: np.ndarray) -> bytes:
         """
