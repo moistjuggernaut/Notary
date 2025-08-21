@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Upload, X, CloudUpload, FileImage, AlertTriangle, Camera, CheckCircle, XCircle, Download, CreditCard } from "lucide-react";
+import { Upload, X, CloudUpload, FileImage, AlertTriangle, Camera, CheckCircle, XCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatFileSize, validateImageFile } from "@/lib/file-utils";
 import type { ValidationResult } from "@/types/validation";

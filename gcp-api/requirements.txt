@@ -9,3 +9,5 @@ rembg
 pydantic~=2.8
 google-cloud-storage==3.3.0
 stripe 
+google-auth>=2.0.0
+requests>=2.28.0
