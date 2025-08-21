@@ -41,7 +41,7 @@ RUN mkdir -p $U2NET_HOME
 COPY models/u2net.onnx $U2NET_HOME/u2net.onnx
 
 # Copy the rest of the application code
-COPY . .
+COPY src .
 
 # Run the application with gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--timeout", "120", "--max-requests", "1000", "app:app"] 
