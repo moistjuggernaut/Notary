@@ -35,6 +35,11 @@ RUN mkdir -p /root/.insightface/models/buffalo_l && \
     unzip -j /tmp/buffalo_l.zip -d /root/.insightface/models/buffalo_l && \
     rm /tmp/buffalo_l.zip
 
+# Pre-cache rembg U2Net model to avoid runtime download
+ENV U2NET_HOME=/root/.u2net
+RUN mkdir -p $U2NET_HOME
+COPY models/u2net.onnx $U2NET_HOME/u2net.onnx
+
 # Copy the rest of the application code
 COPY . .
 
