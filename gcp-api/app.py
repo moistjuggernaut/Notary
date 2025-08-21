@@ -4,16 +4,16 @@ Wraps the checker modules.
 """
 
 import os
-import json
 import base64
-import re
 import cv2
 import numpy as np
 import logging
 import uuid
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 
+# Stripe
+import stripe
 from compliance_checker import ComplianceChecker
 from lib.quick_checker import QuickChecker
 from lib.config import Config
@@ -23,6 +23,16 @@ from lib.order_storage import OrderStorage
 # Initialize services. Both are lightweight at startup.
 # The heavy ML model is lazy-loaded by the ComplianceChecker.
 logging.basicConfig(level=logging.INFO)
+
+# Configure Stripe from environment
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
+APP_PUBLIC_BASE_URL = os.environ.get("APP_PUBLIC_BASE_URL", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+if STRIPE_SECRET_KEY:
+    stripe.api_key = STRIPE_SECRET_KEY
+else:
+    logging.warning("STRIPE_SECRET_KEY not set. Stripe endpoints will return 503.")
 
 try:
     logging.info("Initializing lightweight QuickChecker service...")
@@ -174,6 +184,72 @@ def validate_photo():
     except Exception as e:
         logging.error(f"Error in /api/validate_photo: {e}", exc_info=True)
         return jsonify({"success": False, "error": f"Internal server error: {str(e)}", "message": f"Internal server error: {str(e)}"}), 500
+
+# --- Stripe Checkout ---
+@app.route('/api/stripe/create_checkout_session', methods=['POST'])
+def create_checkout_session():
+    if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID or not APP_PUBLIC_BASE_URL:
+        return jsonify({
+            "error": "Stripe is not configured",
+            "message": "Missing STRIPE_SECRET_KEY, STRIPE_PRICE_ID or APP_PUBLIC_BASE_URL"
+        }), 503
+    try:
+
+        session = stripe.checkout.Session.create(
+            line_items=[{
+                'price': STRIPE_PRICE_ID,
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=f"{APP_PUBLIC_BASE_URL}/checkout/success?success=true",
+            cancel_url=f"{APP_PUBLIC_BASE_URL}/checkout/cancel?canceled=true",
+            allow_promotion_codes=True,
+            automatic_tax={'enabled': False},
+        )
+        return redirect(session.get("url"), code=303)
+    except Exception as e:
+        logging.error(f"Stripe session error: {e}")
+        return jsonify({"error": "Stripe error", "message": str(e)}), 500
+
+# --- Stripe Webhook (verify signature; fulfill asynchronously) ---
+@app.route('/api/stripe/webhook', methods=['POST'])
+def stripe_webhook():
+    if not STRIPE_WEBHOOK_SECRET:
+        logging.error("STRIPE_WEBHOOK_SECRET not set; rejecting webhook")
+        return jsonify({"error": "Stripe webhook not configured"}), 503
+
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature', '')
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload=payload,
+            sig_header=sig_header,
+            secret=STRIPE_WEBHOOK_SECRET,
+        )
+    except ValueError:
+        logging.warning("Received invalid payload for Stripe webhook")
+        return jsonify({"error": "Invalid payload"}), 400
+    except stripe.error.SignatureVerificationError:
+        logging.warning("Invalid Stripe signature in webhook request")
+        return jsonify({"error": "Invalid signature"}), 400
+
+    event_type = event.get('type')
+    data_object = event.get('data', {}).get('object', {})
+
+    if event_type == 'checkout.session.completed':
+        logging.info("Stripe webhook: checkout.session.completed id=%s status=%s", data_object.get('id'), data_object.get('payment_status'))
+        # TODO: fulfill the order (e.g., mark as paid, grant access)
+    elif event_type == 'checkout.session.async_payment_succeeded':
+        logging.info("Stripe webhook: async_payment_succeeded id=%s", data_object.get('id'))
+        # TODO: fulfill delayed payment
+    elif event_type == 'checkout.session.async_payment_failed':
+        logging.warning("Stripe webhook: async_payment_failed id=%s", data_object.get('id'))
+        # TODO: handle failure
+    else:
+        logging.info("Stripe webhook: unhandled event type=%s", event_type)
+
+    return jsonify({"received": True}), 200
 
 @app.errorhandler(404)
 def not_found(error):
