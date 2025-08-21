@@ -327,7 +327,7 @@ export default function PhotoUploader({
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
-              <form action="/api/stripe/create_checkout_session" method="POST" className="flex-1 sm:flex-none">
+              {/* <form action="/api/stripe/create_checkout_session" method="POST" className="flex-1 sm:flex-none">
                 <Button 
                   variant="outline" 
                   type="submit"
@@ -336,7 +336,7 @@ export default function PhotoUploader({
                   <CreditCard className="w-4 h-4 mr-2" />
                   Checkout
                 </Button>
-              </form>
+              </form> */}
             </div>
           </div>
         )}
