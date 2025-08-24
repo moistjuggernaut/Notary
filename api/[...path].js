@@ -32,8 +32,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Proxy configuration error: Backend URL not found.' });
     }
 
-    // Construct the full target URL.
-    const targetUrl = `${GCP_API_URL}/${gcpPath}`;
+    // Construct the full target URL
+    const targetUrl = `${GCP_API_URL}/api/${gcpPath}`;
     
     // Forward the request to the GCP backend.
     const response = await fetch(targetUrl, {
