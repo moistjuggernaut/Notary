@@ -3,7 +3,7 @@ import { API_ENDPOINTS, ValidationRequest, ValidationResponse, QuickCheckRequest
 
 // 1. Define a variable for the API base URL using Vite's import.meta.env
 //    VITE_ prefix is crucial. The '??' operator provides a fallback for local development.
-const API_BASE_URL = import.meta.env.VITE_GCP_API_URL || '';
+const API_BASE_URL = '/api';
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
     // 2. Use the dynamic API_BASE_URL
