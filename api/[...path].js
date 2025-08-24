@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     // Construct the full target URL
     const targetUrl = `${GCP_API_URL}/api/${gcpPath}`;
     
-    // Forward the request to the GCP backend.
+    // Forward the request to the GCP backend, streaming the body.
     const response = await fetch(targetUrl, {
       method: req.method,
       headers: {
@@ -43,8 +43,8 @@ export default async function handler(req, res) {
         // Forward any authorization header if present.
         ...(req.headers.authorization && { 'Authorization': req.headers.authorization }),
       },
-      // Only include body for relevant methods.
-      body: (req.method === 'POST' || req.method === 'PUT') ? JSON.stringify(req.body) : null,
+      // Pass the raw request body directly through.
+      body: req.body,
     });
 
     // Extract the JSON response from the backend.
