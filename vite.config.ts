@@ -10,9 +10,9 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // Proxy API calls to local development server or GCP during development
+      // Proxy API calls to the local Python backend during development
       '/api': {
-        target: process.env.VITE_GCP_API_URL || 'http://localhost:8080',
+        target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
       }

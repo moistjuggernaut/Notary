@@ -136,33 +136,6 @@ else
     echo "✅ Added project binding roles/iam.serviceAccountTokenCreator for ${SERVICE_ACCOUNT_EMAIL}"
 fi
 
-# --- Prepare Cloud Run CORS settings ---
-echo "📦 Preparing Cloud Run CORS settings from JSON config..."
-CORS_CONFIG_FILE="scripts/cloud-run-cors-${STAGE}.json"
-if [ ! -f "$CORS_CONFIG_FILE" ]; then
-    echo "❌ Error: CORS config file not found: ${CORS_CONFIG_FILE}"
-    exit 1
-fi
-
-# Check for python3 or python to parse the JSON config
-PYTHON_CMD="python3"
-if ! command -v $PYTHON_CMD &> /dev/null; then
-    PYTHON_CMD="python"
-    if ! command -v $PYTHON_CMD &> /dev/null; then
-        echo "❌ Error: Neither 'python3' nor 'python' is available. Cannot parse CORS JSON."
-        exit 1
-    fi
-fi
-
-# Read origins from JSON using Python and join them with a comma
-CORS_ORIGINS_STRING=$($PYTHON_CMD -c "import json,sys; print(','.join(json.load(open(sys.argv[1]))['origins']))" "$CORS_CONFIG_FILE")
-
-if [ -z "$CORS_ORIGINS_STRING" ]; then
-    echo "❌ Error: Could not parse origins from ${CORS_CONFIG_FILE} or the list is empty."
-    exit 1
-fi
-echo "✅ CORS origins for Cloud Run set to: ${CORS_ORIGINS_STRING}"
-
 # --- Deploy to Cloud Run ---
 echo "🚀 Deploying to Cloud Run in ${REGION}..."
 
@@ -178,7 +151,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --concurrency 80 \
     --max-instances 10 \
     --service-account="${SERVICE_ACCOUNT_EMAIL}" \
-    --set-env-vars "^@^CORS_ORIGINS=${CORS_ORIGINS_STRING}@GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME}"
+    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME}"
 
 # --- Final Output ---
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --platform managed --region="$REGION" --format="value(status.url)")
