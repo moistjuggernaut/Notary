@@ -1,5 +1,5 @@
 Flask
-gunicorn
+gunicorn==22.0.0
 numpy
 opencv-python-headless
 onnxruntime

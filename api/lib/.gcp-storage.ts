@@ -1,37 +1,53 @@
 import { Storage } from '@google-cloud/storage';
 import { getVercelOidcToken } from '@vercel/functions/oidc';
 import { ExternalAccountClient } from 'google-auth-library';
- 
-const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
-const GCP_PROJECT_NUMBER = process.env.GCP_PROJECT_NUMBER;
-const GCP_SERVICE_ACCOUNT_EMAIL = process.env.GCP_SERVICE_ACCOUNT_EMAIL;
-const GCP_WORKLOAD_IDENTITY_POOL_ID = process.env.GCP_WORKLOAD_IDENTITY_POOL_ID;
-const GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID = process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID;
+let storage: Storage;
 
-// Initialize the External Account Client
-const authClient = ExternalAccountClient.fromJSON({
-  type: 'external_account',
-  audience: `//iam.googleapis.com/projects/${GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/${GCP_WORKLOAD_IDENTITY_POOL_ID}/providers/${GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID}`,
-  subject_token_type: 'urn:ietf:params:oauth:token-type:jwt',
-  token_url: 'https://sts.googleapis.com/v1/token',
-  service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${GCP_SERVICE_ACCOUNT_EMAIL}:generateAccessToken`,
-  subject_token_supplier: {
-    // Use the Vercel OIDC token as the subject token
-    getSubjectToken: getVercelOidcToken,
-  },
-});
+if (process.env.USE_LOCAL_STORAGE !== 'true') {
+  console.log('Using GCP Storage');
+  const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
+  const GCP_PROJECT_NUMBER = process.env.GCP_PROJECT_NUMBER;
+  const GCP_SERVICE_ACCOUNT_EMAIL = process.env.GCP_SERVICE_ACCOUNT_EMAIL;
+  const GCP_WORKLOAD_IDENTITY_POOL_ID = process.env.GCP_WORKLOAD_IDENTITY_POOL_ID;
+  const GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID = process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID;
 
-if (!authClient) {
-  throw new Error('Failed to initialize External Account Client');
+  // Initialize the External Account Client
+  const authClient = ExternalAccountClient.fromJSON({
+    type: 'external_account',
+    audience: `//iam.googleapis.com/projects/${GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/${GCP_WORKLOAD_IDENTITY_POOL_ID}/providers/${GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID}`,
+    subject_token_type: 'urn:ietf:params:oauth:token-type:jwt',
+    token_url: 'https://sts.googleapis.com/v1/token',
+    service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${GCP_SERVICE_ACCOUNT_EMAIL}:generateAccessToken`,
+    subject_token_supplier: {
+      // Use the Vercel OIDC token as the subject token
+      getSubjectToken: getVercelOidcToken,
+    },
+  });
+
+  if (!authClient) {
+    throw new Error('Failed to initialize External Account Client');
+  }
+
+  // Initialize GCP Storage
+  storage = new Storage({
+    authClient: authClient,
+    projectId: GCP_PROJECT_ID,
+  });
+} else {
+  console.log('Using Local Storage');
+  storage = new Storage({
+    apiEndpoint: "http://localhost:4443",
+    projectId: "test",
+  });
+  
+  const bucket = storage.bucket('local-bucket');
+  const [buckets] = await storage.getBuckets();
+  if (!buckets.find((bucket) => bucket.id === 'local-bucket')) {
+    await bucket.create();
+  }
 }
 
-// Initialize GCP Storage
-const storage = new Storage({
-  authClient: authClient,
-  projectId: GCP_PROJECT_ID,
-});
-
-const bucketName = process.env.GCP_STORAGE_BUCKET || 'baby-picture-validator';
+const bucketName = process.env.GCP_STORAGE_BUCKET || 'local-bucket';
 
 export interface UploadResult {
   orderId: string;
@@ -59,11 +75,17 @@ export async function uploadImageToGCP(base64Image: string, filename: string): P
       },
     });
     
+    let signedUrl: string;
+    if (process.env.USE_LOCAL_STORAGE !== 'true') {
     // Generate signed URL for GCP Run to access
-    const [signedUrl] = await file.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
-    });
+      const signedUrlResponse = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      });
+      signedUrl = signedUrlResponse[0];
+    } else {
+      signedUrl = await getSignedUrlForImageFromLocal(orderId, filename);
+    }
     
     return {
       orderId,
@@ -76,11 +98,19 @@ export async function uploadImageToGCP(base64Image: string, filename: string): P
 }
 
 export async function getSignedUrlForImage(orderId: string, filename: string): Promise<string> {
-  const bucket = storage.bucket(bucketName);
-  const file = bucket.file(`${orderId}/${filename}`);
-  const [signedUrl] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 15 * 60 * 1000, // 15 minutes
-  });
-  return signedUrl;
+  if (process.env.USE_LOCAL_STORAGE !== 'true') {
+    const bucket = storage.bucket(bucketName);
+    const file = bucket.file(`${orderId}/${filename}`);
+    const [signedUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+    });
+    return signedUrl;
+  } else {
+    return await getSignedUrlForImageFromLocal(orderId, filename);
+  }
+}
+
+export async function getSignedUrlForImageFromLocal(orderId: string, filename: string): Promise<string> {
+  return `http://localhost:4443/storage/v1/b/${bucketName}/o/${orderId}/${filename}?alt=media`;
 }

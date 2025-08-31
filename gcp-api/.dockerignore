@@ -1,24 +1,17 @@
-# Git files
-.git/
-.gitignore
-
-# Python cache
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Local environment
-.env
+# Environment
+.env*
 venv/
-.venv/
 
-# IDE and OS files
-.idea/
+# IDE
 .vscode/
-.DS_Store
+.idea/
 
-# The model zip is handled by a specific COPY command, but should not be part of the general COPY . .
-# We are intentionally NOT ignoring the models directory itself. 
-# Exclude unused model(s) from build context to speed up builds
-models/buffalo_m.zip 
+# Tests
+tests/
+Dockerfile.test 
