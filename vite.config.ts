@@ -1,22 +1,24 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import devServer from '@hono/vite-dev-server'
+// import vercel from "vite-plugin-vercel";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [
+    // vercel(),
+    react(), 
+    tsconfigPaths(),
+    devServer({
+      entry: 'api/index.ts',
+      exclude: [/^(?!\/api).*/]
+    })
+  ],
   
   // Development server configuration
   server: {
-    port: 3000,
-    proxy: {
-      // Proxy API calls to the local Python backend during development
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        secure: false,
-      }
-    }
+    port: 3000
   },
   
   // Build configuration for Vercel deployment

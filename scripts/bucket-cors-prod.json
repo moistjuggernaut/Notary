@@ -1,6 +1,9 @@
 [
     {
-      "origin": ["https://www.passportphotovalidator.com", "https://passport-validator.vercel.app"],
+      "origin": [
+        "https://www.passportphotovalidator.com",
+        "https://passport-validator.vercel.app",
+        "https://passport-validator-robert-kucheras-projects.vercel.app"],
       "method": ["GET"],
       "responseHeader": ["Content-Type"],
       "maxAgeSeconds": 3600

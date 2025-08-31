@@ -1,7 +1,7 @@
 // client.ts
 import { API_ENDPOINTS, ValidationRequest, ValidationResponse, QuickCheckRequest, QuickCheckResponse } from '@/types/api';
 
-// 1. Define a variable for the API base URL using Vite's import.meta.env
+// 1. Define a variable for the API base URL using Vite's process.env
 //    VITE_ prefix is crucial. The '??' operator provides a fallback for local development.
 const API_BASE_URL = '/api';
 
@@ -63,13 +63,11 @@ export async function quickCheckPhoto(file: File): Promise<QuickCheckResponse> {
     }
 }
 
-// Photo validation function
-export async function validatePhoto(file: File): Promise<ValidationResponse> {
+// Photo validation function using orderId from quick check
+export async function validatePhoto(orderId: string): Promise<ValidationResponse> {
     try {
-        const base64Image = await fileToBase64(file);
         const request: ValidationRequest = {
-            image: base64Image,
-            filename: file.name
+            orderId: orderId
         };
 
         return await fetchApi<ValidationResponse>(API_ENDPOINTS.photo.validate, {

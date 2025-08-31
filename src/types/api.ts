@@ -16,8 +16,7 @@ export interface DocumentResponse {
 
 // Photo validation types for the serverless API
 export interface ValidationRequest {
-    image: string; // Base64 encoded image data
-    filename?: string;
+    orderId: string; // UUID from quick check response
 }
 
 export interface ValidationLogEntry {
@@ -33,8 +32,8 @@ export interface ValidationResponse {
         preprocessing: ValidationLogEntry[];
         validation: ValidationLogEntry[];
     };
-    order_id?: string; // UUID of the stored order
-    validated_image_url?: string; // Signed URL to access the validated image
+    orderId?: string; // UUID of the stored order
+    imageUrl?: string; // Signed URL to access the validated image
     error?: string; // Error message if validation failed or storage failed
 }
 
@@ -45,8 +44,8 @@ export const API_ENDPOINTS = {
         get: (id: string) => `/documents/${id}`,
     },
     photo: {
-        validate: '/api/validate_photo',
-        quickCheck: '/api/quick_check',
+        validate: '/photo/validate',
+        quickCheck: '/photo/quick-check',
     },
 } as const;
 
@@ -58,6 +57,8 @@ export interface QuickCheckRequest {
 
 export interface QuickCheckResponse {
     success: boolean;
-    face_count: number;
+    faceCount: number;
     message: string;
+    imageUrl?: string;
+    orderId?: string;
 } 

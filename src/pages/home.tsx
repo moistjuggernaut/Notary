@@ -96,18 +96,19 @@ export default function Home() {
       summary,
       checks,
       recommendations: [apiResponse.recommendation].filter(Boolean),
-      orderId: apiResponse.order_id,
-      validatedImageUrl: apiResponse.validated_image_url
+      orderId: apiResponse.orderId,
+      validatedImageUrl: apiResponse.imageUrl
     };
   };
 
   const handleValidatePhoto = async () => {
-    if (!selectedFile || !quickCheckResult?.success) return;
-    
+    if (!selectedFile || !quickCheckResult?.success || !quickCheckResult?.orderId) return;
+
     setIsValidating(true);
-    
+
     try {
-      const apiResponse = await validatePhoto(selectedFile);
+      // Use the orderId from quick check result instead of sending the file again
+      const apiResponse = await validatePhoto(quickCheckResult.orderId);
       const validationResultData = convertApiResponseToValidationResult(apiResponse);
       setValidationResult(validationResultData);
     } catch (error) {
