@@ -65,3 +65,5 @@ models/
 *.tmp
 *.temp
 .cache/
+
+.photo-validator-dev-key.json

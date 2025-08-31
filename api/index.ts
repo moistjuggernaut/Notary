@@ -1,0 +1,190 @@
+import { Hono } from 'hono'
+import { logger } from 'hono/logger'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
+import Stripe from 'stripe'
+import { getStripe, getWebhookSecret } from './lib/.stripe.js'
+import { getSignedUrlForImage, uploadImageToGCP } from './lib/.gcp-storage.js'
+import { triggerGCPRun } from './lib/.gcp-run.js'
+
+const app = new Hono()
+
+// Middleware
+app.use('*', logger())
+
+// Initialize Stripe
+const stripe = getStripe()
+
+// Validation schemas
+const QuickCheckSchema = z.object({
+  image: z.string().min(1, 'Image is required'),
+  filename: z.string().min(1, 'Filename is required')
+})
+
+const ValidationSchema = z.object({
+  orderId: z.string().uuid()
+})
+
+// Health routes
+app.get('/api/health', async (c) => {
+  const gcpResponse = await triggerGCPRun({
+    eventType: 'health',
+  })
+
+  if (!gcpResponse.success) {
+    return c.json({
+      success: false,
+      error: gcpResponse.error || 'GCP processing failed'
+    }, 500)
+  }
+
+  return c.json({
+    success: true,
+    data: gcpResponse.data,
+  })
+})
+
+// Photo routes
+app.post('/api/photo/quick-check', zValidator('json', QuickCheckSchema), async (c) => {
+  try {
+    const { image } = c.req.valid('json')
+    
+    // 1. Upload image to GCP storage
+    const uploadResult = await uploadImageToGCP(image, 'original.jpg')
+    
+    // 2. Trigger GCP Run for quick check
+    const gcpResponse = await triggerGCPRun({
+      eventType: 'quick-check',
+      orderId: uploadResult.orderId,
+    })
+    
+    if (!gcpResponse.success) {
+      return c.json({ 
+        success: false, 
+        error: gcpResponse.error || 'GCP processing failed' 
+      }, 500)
+    }
+    
+    // 3. Return results to frontend
+    return c.json({
+      success: true,
+      faceCount: gcpResponse.data.face_count,
+      message: gcpResponse.data.message,
+      imageUrl: uploadResult.imageUrl,
+      orderId: uploadResult.orderId,
+    })
+  } catch (error) {
+    console.error('Quick check error:', error)
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Quick check failed' 
+    }, 500)
+  }
+})
+
+app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) => {
+  try {
+    // 1. Get orderId from request
+    const { orderId } = c.req.valid('json')
+
+    // 2. Trigger GCP Run for full validation
+    const gcpResponse = await triggerGCPRun({
+      eventType: 'validate-photo',
+      orderId: orderId,
+    })
+    
+    if (!gcpResponse.success) {
+      return c.json({ 
+        success: false, 
+        error: gcpResponse.error || 'GCP processing failed' 
+      }, 500)
+    }
+
+    const imageUrl = await getSignedUrlForImage(orderId, 'validated.jpg')
+
+    
+    // 3. Return results to frontend
+    return c.json({
+      success: true,
+      recommendation: gcpResponse.data.recommendation,
+      logs: gcpResponse.data.logs,
+      orderId: gcpResponse.data.orderId,
+      imageUrl: imageUrl,
+    })
+  } catch (error) {
+    console.error('Validation error:', error)
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Validation failed' 
+    }, 500)
+  }
+})
+
+// Stripe routes
+app.post('/api/stripe/create-checkout-session', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { priceId, successUrl, cancelUrl } = body
+
+    if (!priceId) {
+      return c.json({ error: 'Price ID is required' }, 400)
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: successUrl || `${process.env.FRONTEND_URL}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl || `${process.env.FRONTEND_URL}/checkout-cancel`,
+    })
+
+    return c.json({ sessionId: session.id })
+  } catch (error) {
+    console.error('Stripe checkout error:', error)
+    return c.json({ error: 'Failed to create checkout session' }, 500)
+  }
+})
+
+app.post('/api/stripe/webhook', async (c) => {
+  const signature = c.req.header('stripe-signature')
+  const body = await c.req.text()
+
+  if (!signature) {
+    return c.json({ error: 'No signature provided' }, 400)
+  }
+
+  try {
+    const event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      getWebhookSecret()
+    )
+
+    // Handle the event
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object as Stripe.Checkout.Session
+        console.log('Payment successful:', session.id)
+        // TODO: Handle successful payment
+        break
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object as Stripe.PaymentIntent
+        console.log('Payment intent succeeded:', paymentIntent.id)
+        break
+      default:
+        console.log(`Unhandled event type: ${event.type}`)
+    }
+
+    return c.json({ received: true })
+  } catch (error) {
+    console.error('Webhook error:', error)
+    return c.json({ error: 'Webhook signature verification failed' }, 400)
+  }
+})
+
+export default app

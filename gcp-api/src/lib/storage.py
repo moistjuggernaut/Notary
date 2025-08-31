@@ -130,6 +130,14 @@ class StorageClient:
 
             return signed_url
 
+    def get_image(self, blob_name: str) -> np.ndarray:
+        """
+        Get an image from Google Cloud Storage.
+        """
+        blob = self.bucket.blob(blob_name)
+        image_bytes = blob.download_as_bytes()
+        return self._decode_image(image_bytes)
+
     def _encode_image(self, image_bgr: np.ndarray) -> bytes:
         """
         Encode OpenCV BGR image to bytes with appropriate compression.
@@ -147,3 +155,9 @@ class StorageClient:
             raise ValueError("Failed to encode image")
 
         return image_bytes.tobytes()
+
+    def _decode_image(self, image_bytes: bytes) -> np.ndarray:
+        """
+        Decode image bytes to OpenCV BGR image array.
+        """
+        return cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)

@@ -1,29 +1,33 @@
-# Baby Picture Validator
+# Photo Validator
 
 A passport photo validation system using computer vision and ML to ensure compliance with official ICAO photo requirements.
 
-This project uses a high-performance hybrid architecture, combining a fast, static frontend with a powerful, containerized machine learning backend.
+This project uses a modern hybrid architecture with React frontend, Vercel API for orchestration, and GCP Cloud Run for heavy ML processing.
 
 ## Architecture Overview
 
 -   **Frontend**: A modern React & TypeScript single-page application, deployed to **Vercel's Edge Network** for global, low-latency access.
--   **Backend**: A robust Python API powered by Flask and InsightFace, containerized with Docker and deployed to **GCP Cloud Run** for scalable, on-demand processing.
--   **Proxy**: Vercel Serverless Functions act as a lightweight proxy, securely routing requests from the frontend to the GCP backend.
+-   **Vercel API**: A fast Hono.js API that handles image uploads to GCP Storage and orchestrates GCP Cloud Run processing.
+-   **GCP Cloud Run**: Heavy ML processing service for photo validation and face detection.
+-   **GCP Storage**: Temporary storage for uploaded images during processing.
 
 ```mermaid
 graph TD
     subgraph Vercel
-        A[React Frontend] --> B{Vercel Proxy};
+        A[React Frontend] --> B[Hono API];
     end
     subgraph GCP
-        C[Cloud Run: Python/Flask API] --> D[InsightFace Model];
+        B --> C[GCP Storage];
+        B --> D[GCP Cloud Run];
+        D --> C;
     end
-    B --> C;
+    B --> E[Stripe Integration];
 
     style A fill:#000,color:#fff,stroke:#fff
     style B fill:#888,color:#fff,stroke:#fff
     style C fill:#4285F4,color:#fff,stroke:#fff
-    style D fill:#DB4437,color:#fff,stroke:#fff
+    style D fill:#34A853,color:#fff,stroke:#fff
+    style E fill:#00D4AA,color:#fff,stroke:#fff
 ```
 
 ## Tech Stack
@@ -31,61 +35,95 @@ graph TD
 | Area      | Technology                                                                                                   |
 | --------- | ------------------------------------------------------------------------------------------------------------ |
 | **Frontend**  | React 19, TypeScript, Vite, Wouter, Tailwind CSS, shadcn/ui                                                  |
-| **Backend**   | Python, Flask, InsightFace, ONNX Runtime, OpenCV, Gunicorn                                                 |
-| **Deployment**| Vercel (Frontend & Proxy), Docker, GCP Cloud Run (Backend API), GCP Cloud Build, GitHub Actions (CI/CD) |
+| **Vercel API**   | Hono.js, TypeScript, Zod validation, Stripe integration, GCP Storage integration                     |
+| **GCP Cloud Run** | Python, Flask, OpenCV, InsightFace, ONNX Runtime                                                          |
+| **Deployment**| Vercel (Frontend & API), GCP Cloud Run (ML Processing), GCP Storage (Image Storage)                                                          |
 
 ## Project Structure
 
 ```
 .
-├── gcp-api/              # Self-contained Python/Flask backend for GCP
-│   ├── app.py            # Main Flask application with global model loading
-│   ├── lib/              # Core computer vision & validation logic
-│   ├── tests/            # Python unit & integration tests
-│   ├── Dockerfile        # Docker container definition for Cloud Run
-│   └── requirements.txt  # Python dependencies
 ├── src/                  # React/TypeScript frontend source
 │   ├── api/              # Frontend API client (uses Tanstack Query)
 │   ├── components/       # Reusable UI components
 │   └── pages/            # Application pages
-├── api/                  # Vercel Serverless Functions (Proxy)
-│   └── [...path].js      # Dynamic proxy to forward requests to GCP
+├── api/                  # Hono.js API backend (Vercel)
+│   ├── index.ts          # Main Hono application
+│   └── lib/              # Shared utilities
+│       ├── gcp-storage.ts # GCP Storage integration
+│       ├── gcp-run.ts    # GCP Cloud Run client
+│       └── .stripe.ts    # Stripe configuration
+├── gcp-api/              # GCP Cloud Run service
+│   ├── src/
+│   │   ├── app.py        # Flask application
+│   │   ├── lib/          # ML processing modules
+│   │   └── requirements.txt
+│   └── Dockerfile        # Container configuration
 ├── public/               # Static assets for the frontend
-├── scripts/              # Deployment scripts
 ├── .gitignore            # Git ignore configuration
-├── DEPLOYMENT.md         # Detailed deployment instructions
-└── vercel.json           # Vercel project configuration
+├── vercel.json           # Vercel project configuration
+└── env.example           # Environment variables template
 ```
+
+## API Flow
+
+### Quick Check Flow
+1. Frontend uploads image to Vercel API
+2. Vercel API uploads image to GCP Storage with UUID
+3. Vercel API triggers GCP Cloud Run with quick_check event
+4. GCP Cloud Run downloads image and performs face detection
+5. Results returned to Vercel API, then to frontend
+
+### Full Validation Flow
+1. Frontend uploads image to Vercel API
+2. Vercel API uploads image to GCP Storage with UUID
+3. Vercel API triggers GCP Cloud Run with validate_photo event
+4. GCP Cloud Run downloads image and performs full ICAO validation
+5. Validated image stored back to GCP Storage
+6. Results returned to Vercel API, then to frontend
 
 ## Local Development & Deployment
 
 ### Prerequisites
 
 -   Node.js (v20+)
--   Python (v3.12+)
--   Google Cloud SDK (`gcloud`)
--   Docker Desktop
+-   npm or yarn
+-   GCP Project with Cloud Run and Storage enabled
+-   Docker (for local GCP API testing)
 
 ### Running Locally
 
-1.  **Start the Frontend**:
+1.  **Install Dependencies**:
     ```bash
     npm install
+    ```
+
+2.  **Set up Environment Variables**:
+    ```bash
+    cp env.example .env
+    # Edit .env with your Stripe keys and GCP configuration
+    ```
+
+3.  **Start Development Server**:
+    ```bash
     npm run dev
     ```
-    The frontend will be available at `http://localhost:3000`.
+    
+    This will start both the frontend and Vercel API using Vite with the Hono dev server plugin.
+    The application will be available at `http://localhost:3000`
 
-2.  **Start the Backend**:
-    For detailed instructions on running the Python backend locally (with or without Docker), please see the `DEPLOYMENT.md` file.
+4.  **Run GCP API Locally** (optional):
+    ```bash
+    npm run gcp:run
+    ```
 
 ### Deployment
 
-This project is configured for automated deployments:
+This project requires deployment to both Vercel and GCP:
 
--   **Frontend (Vercel)**: Pushing to the `main` branch automatically deploys the frontend.
--   **Backend (GCP)**: Pushing to the `main` branch triggers a GitHub Action to build and deploy the Docker container to GCP Cloud Run.
-
-For manual deployment steps and initial setup, please refer to the complete **[DEPLOYMENT.md](DEPLOYMENT.md)** guide.
+-   **Frontend & Vercel API**: Pushing to the `main` branch automatically deploys both to Vercel.
+-   **GCP Cloud Run**: Deploy using the provided Dockerfile and deployment scripts.
+-   **Environment Variables**: Set up your environment variables in both Vercel and GCP.
 
 ## License
 
