@@ -1,5 +1,5 @@
 import Header from "@/components/header";
-import { CheckCircle, Upload, Zap, Download } from "lucide-react";
+import { Upload, Zap, Download } from "lucide-react";
 
 export default function HowItWorks() {
   return (
@@ -9,11 +9,11 @@ export default function HowItWorks() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-dark-slate mb-4">
-            How Baby Photo Validation Works
+            How Photo Validation Works
           </h2>
           <p className="text-lg text-slate-grey max-w-2xl mx-auto leading-relaxed">
-            Our AI-powered system validates your baby's passport photo against EU biometric standards 
-            (Regulations 2252/2004 & 444/2009) with special allowances for infants under 6 months.
+            Our AI-powered system validates passport photos against EU biometric standards 
+            (Regulations 2252/2004 & 444/2009) with special allowances for children and infants.
           </p>
         </div>
 
@@ -24,7 +24,7 @@ export default function HowItWorks() {
             </div>
             <h3 className="text-xl font-semibold text-dark-slate mb-4">1. Upload Photo</h3>
             <p className="text-slate-grey leading-relaxed">
-              Select or drag and drop your child's passport photo. We support JPG, PNG, and WEBP formats up to 10MB.
+              Select or drag and drop your passport photo. We support JPG, PNG, and WEBP formats up to 10MB.
             </p>
           </div>
 
@@ -49,58 +49,7 @@ export default function HowItWorks() {
           </div>
         </div>
 
-        <div className="bg-light-slate rounded-lg p-8 mb-12">
-          <h3 className="text-2xl font-semibold text-dark-slate mb-6 flex items-center">
-            <CheckCircle className="w-6 h-6 text-success-emerald mr-3" />
-            What We Check
-          </h3>
-          
-          <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <h4 className="font-semibold text-dark-slate mb-3">Photo Quality</h4>
-              <ul className="space-y-2 text-slate-grey">
-                <li className="flex items-start">
-                  <span className="text-success-emerald mr-2">•</span>
-                  High resolution and sharpness
-                </li>
-                <li className="flex items-start">
-                  <span className="text-success-emerald mr-2">•</span>
-                  Proper contrast and exposure
-                </li>
-                <li className="flex items-start">
-                  <span className="text-success-emerald mr-2">•</span>
-                  No blur or pixelation
-                </li>
-                <li className="flex items-start">
-                  <span className="text-success-emerald mr-2">•</span>
-                  Correct file format
-                </li>
-              </ul>
-            </div>
 
-            <div>
-              <h4 className="font-semibold text-dark-slate mb-3">Compliance Standards</h4>
-              <ul className="space-y-2 text-slate-grey">
-                <li className="flex items-start">
-                  <span className="text-success-emerald mr-2">•</span>
-                  Face position and centering
-                </li>
-                <li className="flex items-start">
-                  <span className="text-success-emerald mr-2">•</span>
-                  Head size and dimensions
-                </li>
-                <li className="flex items-start">
-                  <span className="text-success-emerald mr-2">•</span>
-                  Background color and uniformity
-                </li>
-                <li className="flex items-start">
-                  <span className="text-success-emerald mr-2">•</span>
-                  Expression and eye visibility
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="font-semibold text-blue-800 mb-3">Important Note</h3>

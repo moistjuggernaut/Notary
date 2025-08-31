@@ -143,7 +143,7 @@ export default function Home() {
             EU Photo ID Validator
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
-            Ensure your baby's passport photo meets European Union biometric standards. 
+            Ensure your passport photo meets European Union biometric standards. 
             Valid for all EU member states under Regulations 2252/2004 & 444/2009.
           </p>
 
@@ -213,9 +213,6 @@ export default function Home() {
               </div>
               <span className="text-xl font-semibold text-gray-900">Photo ID Validator</span>
             </div>
-            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Professional EU biometric compliance validation for baby passport photographs valid across all EU member states.
-            </p>
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-sm text-gray-500 mb-6">
               <a href="#" className="hover:text-blue-600 transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-blue-600 transition-colors">Terms of Service</a>
