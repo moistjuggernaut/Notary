@@ -26,9 +26,7 @@ export default function Requirements() {
             EU Photo Requirements
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-            Complete guide to European Union requirements for baby passport photographs, 
-            based on EU Regulations 2252/2004 & 444/2009 and ICAO Doc 9303 biometric standards 
-            that all EU member states follow.
+            Guide to European Union requirements for passport photographs, based on EU Regulations 2252/2004 & 444/2009 and ICAO Doc 9303 biometric standards that all EU member states follow.
           </p>
         </div>
 
@@ -41,11 +39,11 @@ export default function Requirements() {
             Ready to Validate Your Photo?
           </h3>
           <p className="text-green-800 mb-4">
-            Now that you understand the EU requirements, upload your baby's photo 
+            Now that you understand the EU requirements, upload your photo
             to check compliance with European biometric passport standards.
           </p>
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
             Start Photo Validation
