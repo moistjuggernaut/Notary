@@ -4,9 +4,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Local development files
-local_storage/
-
 # Environment
 .env*
 venv/

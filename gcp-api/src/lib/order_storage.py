@@ -32,7 +32,7 @@ class OrderStorage:
             Storage information dict
         """
         try:
-            # Initialize storage using the factory
+            # Initialize storage
             storage_client = StorageClient()
 
             # Store original image
