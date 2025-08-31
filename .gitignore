@@ -54,6 +54,9 @@ htmlcov/
 *.tar.gz
 .docker/
 
+# Local development storage
+gcp-api/local_storage/
+
 # ML Models (will be stored in GCP Cloud Storage)
 *.onnx
 *.pkl
