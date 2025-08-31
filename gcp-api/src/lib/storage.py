@@ -1,134 +1,45 @@
 """
-Generic Google Cloud Storage utilities.
+Native Google Cloud Storage utilities.
 Handles client initialization, image storage, and signed URL generation.
+This module provides a factory to get the correct client for the environment.
 """
-
 import logging
 from typing import Optional, Union
 import cv2
 import numpy as np
-import google.auth
 from google.cloud import storage
+from google.cloud.exceptions import NotFound
 
 from lib.storage_config import StorageConfig
+from lib.storage_base import BaseStorageClient
 
 log = logging.getLogger(__name__)
 
+class GCSStorageClient(BaseStorageClient):
+    """
+    Production Google Cloud Storage client for image operations.
+    Connects to the real GCS and generates signed URLs.
+    """
+    def __init__(self, bucket_name: str):
+        self.bucket_name = bucket_name
+        self.client = storage.Client()
+        self.bucket = self._ensure_bucket_exists()
 
-class StorageClient:
-    """Generic Google Cloud Storage client for image operations."""
+    def _ensure_bucket_exists(self) -> storage.Bucket:
+        try:
+            return self.client.get_bucket(self.bucket_name)
+        except NotFound:
+            log.info(f"Bucket '{self.bucket_name}' not found. Creating it...")
+            return self.client.create_bucket(self.bucket_name)
 
-    def __init__(self, bucket_name: Optional[str] = None):
-        """
-        Initialize the storage client.
-
-        Args:
-            bucket_name: GCS bucket name. If None, uses StorageConfig.BUCKET_NAME
-
-        Raises:
-            ValueError: If storage configuration is invalid
-        """
-        # Validate storage configuration first
-        if not StorageConfig.validate():
-            raise ValueError(
-                "Storage configuration invalid. GCS_BUCKET_NAME environment variable is required."
-            )
-
-        self.bucket_name = bucket_name or StorageConfig.get_bucket_name()
-
-        # Initialize storage client based on authentication method
-        if StorageConfig.USE_SERVICE_ACCOUNT:
-            log.info(
-                f"Using service account authentication from {StorageConfig.GOOGLE_APPLICATION_CREDENTIALS}"
-            )
-            self.client = storage.Client.from_service_account_json(
-                StorageConfig.GOOGLE_APPLICATION_CREDENTIALS
-            )
-        elif StorageConfig.GCP_PROJECT_ID:
-            log.info(
-                f"Using application default credentials for project {StorageConfig.GCP_PROJECT_ID}"
-            )
-            self.client = storage.Client(project=StorageConfig.GCP_PROJECT_ID)
-        else:
-            log.info("Using application default credentials")
-            self.client = storage.Client()
-
-        self.bucket = self.client.bucket(self.bucket_name)
-
-    def save_image(
-        self,
-        image: Union[np.ndarray, bytes],
-        blob_name: str,
-    ) -> str:
-        """
-        Save an image to Google Cloud Storage.
-
-        Args:
-            image: OpenCV BGR image array or bytes
-            blob_name: Name for the blob in storage
-
-        Returns:
-            GCS URL of the saved image
-        """
-        # Handle different input types
-        if isinstance(image, np.ndarray):
-            # Encode numpy array to bytes
-            image_bytes = self._encode_image(image)
-        elif isinstance(image, bytes):
-            image_bytes = image
-        else:
-            raise ValueError("Image must be numpy array or bytes")
-
-        # Create blob and upload
+    def save_image(self, image: Union[np.ndarray, bytes], blob_name: str) -> str:
         blob = self.bucket.blob(blob_name)
-        blob.content_type = "image/jpeg"
-        blob.upload_from_string(image_bytes, content_type="image/jpeg")
+        blob.upload_from_string(self._encode_image(image), content_type="image/jpeg")
+        return f"gs://{self.bucket_name}/{blob_name}"
 
-        gcs_url = f"gs://{self.bucket_name}/{blob_name}"
-        log.info(f"Saved image: {blob_name} -> {gcs_url}")
-
-        return gcs_url
-
-    def get_signed_url(self, blob_name: str, expiration: Optional[int] = None) -> str:
-        """
-        Generate a signed URL for accessing a stored image.
-
-        Args:
-            blob_name: Name of the blob in the bucket
-            expiration: URL expiration time in seconds (default: from StorageConfig)
-
-        Returns:
-            Signed URL for accessing the image
-        """
-        if expiration is None:
-            expiration = StorageConfig.SIGNED_URL_EXPIRATION
-
+    def get_signed_url(self, blob_name: str, expiration: int) -> str:
         blob = self.bucket.blob(blob_name)
-        if StorageConfig.USE_SERVICE_ACCOUNT:
-            return blob.generate_signed_url(
-                version="v4",
-                expiration=expiration,
-                method="GET",
-            )
-        else:
-            try:
-                credentials, _ = google.auth.default()
-                credentials.refresh(google.auth.transport.requests.Request())
-                try:
-                    signed_url = blob.generate_signed_url(
-                        version="v4", 
-                        expiration=expiration,
-                        method="GET",
-                        service_account_email=credentials.service_account_email,
-                        access_token=credentials.token,
-                    )
-                except Exception as e:
-                    log.error(f"Failed to generate signed URL: {e}")
-                    raise e
-            except Exception as e:
-                log.error(f"Failed to get service account information: {e}")
-
-            return signed_url
+        return blob.generate_signed_url(expiration=expiration)
 
     def get_image(self, blob_name: str) -> np.ndarray:
         """
@@ -139,25 +50,74 @@ class StorageClient:
         return self._decode_image(image_bytes)
 
     def _encode_image(self, image_bgr: np.ndarray) -> bytes:
-        """
-        Encode OpenCV BGR image to bytes with appropriate compression.
-
-        Args:
-            image_bgr: OpenCV BGR image array
-
-        Returns:
-            Encoded image bytes
-        """
-        success, image_bytes = cv2.imencode(
-            ".jpg", image_bgr, [cv2.IMWRITE_JPEG_QUALITY, StorageConfig.JPEG_QUALITY]
-        )
+        success, buf = cv2.imencode(".jpg", image_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
         if not success:
             raise ValueError("Failed to encode image")
-
-        return image_bytes.tobytes()
+        return buf.tobytes()
 
     def _decode_image(self, image_bytes: bytes) -> np.ndarray:
         """
         Decode image bytes to OpenCV BGR image array.
         """
         return cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+
+class EmulatorStorageClient(BaseStorageClient):
+    """
+    Local development storage client for the GCS emulator.
+    Connects to the emulator and generates simple, direct URLs.
+    """
+    def __init__(self, bucket_name: str, public_host: str):
+        self.bucket_name = bucket_name
+        self.public_host = public_host
+        self.client = storage.Client(project="local-dev")
+        self.bucket = self._ensure_bucket_exists()
+
+    def _ensure_bucket_exists(self) -> storage.Bucket:
+        try:
+            return self.client.get_bucket(self.bucket_name)
+        except NotFound:
+            log.info(f"Emulator bucket '{self.bucket_name}' not found. Creating...")
+            return self.client.create_bucket(self.bucket_name)
+
+    def save_image(self, image: Union[np.ndarray, bytes], blob_name: str) -> str:
+        blob = self.bucket.blob(blob_name)
+        blob.upload_from_string(self._encode_image(image), content_type="image/jpeg")
+        return f"gs://{self.bucket_name}/{blob_name}"
+
+    def get_signed_url(self, blob_name: str, expiration: int) -> str:
+        return f"{self.public_host}/storage/v1/b/{self.bucket_name}/o/{blob_name}?alt=media"
+
+    def get_image(self, blob_name: str) -> np.ndarray:
+        """
+        Get an image from Google Cloud Storage.
+        """
+        blob = self.bucket.blob(blob_name)
+        image_bytes = blob.download_as_bytes()
+        return self._decode_image(image_bytes)
+
+    def _encode_image(self, image_bgr: np.ndarray) -> bytes:
+        success, buf = cv2.imencode(".jpg", image_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        if not success:
+            raise ValueError("Failed to encode image")
+        return buf.tobytes()
+
+    def _decode_image(self, image_bytes: bytes) -> np.ndarray:
+        """
+        Decode image bytes to OpenCV BGR image array.
+        """
+        return cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+
+def get_storage_client() -> BaseStorageClient:
+    """
+    Factory function to get the appropriate storage client based on the environment.
+    """
+    bucket_name = StorageConfig.get_bucket_name()
+    if StorageConfig.STORAGE_EMULATOR_HOST:
+        log.info("Using EmulatorStorageClient for local development.")
+        return EmulatorStorageClient(
+            bucket_name=bucket_name,
+            public_host=StorageConfig.GCS_EMULATOR_PUBLIC_HOST,
+        )
+    else:
+        log.info("Using GCSStorageClient for production.")
+        return GCSStorageClient(bucket_name=bucket_name)

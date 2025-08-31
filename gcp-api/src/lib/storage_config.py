@@ -1,42 +1,31 @@
 """
 Configuration for Google Cloud Storage settings.
 """
-
 import os
 from typing import Optional
-
 
 class StorageConfig:
     """Configuration for image storage settings."""
 
-    # GCS Bucket name - can be set via environment variable
-    BUCKET_NAME: Optional[str] = os.environ.get("GCS_BUCKET_NAME")
-
-    # GCP Project settings
+    # --- GCS Settings ---
+    # In production, this is the real GCS bucket name.
+    # In development, this is the name of the bucket to create in the emulator.
+    BUCKET_NAME: Optional[str] = os.environ.get("GCS_BUCKET_NAME", "local-bucket")
     GCP_PROJECT_ID: Optional[str] = os.environ.get("GCP_PROJECT_ID")
+    
+    # --- Local Development Settings ---
+    # This variable is used by the google-cloud-storage library to automatically
+    # connect to a local emulator instead of the real GCS API.
+    # It should be set to, e.g., 'http://localhost:4443' or 'http://gcs-emulator:4443'
+    STORAGE_EMULATOR_HOST: Optional[str] = os.environ.get("STORAGE_EMULATOR_HOST")
+    # The public URL for the emulator, used for constructing direct URLs.
+    GCS_EMULATOR_PUBLIC_HOST: str = os.environ.get("GCS_EMULATOR_PUBLIC_HOST", "http://localhost:4443")
 
-    # Authentication settings
-    GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = os.environ.get(
-        "GOOGLE_APPLICATION_CREDENTIALS"
-    )
-    USE_SERVICE_ACCOUNT: bool = (
-        os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") is not None
-    )
-
-    # Image quality settings
+    # --- Common Settings ---
     JPEG_QUALITY: int = int(os.environ.get("JPEG_QUALITY", "95"))
-
-    # Signed URL settings
     SIGNED_URL_EXPIRATION: int = int(
         os.environ.get("SIGNED_URL_EXPIRATION", "3600")
     )  # 1 hour default
-
-    @classmethod
-    def validate(cls) -> bool:
-        """Validate that required configuration is present."""
-        if not cls.BUCKET_NAME:
-            return False
-        return True
 
     @classmethod
     def get_bucket_name(cls) -> str:
