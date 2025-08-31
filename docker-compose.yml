@@ -1,0 +1,45 @@
+services:
+  api:
+    build:
+      context: ./gcp-api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # --- Development Settings ---
+      - APP_ENV=development
+      # Tell the app to use the MinIO container for storage
+      - STORAGE_PROVIDER=MINIO
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_PUBLIC_ENDPOINT=http://localhost:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=images
+      # Set a dummy project ID for local dev
+      - GCP_PROJECT_ID=local-dev
+    depends_on:
+      - minio
+    volumes:
+      # Mount the source code for hot-reloading (if you set up a dev server)
+      - ./gcp-api/src:/app
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Console Port
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  minio_data:
+    driver: local

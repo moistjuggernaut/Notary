@@ -4,7 +4,8 @@ Order storage utilities for handling image storage after validation.
 
 import logging
 import numpy as np
-from lib.storage_factory import get_storage_client
+from lib.storage_config import StorageConfig
+from lib.storage import StorageClient
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class OrderStorage:
         """
         try:
             # Initialize storage using the factory
-            storage_client = get_storage_client()
+            storage_client = StorageClient()
 
             # Store original image
             original_blob_name = f"{order_id}/original.jpg"
