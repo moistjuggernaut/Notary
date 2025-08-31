@@ -5,7 +5,7 @@ Order storage utilities for handling image storage after validation.
 import logging
 import numpy as np
 from lib.storage_config import StorageConfig
-from lib.storage import StorageClient
+from lib.storage import get_storage_client
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +32,8 @@ class OrderStorage:
             Storage information dict
         """
         try:
-            # Initialize storage
-            storage_client = StorageClient()
+            # Get the appropriate storage client from the factory
+            storage_client = get_storage_client()
 
             # Store original image
             original_blob_name = f"{order_id}/original.jpg"
@@ -41,7 +41,10 @@ class OrderStorage:
             # Store validated (processed) image
             validated_blob_name = f"{order_id}/validated.jpg"
             storage_client.save_image(processed_bgr, validated_blob_name)
-            validated_signed_url = storage_client.get_signed_url(validated_blob_name)
+            validated_signed_url = storage_client.get_signed_url(
+                validated_blob_name,
+                expiration=StorageConfig.SIGNED_URL_EXPIRATION
+            )
 
             # Return storage information
             storage_info = {
