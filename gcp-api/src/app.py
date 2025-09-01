@@ -16,7 +16,7 @@ from flask_cors import CORS
 import stripe
 from compliance_checker import ComplianceChecker
 from lib.quick_checker import QuickChecker
-from lib.config import Config
+from lib.app_config import config
 from lib.order_storage import OrderStorage
 
 # --- Global Initialization ---
@@ -24,13 +24,10 @@ from lib.order_storage import OrderStorage
 # The heavy ML model is lazy-loaded by the ComplianceChecker.
 logging.basicConfig(level=logging.INFO)
 
-# Configure Stripe from environment
-STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
-APP_PUBLIC_BASE_URL = os.environ.get("APP_PUBLIC_BASE_URL", "")
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-if STRIPE_SECRET_KEY:
-    stripe.api_key = STRIPE_SECRET_KEY
+# Configure Stripe from centralized config
+stripe_config = config.stripe
+if stripe_config.secret_key:
+    stripe.api_key = stripe_config.secret_key
 else:
     logging.warning("STRIPE_SECRET_KEY not set. Stripe endpoints will return 503.")
 
@@ -44,7 +41,7 @@ except Exception as e:
 
 try:
     logging.info("Initializing ComplianceChecker orchestrator...")
-    compliance_checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
+    compliance_checker = ComplianceChecker(model_name=config.icao.recommended_model_name)
     logging.info("ComplianceChecker orchestrator initialized.")
 except Exception as e:
     logging.critical(f"FATAL: Could not initialize ComplianceChecker: {e}", exc_info=True)
@@ -56,17 +53,9 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 
 # Configure CORS for Vercel frontend
-allowed_origins = [
-    "https://passport-validator.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:5173",
-]
-# Allow env override (comma-separated list)
-extra_origins = os.environ.get('CORS_ORIGINS')
-if extra_origins:
-    allowed_origins.extend([o.strip() for o in extra_origins.split(',') if o.strip()])
+server_config = config.server
 # Enable wildcard subdomains for Vercel via regex (anchor for safety)
-CORS(app, origins=allowed_origins + [r"^https://.*\.vercel\.app$"])
+CORS(app, origins=server_config.cors_origins + [r"^https://.*\.vercel\.app$"])
 
 @app.before_request
 def check_services_initialized():
@@ -188,7 +177,7 @@ def validate_photo():
 # --- Stripe Checkout ---
 @app.route('/api/stripe/create_checkout_session', methods=['POST'])
 def create_checkout_session():
-    if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID or not APP_PUBLIC_BASE_URL:
+    if not stripe_config.secret_key or not stripe_config.price_id or not stripe_config.public_base_url:
         return jsonify({
             "error": "Stripe is not configured",
             "message": "Missing STRIPE_SECRET_KEY, STRIPE_PRICE_ID or APP_PUBLIC_BASE_URL"
@@ -197,12 +186,12 @@ def create_checkout_session():
 
         session = stripe.checkout.Session.create(
             line_items=[{
-                'price': STRIPE_PRICE_ID,
+                'price': stripe_config.price_id,
                 'quantity': 1,
             }],
             mode='payment',
-            success_url=f"{APP_PUBLIC_BASE_URL}/checkout/success?success=true",
-            cancel_url=f"{APP_PUBLIC_BASE_URL}/checkout/cancel?canceled=true",
+            success_url=f"{stripe_config.public_base_url}/checkout/success?success=true",
+            cancel_url=f"{stripe_config.public_base_url}/checkout/cancel?canceled=true",
             allow_promotion_codes=True,
             automatic_tax={'enabled': False},
         )
@@ -214,7 +203,7 @@ def create_checkout_session():
 # --- Stripe Webhook (verify signature; fulfill asynchronously) ---
 @app.route('/api/stripe/webhook', methods=['POST'])
 def stripe_webhook():
-    if not STRIPE_WEBHOOK_SECRET:
+    if not stripe_config.webhook_secret:
         logging.error("STRIPE_WEBHOOK_SECRET not set; rejecting webhook")
         return jsonify({"error": "Stripe webhook not configured"}), 503
 
@@ -225,7 +214,7 @@ def stripe_webhook():
         event = stripe.Webhook.construct_event(
             payload=payload,
             sig_header=sig_header,
-            secret=STRIPE_WEBHOOK_SECRET,
+            secret=stripe_config.webhook_secret,
         )
     except ValueError:
         logging.warning("Received invalid payload for Stripe webhook")
@@ -261,6 +250,5 @@ def internal_error(error):
     return jsonify({"error": "An unexpected internal server error occurred", "message": "An unexpected internal server error occurred"}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
     # No special logic needed here anymore, global init is sufficient and fast.
-    app.run(host='0.0.0.0', port=port, debug=False) 
+    app.run(host='0.0.0.0', port=server_config.port, debug=False) 
