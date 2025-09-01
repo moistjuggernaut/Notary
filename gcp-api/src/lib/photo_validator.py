@@ -5,7 +5,7 @@ Validates processed photos against various quality and compliance criteria.
 
 import cv2
 import numpy as np
-from lib.config import Config
+from lib.app_config import config
 
 
 class PhotoValidator:
@@ -13,7 +13,7 @@ class PhotoValidator:
     
     def __init__(self):
         """Initialize the PhotoValidator with configuration."""
-        self.config = Config()
+        self.config = config.icao
 
     def _get_distance(self, p1, p2):
         """
@@ -48,7 +48,7 @@ class PhotoValidator:
         Uses the detection method from the LearnOpenCV guide.
         Ref: https://learnopencv.com/automatic-red-eye-remover-using-opencv-cpp-python/
         """
-        pupil_roi_radius = max(5, int(self.config.FINAL_OUTPUT_HEIGHT_PX * 0.01))
+        pupil_roi_radius = max(5, int(self.config.final_output_height_px * 0.01))
         x, y = int(pupil_landmark[0]), int(pupil_landmark[1])
         roi = image_bgr[y-pupil_roi_radius:y+pupil_roi_radius, x-pupil_roi_radius:x+pupil_roi_radius]
         
@@ -67,7 +67,7 @@ class PhotoValidator:
         total_pixels = roi.shape[0] * roi.shape[1]
         red_percentage = red_pixel_count / total_pixels if total_pixels > 0 else 0
 
-        if red_percentage > self.config.RED_EYE_PIXEL_PERCENTAGE_THRESH:
+        if red_percentage > self.config.red_eye_pixel_percentage_thresh:
             return "FAIL", f"{red_percentage:.1%} of pupil ROI is red after correction attempt."
             
         return "PASS", f"{red_percentage:.1%} of pupil ROI is red."
@@ -110,9 +110,9 @@ class PhotoValidator:
         std_dev_color = np.std(bg_pixels, axis=0)
 
         # Check if background meets final criteria
-        is_light_enough = np.all(mean_color >= self.config.BG_FINAL_MIN_LIGHT_RGB)
-        is_not_too_bright = np.all(mean_color <= self.config.BG_FINAL_MAX_RGB)
-        is_uniform = np.all(std_dev_color <= self.config.BG_FINAL_STD_DEV_MAX)
+        is_light_enough = np.all(mean_color >= self.config.bg_final_min_light_rgb)
+        is_not_too_bright = np.all(mean_color <= self.config.bg_final_max_rgb)
+        is_uniform = np.all(std_dev_color <= self.config.bg_final_std_dev_max)
         
         issues = []
         if not is_light_enough:
@@ -162,7 +162,7 @@ class PhotoValidator:
         
         contrast = abs(bg_mean - face_mean)
         
-        if contrast >= self.config.CONTRAST_THRESHOLD_GRAY:
+        if contrast >= self.config.contrast_threshold_gray:
             return "PASS", f"Good contrast: {contrast:.1f} (face: {face_mean:.1f}, bg: {bg_mean:.1f})"
         else:
             return "WARNING", f"Low contrast: {contrast:.1f} (face: {face_mean:.1f}, bg: {bg_mean:.1f})"
@@ -181,8 +181,8 @@ class PhotoValidator:
         """
         # Get average eye level from landmarks
         eye_indices = np.concatenate([
-            self.config.LEFT_EYE_LANDMARKS,
-            self.config.RIGHT_EYE_LANDMARKS
+            self.config.left_eye_landmarks,
+            self.config.right_eye_landmarks
         ])
         avg_eye_y = np.mean(landmarks[eye_indices, 1])
         
@@ -190,13 +190,13 @@ class PhotoValidator:
         distance_from_bottom_px = img_h - avg_eye_y
         
         # Check if within acceptable range
-        if self.config.EYE_LEVEL_MIN_FROM_BOTTOM_PX <= distance_from_bottom_px <= self.config.EYE_LEVEL_MAX_FROM_BOTTOM_PX:
+        if self.config.eye_level_min_from_bottom_px <= distance_from_bottom_px <= self.config.eye_level_max_from_bottom_px:
             # Convert back to mm for display
-            distance_mm = (distance_from_bottom_px / self.config.TARGET_DPI) * 25.4
-            return "PASS", f"Eye level: {distance_mm:.1f}mm from bottom (Target: {self.config.EYE_LEVEL_MIN_FROM_BOTTOM_MM}-{self.config.EYE_LEVEL_MAX_FROM_BOTTOM_MM}mm)"
+            distance_mm = (distance_from_bottom_px / self.config.target_dpi) * 25.4
+            return "PASS", f"Eye level: {distance_mm:.1f}mm from bottom (Target: {self.config.eye_level_min_from_bottom_mm}-{self.config.eye_level_max_from_bottom_mm}mm)"
         else:
-            distance_mm = (distance_from_bottom_px / self.config.TARGET_DPI) * 25.4
-            return "FAIL", f"Eye level: {distance_mm:.1f}mm from bottom (Target: {self.config.EYE_LEVEL_MIN_FROM_BOTTOM_MM}-{self.config.EYE_LEVEL_MAX_FROM_BOTTOM_MM}mm)"
+            distance_mm = (distance_from_bottom_px / self.config.target_dpi) * 25.4
+            return "FAIL", f"Eye level: {distance_mm:.1f}mm from bottom (Target: {self.config.eye_level_min_from_bottom_mm}-{self.config.eye_level_max_from_bottom_mm}mm)"
 
     def validate_photo(self, preprocessed_image_bgr, face_data, rembg_mask=None):
         """
@@ -223,11 +223,11 @@ class PhotoValidator:
         # 1. Head Pose Validation
         if face_data.pose is not None:
             yaw, pitch, roll = face_data.pose
-            results.append(("PASS" if abs(yaw) <= self.config.MAX_ABS_YAW else "FAIL", 
+            results.append(("PASS" if abs(yaw) <= self.config.max_abs_yaw else "FAIL", 
                           "Head Pose - Yaw", f"{yaw:.1f}°"))
-            results.append(("PASS" if abs(pitch) <= self.config.MAX_ABS_PITCH else "FAIL", 
+            results.append(("PASS" if abs(pitch) <= self.config.max_abs_pitch else "FAIL", 
                           "Head Pose - Pitch", f"{pitch:.1f}°"))
-            results.append(("PASS" if abs(roll) <= self.config.MAX_ABS_ROLL else "FAIL", 
+            results.append(("PASS" if abs(roll) <= self.config.max_abs_roll else "FAIL", 
                           "Head Pose - Roll", f"{roll:.1f}°"))
         else:
             results.append(("UNKNOWN", "Head Pose", "Pose information not available."))
@@ -255,30 +255,30 @@ class PhotoValidator:
             # Hybrid approach: rembg for crown, landmarks for chin
             subject_pixels_y = np.where(rembg_mask)[0]
             crown_y = np.min(subject_pixels_y)
-            chin_y = landmarks[self.config.CHIN_LANDMARK_INDEX][1]
+            chin_y = landmarks[self.config.chin_landmark_index][1]
             head_h = chin_y - crown_y
             
             # Add a log for which method was used
             method_log = " (Method: rembg+landmarks)"
         else:
             # Fallback to validating the preprocessor's crop logic
-            chin_y = landmarks[self.config.CHIN_LANDMARK_INDEX][1]
-            expected_crown_y = img_h * self.config.HEAD_POS_RATIO_VERTICAL
+            chin_y = landmarks[self.config.chin_landmark_index][1]
+            expected_crown_y = img_h * self.config.head_pos_ratio_vertical
             head_h = chin_y - expected_crown_y
             method_log = " (Method: crop-box validation)"
 
         ratio = head_h / img_h if head_h > 0 else 0
         
-        status = "PASS" if self.config.MIN_CHIN_TO_CROWN_RATIO <= ratio <= self.config.MAX_CHIN_TO_CROWN_RATIO else "FAIL"
+        status = "PASS" if self.config.min_chin_to_crown_ratio <= ratio <= self.config.max_chin_to_crown_ratio else "FAIL"
         results.append((status, "Chin-to-Crown Ratio", 
-                       f"{ratio:.2f} (Target: {self.config.MIN_CHIN_TO_CROWN_RATIO:.2f}-{self.config.MAX_CHIN_TO_CROWN_RATIO:.2f}){method_log}"))
+                       f"{ratio:.2f} (Target: {self.config.min_chin_to_crown_ratio:.2f}-{self.config.max_chin_to_crown_ratio:.2f}){method_log}"))
         
         # 4. Eyes Open Validation (using EAR)
-        left_ear = self._get_eye_aspect_ratio(landmarks[self.config.LEFT_EYE_LANDMARKS])
-        right_ear = self._get_eye_aspect_ratio(landmarks[self.config.RIGHT_EYE_LANDMARKS])
+        left_ear = self._get_eye_aspect_ratio(landmarks[self.config.left_eye_landmarks])
+        right_ear = self._get_eye_aspect_ratio(landmarks[self.config.right_eye_landmarks])
         avg_ear = (left_ear + right_ear) / 2.0
         
-        if avg_ear >= self.config.EYE_AR_THRESH:
+        if avg_ear >= self.config.eye_ar_thresh:
             results.append(("PASS", "Eyes Open", f"EAR: {avg_ear:.2f} (appears open)."))
         else:
             results.append(("WARNING", "Eyes Open", 
@@ -288,9 +288,9 @@ class PhotoValidator:
         # This check verifies that the red-eye correction in the preprocessor was
         # successful. It runs the detection algorithm again on the final image.
         left_redeye_status, left_redeye_msg = self._validate_red_eye(
-            preprocessed_image_bgr, landmarks[self.config.LEFT_PUPIL_APPROX_INDEX])
+            preprocessed_image_bgr, landmarks[self.config.left_pupil_approx_index])
         right_redeye_status, right_redeye_msg = self._validate_red_eye(
-            preprocessed_image_bgr, landmarks[self.config.RIGHT_PUPIL_APPROX_INDEX])
+            preprocessed_image_bgr, landmarks[self.config.right_pupil_approx_index])
         results.append((left_redeye_status, "Left Eye Red-Eye", left_redeye_msg))
         results.append((right_redeye_status, "Right Eye Red-Eye", right_redeye_msg))
 

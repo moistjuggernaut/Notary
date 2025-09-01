@@ -5,7 +5,7 @@ Handles cropping, resizing, and background removal operations.
 
 import cv2
 import numpy as np
-from lib.config import Config
+from lib.app_config import config
 from lib.face_analyzer import FaceAnalyzer
 from types import SimpleNamespace
 
@@ -22,7 +22,7 @@ class ImagePreprocessor:
                                              library. Defaults to None.
         """
         self.face_analyzer = face_analyzer
-        self.config = Config()
+        self.config = config.icao
         self.rembg_func = rembg_func
 
     def _get_face_details_for_crop(self, faces):
@@ -58,12 +58,12 @@ class ImagePreprocessor:
         # For infants, we use a simple but robust geometric estimation.
         if landmarks is not None and len(landmarks) == 106:
             # The bbox can be too tight. We estimate crown position based on facial geometry.
-            chin_y = landmarks[self.config.CHIN_LANDMARK_INDEX][1]
+            chin_y = landmarks[self.config.chin_landmark_index][1]
             
             # Get the average vertical position of the eyes.
             eye_indices = np.concatenate([
-                self.config.LEFT_EYE_LANDMARKS,
-                self.config.RIGHT_EYE_LANDMARKS
+                self.config.left_eye_landmarks,
+                self.config.right_eye_landmarks
             ])
             avg_eye_y = np.mean(landmarks[eye_indices, 1])
             
@@ -74,7 +74,7 @@ class ImagePreprocessor:
             # to generously estimate where the crown should be. This provides
             # ample space and avoids cropping too tightly.
             eye_to_chin_dist = chin_y - avg_eye_y
-            crown_y = avg_eye_y - (eye_to_chin_dist * self.config.INFANT_CROWN_ESTIMATION_MULTIPLIER)
+            crown_y = avg_eye_y - (eye_to_chin_dist * self.config.infant_crown_estimation_multiplier)
 
             # Only use the landmark values if they are valid.
             if crown_y < chin_y:
@@ -108,10 +108,10 @@ class ImagePreprocessor:
 
         # ICAO spec: head height should be a specific ratio of the photo height.
         # We calculate the target crop height to satisfy this requirement.
-        target_crop_h = head_height_px / self.config.TARGET_HEAD_HEIGHT_RATIO
+        target_crop_h = head_height_px / self.config.target_head_height_ratio
         
         # Calculate target width based on the passport aspect ratio
-        target_crop_w = target_crop_h * self.config.TARGET_ASPECT_RATIO
+        target_crop_w = target_crop_h * self.config.target_aspect_ratio
 
         # Center the crop box horizontally on the face center.
         # For passport photos, we want to center on the face/head, not the entire subject extent.
@@ -125,7 +125,7 @@ class ImagePreprocessor:
         # Position the crop vertically. ICAO mandates space above the head.
         # We use a ratio of the final image height to position the crown correctly
         # from the top of the frame.
-        space_above_head = target_crop_h * self.config.HEAD_POS_RATIO_VERTICAL
+        space_above_head = target_crop_h * self.config.head_pos_ratio_vertical
         crop_y1 = crown_y - space_above_head
         crop_y2 = crop_y1 + target_crop_h
         
@@ -167,8 +167,8 @@ class ImagePreprocessor:
         mean_color = np.mean(bg_pixels, axis=0)
         std_dev_color = np.std(bg_pixels, axis=0)
 
-        is_light_enough = np.all(mean_color >= self.config.BG_PRELIM_MIN_LIGHT_RGB)
-        is_uniform = np.all(std_dev_color <= self.config.BG_PRELIM_STD_DEV_MAX)
+        is_light_enough = np.all(mean_color >= self.config.bg_prelim_min_light_rgb)
+        is_uniform = np.all(std_dev_color <= self.config.bg_prelim_std_dev_max)
         
         if is_light_enough and is_uniform:
             return True, "Background appears light and uniform."
@@ -228,8 +228,8 @@ class ImagePreprocessor:
         
         # Define eye regions using landmarks
         eye_indices = [
-            ("Left", self.config.LEFT_PUPIL_APPROX_INDEX),
-            ("Right", self.config.RIGHT_PUPIL_APPROX_INDEX)
+            ("Left", self.config.left_pupil_approx_index),
+            ("Right", self.config.right_pupil_approx_index)
         ]
 
         for eye_name, pupil_index in eye_indices:
@@ -356,7 +356,7 @@ class ImagePreprocessor:
                 logs.append(("INFO", "Preprocessing", "Background removal applied."))
         
         # Step 6: Resize to final dimensions
-        final_shape = (self.config.FINAL_OUTPUT_WIDTH_PX, self.config.FINAL_OUTPUT_HEIGHT_PX)
+        final_shape = (self.config.final_output_width_px, self.config.final_output_height_px)
         processed_bgr = cv2.resize(cropped_bgr, final_shape, interpolation=cv2.INTER_AREA)
         logs.append(("INFO", "Preprocessing", "Image resized to final dimensions."))
 
