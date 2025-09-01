@@ -45,8 +45,8 @@ export const API_ENDPOINTS = {
         get: (id: string) => `/documents/${id}`,
     },
     photo: {
-        validate: '/api/validate_photo',
-        quickCheck: '/api/quick_check',
+        validate: '/validate_photo',
+        quickCheck: '/quick_check',
     },
 } as const;
 

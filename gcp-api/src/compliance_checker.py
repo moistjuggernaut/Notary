@@ -10,7 +10,7 @@ import os
 import numpy as np
 from threading import Lock
 
-from lib.config import Config
+from lib.app_config import config
 from lib.image_preprocessor import ImagePreprocessor
 from lib.photo_validator import PhotoValidator
 # FaceAnalyzer is imported dynamically for lazy loading
@@ -26,7 +26,7 @@ class ComplianceChecker:
     _full_analyzer_lock = Lock()
     _rembg_remove_func = None
     
-    def __init__(self, model_name=Config.RECOMMENDED_MODEL_NAME, providers=None):
+    def __init__(self, model_name=config.icao.recommended_model_name, providers=None):
         """
         Initializes the ComplianceChecker orchestrator.
         The heavyweight FaceAnalyzer is NOT loaded on initialization.
@@ -36,7 +36,7 @@ class ComplianceChecker:
         self._providers = providers
         self.preprocessor = None
         self.validator = PhotoValidator()
-        self.config = Config()
+        self.config = config.icao
         log.info("ComplianceChecker orchestrator initialized.")
 
     def _get_full_analyzer(self):
@@ -141,7 +141,7 @@ class ComplianceChecker:
 
         except Exception as e:
             log.critical(f"A critical error occurred during full validation: {e}", exc_info=True)
-            return {"success": False, "error": f"Internal server error: {e}", "recommendation": "REJECTED: System error"}
+            return {"success": False, "error": f"Internal server error: {e}", "recommendation": "REJECTED: System error"}, None
 
 
 def handler(request, response):
@@ -201,7 +201,7 @@ def handler(request, response):
             return json.dumps({"error": "Could not decode image data"})
         
         # Run validation using the orchestrator
-        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
+        checker = ComplianceChecker(model_name=config.icao.recommended_model_name)
         result = checker.check_image_array(original_bgr)
         
         response.status_code = 200
@@ -223,7 +223,7 @@ if __name__ == "__main__":
     try:
         if not os.path.exists(input_image_path):
             log.warning(f"Test image '{input_image_path}' not found. Creating a dummy image.")
-            dummy_h, dummy_w = int(Config.FINAL_OUTPUT_HEIGHT_PX * 1.5), int(Config.FINAL_OUTPUT_WIDTH_PX * 1.5)
+            dummy_h, dummy_w = int(config.icao.final_output_height_px * 1.5), int(config.icao.final_output_width_px * 1.5)
             dummy_img = np.full((dummy_h, dummy_w, 3), (225, 225, 225), dtype=np.uint8)
             fh, fw = int(dummy_h * 0.6), int(dummy_w * 0.6)
             fy, fx = (dummy_h - fh) // 2, (dummy_w - fw) // 2
@@ -238,7 +238,7 @@ if __name__ == "__main__":
         if image_to_check is None:
             raise FileNotFoundError(f"Could not read the image file at {input_image_path}")
 
-        checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
+        checker = ComplianceChecker(model_name=config.icao.recommended_model_name)
         result = checker.check_image_array(image_to_check)
 
         log.info(f"Final Recommendation: {result.get('recommendation')}")

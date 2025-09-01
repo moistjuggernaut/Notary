@@ -1,0 +1,26 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - gcs-emulator
+    volumes:
+      # Mount the source code for live-reloading during development
+      - ./src:/app
+
+  gcs-emulator:
+    image: fsouza/fake-gcs-server:latest
+    ports:
+      - "4443:4443"
+    command: -scheme http -host 0.0.0.0
+    volumes:
+      # Persist data between runs
+      - gcs_data:/data
+
+volumes:
+  gcs_data:

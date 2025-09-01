@@ -2,15 +2,15 @@
 Core Library for Baby Picture Validator
 
 Contains the main validation logic and processing modules:
-- config: Configuration constants and calculations
+- app_config: Centralized Pydantic configuration
 - face_analyzer: Face detection and analysis using InsightFace
 - image_preprocessor: Image preprocessing and background removal
 - photo_validator: ICAO compliance validation rules
 """
 
-from .config import Config
+from .app_config import config
 from .face_analyzer import FaceAnalyzer
 from .image_preprocessor import ImagePreprocessor
 from .photo_validator import PhotoValidator
 
-__all__ = ['Config', 'FaceAnalyzer', 'ImagePreprocessor', 'PhotoValidator'] 
+__all__ = ['config', 'FaceAnalyzer', 'ImagePreprocessor', 'PhotoValidator'] 

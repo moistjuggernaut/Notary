@@ -15,7 +15,7 @@ export default function Header() {
             </div>
             <div>
               <h1 className="text-xl font-semibold text-gray-900">EU Photo ID Validator</h1>
-              <p className="text-sm text-gray-600">EU Baby Passport Photo Verification</p>
+              <p className="text-sm text-gray-600">EU Passport Photo Verification</p>
             </div>
           </Link>
           
