@@ -97,12 +97,12 @@ export default function Home() {
       checks,
       recommendations: [apiResponse.recommendation].filter(Boolean),
       orderId: apiResponse.orderId,
-      validatedImageUrl: apiResponse.imageUrl
+      imageUrl: apiResponse.imageUrl
     };
   };
 
   const handleValidatePhoto = async () => {
-    if (!selectedFile || !quickCheckResult?.success || !quickCheckResult?.orderId) return;
+    if (!quickCheckResult?.success || !quickCheckResult?.orderId) return;
 
     setIsValidating(true);
 
