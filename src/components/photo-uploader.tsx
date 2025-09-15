@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Upload, X, CloudUpload, FileImage, AlertTriangle, Camera, CheckCircle, XCircle, Download } from "lucide-react";
+// import { CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatFileSize, validateImageFile } from "@/lib/file-utils";
 import type { ValidationResult } from "@/types/validation";
@@ -327,16 +328,17 @@ export default function PhotoUploader({
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
-              {/* <form action="/api/stripe/create_checkout_session" method="POST" className="flex-1 sm:flex-none">
+              {/*<form action={`/api/stripe/create-checkout-session?orderId=${validationResult?.orderId || ''}`} method="POST" className="flex-1 sm:flex-none">
                 <Button 
                   variant="outline" 
                   type="submit"
                   className="w-full h-11"
+                  disabled={!validationResult?.orderId}
                 >
                   <CreditCard className="w-4 h-4 mr-2" />
                   Checkout
                 </Button>
-              </form> */}
+              </form>*/}
             </div>
           </div>
         )}

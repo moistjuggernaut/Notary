@@ -108,7 +108,7 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
       success: true,
       recommendation: gcpResponse.data.recommendation,
       logs: gcpResponse.data.logs,
-      orderId: gcpResponse.data.orderId,
+      orderId: orderId,
       imageUrl: imageUrl,
     })
   } catch (error) {
@@ -124,6 +124,12 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
 app.post('/api/stripe/create-checkout-session', async (c) => {
   // Check if Stripe is configured
   try {
+    const orderId = c.req.query('orderId')
+
+    if (!orderId) {
+      return c.json({ error: 'Order ID is required' }, 400)
+    }
+
     const session = await stripe.checkout.sessions.create({
       line_items: [{
         price: process.env.STRIPE_PRICE_ID,
@@ -134,6 +140,7 @@ app.post('/api/stripe/create-checkout-session', async (c) => {
       cancel_url: `${process.env.APP_PUBLIC_BASE_URL}/checkout/cancel?canceled=true`,
       allow_promotion_codes: true,
       automatic_tax: { enabled: false },
+      client_reference_id: orderId,
     })
 
     return c.redirect(session.url!, 303)
