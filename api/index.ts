@@ -122,31 +122,27 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
 
 // Stripe routes
 app.post('/api/stripe/create-checkout-session', async (c) => {
+  // Check if Stripe is configured
   try {
-    const body = await c.req.json()
-    const { priceId, successUrl, cancelUrl } = body
-
-    if (!priceId) {
-      return c.json({ error: 'Price ID is required' }, 400)
-    }
-
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+      line_items: [{
+        price: process.env.STRIPE_PRICE_ID,
+        quantity: 1,
+      }],
       mode: 'payment',
-      success_url: successUrl || `${process.env.FRONTEND_URL}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl || `${process.env.FRONTEND_URL}/checkout-cancel`,
+      success_url: `${process.env.APP_PUBLIC_BASE_URL}/checkout/success?success=true`,
+      cancel_url: `${process.env.APP_PUBLIC_BASE_URL}/checkout/cancel?canceled=true`,
+      allow_promotion_codes: true,
+      automatic_tax: { enabled: false },
     })
 
-    return c.json({ sessionId: session.id })
+    return c.redirect(session.url!, 303)
   } catch (error) {
-    console.error('Stripe checkout error:', error)
-    return c.json({ error: 'Failed to create checkout session' }, 500)
+    console.error('Stripe session error:', error)
+    return c.json({ 
+      error: "Stripe error", 
+      message: error instanceof Error ? error.message : 'Unknown error' 
+    }, 500)
   }
 })
 
