@@ -36,15 +36,10 @@ class OrderStorage:
             # Store validated (processed) image
             validated_blob_name = f"{order_id}/validated.jpg"
             storage_client.save_image(validated_bgr, validated_blob_name)
-            validated_signed_url = storage_client.get_signed_url(
-                validated_blob_name,
-                expiration=StorageConfig.SIGNED_URL_EXPIRATION
-            )
 
             # Return storage information
             storage_info = {
                 "order_id": order_id,
-                "validated_image_url": validated_signed_url,
             }
 
             log.info(f"Images stored successfully for order: {order_id}")
