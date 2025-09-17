@@ -7,7 +7,7 @@ import logging
 import cv2
 import numpy as np
 from insightface.app import FaceAnalysis
-from lib.config import Config
+from lib.app_config import config
 
 log = logging.getLogger(__name__)
                 
@@ -16,7 +16,7 @@ class FaceAnalyzer:
     Handles detailed face analysis using the InsightFace model.
     This includes detection, landmark extraction, and pose estimation.
     """
-    def __init__(self, model_name=Config.RECOMMENDED_MODEL_NAME, providers=None):
+    def __init__(self, model_name=config.icao.recommended_model_name, providers=None):
         """
         Initializes the FaceAnalyzer by loading the full InsightFace model.
         This is a slow operation and should not be done at application startup.

@@ -9,7 +9,7 @@ from flask import Flask, request, jsonify
 
 from compliance_checker import ComplianceChecker
 from lib.quick_checker import QuickChecker
-from lib.config import Config
+from lib.app_config import config
 from lib.order_storage import OrderStorage
 
 # --- Global Initialization ---
@@ -27,7 +27,7 @@ except Exception as e:
 
 try:
     logging.info("Initializing ComplianceChecker orchestrator...")
-    compliance_checker = ComplianceChecker(model_name=Config.RECOMMENDED_MODEL_NAME)
+    compliance_checker = ComplianceChecker(model_name=config.icao.recommended_model_name)
     logging.info("ComplianceChecker orchestrator initialized.")
 except Exception as e:
     logging.critical(f"FATAL: Could not initialize ComplianceChecker: {e}", exc_info=True)
@@ -143,6 +143,5 @@ def internal_error(error):
     return jsonify({"error": "An unexpected internal server error occurred", "message": "An unexpected internal server error occurred"}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
     # No special logic needed here anymore, global init is sufficient and fast.
-    app.run(host='0.0.0.0', port=port, debug=False) 
+    app.run(host='0.0.0.0', port=server_config.port, debug=False) 

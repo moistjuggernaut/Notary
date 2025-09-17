@@ -4,7 +4,7 @@ Order storage utilities for handling image storage after validation.
 
 import logging
 import numpy as np
-from lib.storage_config import StorageConfig
+from lib.app_config import config
 from lib.storage import get_storage_client
 
 log = logging.getLogger(__name__)

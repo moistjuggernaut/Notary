@@ -10,7 +10,7 @@ import os
 import numpy as np
 from threading import Lock
 
-from lib.config import Config
+from lib.app_config import config
 from lib.image_preprocessor import ImagePreprocessor
 from lib.photo_validator import PhotoValidator
 # FaceAnalyzer is imported dynamically for lazy loading
@@ -26,7 +26,7 @@ class ComplianceChecker:
     _full_analyzer_lock = Lock()
     _rembg_remove_func = None
     
-    def __init__(self, model_name=Config.RECOMMENDED_MODEL_NAME, providers=None):
+    def __init__(self, model_name=config.icao.recommended_model_name, providers=None):
         """
         Initializes the ComplianceChecker orchestrator.
         The heavyweight FaceAnalyzer is NOT loaded on initialization.
@@ -36,7 +36,7 @@ class ComplianceChecker:
         self._providers = providers
         self.preprocessor = None
         self.validator = PhotoValidator()
-        self.config = Config()
+        self.config = config.icao
         log.info("ComplianceChecker orchestrator initialized.")
 
     def _get_full_analyzer(self):
