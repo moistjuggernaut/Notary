@@ -12,18 +12,12 @@ class StorageConfig(BaseSettings):
 
     # GCS Settings
     bucket_name: str = Field(default="local-bucket", env="GCS_BUCKET_NAME")
-    gcp_project_id: Optional[str] = Field(default=None, env="GCP_PROJECT_ID")
 
     # Local Development Settings
     storage_emulator_host: Optional[str] = Field(
-        default=None,
+        default="http://localhost:4443",
         env="STORAGE_EMULATOR_HOST",
         description="Host for GCS emulator (e.g., 'http://localhost:4443')"
-    )
-    gcs_emulator_public_host: str = Field(
-        default="http://localhost:4443",
-        env="GCS_EMULATOR_PUBLIC_HOST",
-        description="Public URL for emulator, used for constructing direct URLs"
     )
 
     # Common Settings

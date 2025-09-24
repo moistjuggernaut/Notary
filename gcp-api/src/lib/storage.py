@@ -116,7 +116,7 @@ def get_storage_client() -> BaseStorageClient:
         log.info("Using EmulatorStorageClient for local development.")
         return EmulatorStorageClient(
             bucket_name=bucket_name,
-            public_host=config.storage.gcs_emulator_public_host,
+            public_host=config.storage.storage_emulator_host,
         )
     else:
         log.info("Using GCSStorageClient for production.")
