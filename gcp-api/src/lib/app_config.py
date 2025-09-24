@@ -11,17 +11,17 @@ class StorageConfig(BaseSettings):
     """Configuration for Google Cloud Storage settings."""
 
     # GCS Settings
-    bucket_name: str = Field(default="local-bucket", env="GCS_BUCKET_NAME")
+    bucket_name: str = Field(default="local-bucket", alias="GCS_BUCKET_NAME")
 
     # Local Development Settings
     storage_emulator_host: Optional[str] = Field(
         default="http://localhost:4443",
-        env="STORAGE_EMULATOR_HOST",
+        alias="STORAGE_EMULATOR_HOST",
         description="Host for GCS emulator (e.g., 'http://localhost:4443')"
     )
 
     # Common Settings
-    jpeg_quality: int = Field(default=95, env="JPEG_QUALITY")
+    jpeg_quality: int = Field(default=95, alias="JPEG_QUALITY")
 
     class Config:
         env_prefix = ""  # No prefix for storage config
@@ -30,7 +30,7 @@ class StorageConfig(BaseSettings):
 class ServerConfig(BaseSettings):
     """Configuration for server settings."""
 
-    port: int = Field(default=8080, env="PORT")
+    port: int = Field(default=8080, alias="PORT")
 
     class Config:
         env_prefix = ""
