@@ -150,39 +150,32 @@ class PrintProcessor:
         # Text content
         url_text = "www.passportphotovalidator.com"
         info_text = f"4x Passport Photos (35x45mm) - Cut along guides"
-        dpi_text = f"Print at {self.config.target_dpi} DPI"
 
         # Thicknesses
         url_thickness = 2  # Bold
         info_thickness = 1 # Regular
-        dpi_thickness = 1  # Regular
 
         # Get text sizes to calculate layout
         (url_w, url_h), _ = cv2.getTextSize(url_text, font, font_scale, url_thickness)
         (info_w, info_h), _ = cv2.getTextSize(info_text, font, font_scale, info_thickness)
-        (dpi_w, dpi_h), _ = cv2.getTextSize(dpi_text, font, font_scale, dpi_thickness)
 
         # Define margins and spacing
         bottom_margin = int((4 / 25.4) * self.config.target_dpi)  # 4mm from bottom
         line_spacing = int((2 / 25.4) * self.config.target_dpi)   # 2mm between lines
 
         # Calculate Y positions from the bottom up
-        dpi_y = self.PAPER_HEIGHT_PX - bottom_margin
-        info_y = dpi_y - dpi_h - line_spacing
+        info_y = self.PAPER_HEIGHT_PX - bottom_margin
         url_y = info_y - info_h - line_spacing
         
         # Calculate X positions to center the text
         url_x = (self.PAPER_WIDTH_PX - url_w) // 2
         info_x = (self.PAPER_WIDTH_PX - info_w) // 2
-        dpi_x = (self.PAPER_WIDTH_PX - dpi_w) // 2
         
         # Draw the text on the canvas
         cv2.putText(print_canvas, url_text, (url_x, url_y), 
                    font, font_scale, font_color, url_thickness)
         cv2.putText(print_canvas, info_text, (info_x, info_y), 
                    font, font_scale, font_color, info_thickness)
-        cv2.putText(print_canvas, dpi_text, (dpi_x, dpi_y), 
-                   font, font_scale, font_color, dpi_thickness)
     
     def create_print_layout(self, photo_bgr):
         """
