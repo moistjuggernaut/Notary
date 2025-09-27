@@ -2,10 +2,10 @@ import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import Stripe from 'stripe'
 import { getStripe, getWebhookSecret } from './lib/.stripe.js'
 import { getSignedUrlForImage, uploadImageToGCP } from './lib/.gcp-storage.js'
 import { triggerGCPRun } from './lib/.gcp-run.js'
+import { handleStripeWebhookEvent } from './lib/fulfillment.js'
 
 const app = new Hono()
 
@@ -168,20 +168,9 @@ app.post('/api/stripe/webhook', async (c) => {
       getWebhookSecret()
     )
 
-    // Handle the event
-    switch (event.type) {
-      case 'checkout.session.completed':
-        const session = event.data.object as Stripe.Checkout.Session
-        console.log('Payment successful:', session.id)
-        // TODO: Handle successful payment
-        break
-      case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object as Stripe.PaymentIntent
-        console.log('Payment intent succeeded:', paymentIntent.id)
-        break
-      default:
-        console.log(`Unhandled event type: ${event.type}`)
-    }
+    handleStripeWebhookEvent(event).catch((err) => {
+      console.error('Fulfillment error:', err)
+    })
 
     return c.json({ received: true })
   } catch (error) {
