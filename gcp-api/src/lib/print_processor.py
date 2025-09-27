@@ -17,6 +17,9 @@ class PrintProcessor:
         # Print paper dimensions (10×15 cm)
         self.PAPER_WIDTH_MM = 100
         self.PAPER_HEIGHT_MM = 150
+
+        # Desired spacing between photos (in mm)
+        self.PHOTO_SPACING_MM = 6
         
         # Calculate paper dimensions in pixels at target DPI
         self.PAPER_WIDTH_PX = int((self.PAPER_WIDTH_MM / 25.4) * self.config.target_dpi)
@@ -35,9 +38,14 @@ class PrintProcessor:
     
     def _calculate_layout(self):
         """Calculate the optimal layout for photos on the print paper."""
+        # Calculate photo spacing in pixels (ensure at least 1px)
+        spacing_px = int((self.PHOTO_SPACING_MM / 25.4) * self.config.target_dpi)
+        self.spacing_x = max(spacing_px, 1)
+        self.spacing_y = max(spacing_px, 1)
+
         # Calculate total area needed for photos
-        total_photos_width = self.PHOTO_WIDTH_PX * self.GRID_COLS
-        total_photos_height = self.PHOTO_HEIGHT_PX * self.GRID_ROWS
+        total_photos_width = (self.PHOTO_WIDTH_PX * self.GRID_COLS) + self.spacing_x * (self.GRID_COLS - 1)
+        total_photos_height = (self.PHOTO_HEIGHT_PX * self.GRID_ROWS) + self.spacing_y * (self.GRID_ROWS - 1)
         
         # Calculate margins
         self.margin_x = (self.PAPER_WIDTH_PX - total_photos_width) // 2
@@ -48,90 +56,133 @@ class PrintProcessor:
         self.margin_x = max(self.margin_x, min_margin_px)
         self.margin_y = max(self.margin_y, min_margin_px)
         
-        # Calculate spacing between photos
-        self.spacing_x = 0  # No spacing between photos for easier cutting
-        self.spacing_y = 0
+        # Precompute grid dimensions for later use
+        self.grid_width = total_photos_width
+        self.grid_height = total_photos_height
     
     def _draw_cutting_guides(self, print_canvas):
         """Draw cutting guides on the print canvas."""
         # Cutting guide color (light gray)
         guide_color = (128, 128, 128)
         guide_thickness = 2
-        
-        # Draw outer cutting frame
-        frame_margin = int((2 / 25.4) * self.config.target_dpi)  # 2mm outside the photos
-        
-        # Calculate frame coordinates
-        frame_x1 = self.margin_x - frame_margin
-        frame_y1 = self.margin_y - frame_margin
-        frame_x2 = self.margin_x + (self.PHOTO_WIDTH_PX * self.GRID_COLS) + frame_margin
-        frame_y2 = self.margin_y + (self.PHOTO_HEIGHT_PX * self.GRID_ROWS) + frame_margin
-        
-        # Ensure frame is within canvas bounds
-        frame_x1 = max(0, frame_x1)
-        frame_y1 = max(0, frame_y1)
-        frame_x2 = min(self.PAPER_WIDTH_PX, frame_x2)
-        frame_y2 = min(self.PAPER_HEIGHT_PX, frame_y2)
-        
-        # Draw outer frame
-        cv2.rectangle(print_canvas, (frame_x1, frame_y1), (frame_x2, frame_y2), guide_color, guide_thickness)
-        
-        # Draw individual photo cutting guides
+
+        tick_length = int((6 / 25.4) * self.config.target_dpi)
+        tick_length = max(tick_length, 6)
+
         for row in range(self.GRID_ROWS):
             for col in range(self.GRID_COLS):
-                x = self.margin_x + col * self.PHOTO_WIDTH_PX
-                y = self.margin_y + row * self.PHOTO_HEIGHT_PX
-                
-                # Draw photo border
-                cv2.rectangle(print_canvas, 
-                            (x, y), 
-                            (x + self.PHOTO_WIDTH_PX, y + self.PHOTO_HEIGHT_PX), 
-                            guide_color, 1)
-        
-        # Draw cross marks at corners for precise cutting
-        cross_size = int((3 / 25.4) * self.config.target_dpi)  # 3mm cross marks
-        
-        # Corner positions for each photo
-        for row in range(self.GRID_ROWS + 1):  # +1 to include bottom edge
-            for col in range(self.GRID_COLS + 1):  # +1 to include right edge
-                x = self.margin_x + col * self.PHOTO_WIDTH_PX
-                y = self.margin_y + row * self.PHOTO_HEIGHT_PX
-                
-                # Draw cross mark
-                cv2.line(print_canvas, 
-                        (x - cross_size, y), (x + cross_size, y), 
-                        guide_color, 1)
-                cv2.line(print_canvas, 
-                        (x, y - cross_size), (x, y + cross_size), 
-                        guide_color, 1)
+                x0 = self.margin_x + col * (self.PHOTO_WIDTH_PX + self.spacing_x)
+                y0 = self.margin_y + row * (self.PHOTO_HEIGHT_PX + self.spacing_y)
+                x1 = x0 + self.PHOTO_WIDTH_PX
+                y1 = y0 + self.PHOTO_HEIGHT_PX
+
+                # Top-left corner
+                cv2.line(
+                    print_canvas,
+                    (max(x0 - tick_length, 0), y0),
+                    (x0, y0),
+                    guide_color,
+                    guide_thickness,
+                )
+                cv2.line(
+                    print_canvas,
+                    (x0, max(y0 - tick_length, 0)),
+                    (x0, y0),
+                    guide_color,
+                    guide_thickness,
+                )
+
+                # Top-right corner
+                cv2.line(
+                    print_canvas,
+                    (x1, y0),
+                    (min(x1 + tick_length, self.PAPER_WIDTH_PX), y0),
+                    guide_color,
+                    guide_thickness,
+                )
+                cv2.line(
+                    print_canvas,
+                    (x1, max(y0 - tick_length, 0)),
+                    (x1, y0),
+                    guide_color,
+                    guide_thickness,
+                )
+
+                # Bottom-left corner
+                cv2.line(
+                    print_canvas,
+                    (max(x0 - tick_length, 0), y1),
+                    (x0, y1),
+                    guide_color,
+                    guide_thickness,
+                )
+                cv2.line(
+                    print_canvas,
+                    (x0, y1),
+                    (x0, min(y1 + tick_length, self.PAPER_HEIGHT_PX)),
+                    guide_color,
+                    guide_thickness,
+                )
+
+                # Bottom-right corner
+                cv2.line(
+                    print_canvas,
+                    (x1, y1),
+                    (min(x1 + tick_length, self.PAPER_WIDTH_PX), y1),
+                    guide_color,
+                    guide_thickness,
+                )
+                cv2.line(
+                    print_canvas,
+                    (x1, y1),
+                    (x1, min(y1 + tick_length, self.PAPER_HEIGHT_PX)),
+                    guide_color,
+                    guide_thickness,
+                )
     
     def _add_print_info(self, print_canvas):
         """Add printing information text to the canvas."""
         # Font settings
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.6
+        font_scale = 0.8 # Increased size
         font_color = (64, 64, 64)  # Dark gray
-        thickness = 1
         
-        # Calculate text position (bottom of canvas)
-        text_y = self.PAPER_HEIGHT_PX - int((3 / 25.4) * self.config.target_dpi)  # 3mm from bottom
-        
-        # Add dimension info
+        # Text content
+        url_text = "www.passportphotovalidator.com"
         info_text = f"4x Passport Photos (35x45mm) - Cut along guides"
-        text_size = cv2.getTextSize(info_text, font, font_scale, thickness)[0]
-        text_x = (self.PAPER_WIDTH_PX - text_size[0]) // 2
-        
-        cv2.putText(print_canvas, info_text, (text_x, text_y), 
-                   font, font_scale, font_color, thickness)
-        
-        # Add DPI info
         dpi_text = f"Print at {self.config.target_dpi} DPI"
-        dpi_size = cv2.getTextSize(dpi_text, font, font_scale, thickness)[0]
-        dpi_x = (self.PAPER_WIDTH_PX - dpi_size[0]) // 2
-        dpi_y = text_y + int((4 / 25.4) * self.config.target_dpi)  # 4mm below main text
+
+        # Thicknesses
+        url_thickness = 2  # Bold
+        info_thickness = 1 # Regular
+        dpi_thickness = 1  # Regular
+
+        # Get text sizes to calculate layout
+        (url_w, url_h), _ = cv2.getTextSize(url_text, font, font_scale, url_thickness)
+        (info_w, info_h), _ = cv2.getTextSize(info_text, font, font_scale, info_thickness)
+        (dpi_w, dpi_h), _ = cv2.getTextSize(dpi_text, font, font_scale, dpi_thickness)
+
+        # Define margins and spacing
+        bottom_margin = int((4 / 25.4) * self.config.target_dpi)  # 4mm from bottom
+        line_spacing = int((2 / 25.4) * self.config.target_dpi)   # 2mm between lines
+
+        # Calculate Y positions from the bottom up
+        dpi_y = self.PAPER_HEIGHT_PX - bottom_margin
+        info_y = dpi_y - dpi_h - line_spacing
+        url_y = info_y - info_h - line_spacing
         
+        # Calculate X positions to center the text
+        url_x = (self.PAPER_WIDTH_PX - url_w) // 2
+        info_x = (self.PAPER_WIDTH_PX - info_w) // 2
+        dpi_x = (self.PAPER_WIDTH_PX - dpi_w) // 2
+        
+        # Draw the text on the canvas
+        cv2.putText(print_canvas, url_text, (url_x, url_y), 
+                   font, font_scale, font_color, url_thickness)
+        cv2.putText(print_canvas, info_text, (info_x, info_y), 
+                   font, font_scale, font_color, info_thickness)
         cv2.putText(print_canvas, dpi_text, (dpi_x, dpi_y), 
-                   font, font_scale, font_color, thickness)
+                   font, font_scale, font_color, dpi_thickness)
     
     def create_print_layout(self, photo_bgr):
         """
