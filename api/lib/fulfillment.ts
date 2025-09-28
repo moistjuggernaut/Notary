@@ -50,6 +50,7 @@ export async function handleCheckoutSessionFulfillment(
   }
 
   const shipping = parseShippingMetadata(session)
+
   if (!shipping) {
     console.warn('[Fulfillment] Missing shipping metadata; Familink order skipped.', orderId)
     return
@@ -61,12 +62,10 @@ export async function handleCheckoutSessionFulfillment(
     paymentStatus: session.payment_status,
   })
 
-  const familinkConfig = getFamilinkConfig()
   const validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated-print.jpg')
 
   await createFamilinkPrintOrder({
     merchant_reference: orderId,
-    enveloppe: familinkConfig.envelope,
     recipient: {
       first_name: shipping.first_name,
       last_name: shipping.last_name,
@@ -93,10 +92,19 @@ export async function handleCheckoutSessionFulfillment(
  * Dispatches incoming Stripe events to the appropriate fulfillment handler.
  */
 export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<void> {
-  switch (event.type) {
+  console.log('[Fulfillment] Handling Stripe event.', {
+    eventType: event.type,
+    eventId: event.id,
+  })
+
+    switch (event.type) {
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded': {
       const session = event.data.object as Stripe.Checkout.Session
+      console.log('[Fulfillment] Handling checkout session fulfillment.', {
+        sessionId: session.id,
+        sessionStatus: session.status,
+      })
       await handleCheckoutSessionFulfillment(session)
       break
     }
