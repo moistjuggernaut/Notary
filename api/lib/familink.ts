@@ -1,7 +1,5 @@
 import { getFamilinkConfig } from './.familink.js'
 
-const familinkConfig = getFamilinkConfig()
-
 export interface FamilinkRecipient {
   company?: string
   first_name: string
@@ -26,7 +24,6 @@ export interface FamilinkOrderRequest {
   merchant_reference: string
   recipient: FamilinkRecipient
   photos: FamilinkPhotoPayload[]
-  enveloppe?: 'auto' | 'with_tracking'
 }
 
 export interface FamilinkOrderResponse {
@@ -38,16 +35,17 @@ export interface FamilinkOrderResponse {
 export async function createFamilinkPrintOrder(
   payload: FamilinkOrderRequest
 ): Promise<FamilinkOrderResponse> {
-  const url = `${familinkConfig.baseUrl}/api/prints/external-order`
+  const config = getFamilinkConfig()
+  const url = `${config.baseUrl}/api/prints/external-order`
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      Authorization: `Token ${familinkConfig.apiKey}`,
+      Authorization: `Token ${config.apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sandbox: familinkConfig.sandbox,
-      enveloppe: payload.enveloppe ?? familinkConfig.envelope,
+      sandbox: config.sandbox,
+      enveloppe: config.envelope,
       merchant_reference: payload.merchant_reference,
       recipient: payload.recipient,
       photos: payload.photos,

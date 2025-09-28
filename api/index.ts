@@ -141,6 +141,9 @@ app.post('/api/stripe/create-checkout-session', async (c) => {
       allow_promotion_codes: true,
       automatic_tax: { enabled: false },
       client_reference_id: orderId,
+      shipping_address_collection: {
+        allowed_countries: ['BE', 'NL', 'DE'],
+      },
     })
 
     return c.redirect(session.url!, 303)
