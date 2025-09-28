@@ -5,14 +5,14 @@ Handles arranging processed photos for printing on standard 10×15 cm paper.
 
 import cv2
 import numpy as np
-from lib.config import Config
+from lib.app_config import config
 
 class PrintProcessor:
     """Handles arranging passport photos for printing with cutting guides."""
     
     def __init__(self):
         """Initialize the PrintProcessor."""
-        self.config = Config()
+        self.config = config.icao
         
         # Print paper dimensions (10×15 cm)
         self.PAPER_WIDTH_MM = 100
@@ -22,12 +22,12 @@ class PrintProcessor:
         self.PHOTO_SPACING_MM = 6
         
         # Calculate paper dimensions in pixels at target DPI
-        self.PAPER_WIDTH_PX = int((self.PAPER_WIDTH_MM / 25.4) * self.config.TARGET_DPI)
-        self.PAPER_HEIGHT_PX = int((self.PAPER_HEIGHT_MM / 25.4) * self.config.TARGET_DPI)
-        
+        self.PAPER_WIDTH_PX = int((self.PAPER_WIDTH_MM / 25.4) * self.config.target_dpi)
+        self.PAPER_HEIGHT_PX = int((self.PAPER_HEIGHT_MM / 25.4) * self.config.target_dpi)
+
         # Photo dimensions (already defined in config)
-        self.PHOTO_WIDTH_PX = self.config.FINAL_OUTPUT_WIDTH_PX
-        self.PHOTO_HEIGHT_PX = self.config.FINAL_OUTPUT_HEIGHT_PX
+        self.PHOTO_WIDTH_PX = self.config.final_output_width_px
+        self.PHOTO_HEIGHT_PX = self.config.final_output_height_px
         
         # Grid layout (2x2 for 4 photos)
         self.GRID_COLS = 2
@@ -52,7 +52,7 @@ class PrintProcessor:
         self.margin_y = (self.PAPER_HEIGHT_PX - total_photos_height) // 2
         
         # Ensure minimum margins
-        min_margin_px = int((5 / 25.4) * self.config.TARGET_DPI)  # 5mm minimum margin
+        min_margin_px = int((5 / 25.4) * self.config.target_dpi)  # 5mm minimum margin
         self.margin_x = max(self.margin_x, min_margin_px)
         self.margin_y = max(self.margin_y, min_margin_px)
         
@@ -221,10 +221,10 @@ class PrintProcessor:
         info_dict = {
             "paper_size_mm": f"{self.PAPER_WIDTH_MM}×{self.PAPER_HEIGHT_MM}",
             "paper_size_px": f"{self.PAPER_WIDTH_PX}×{self.PAPER_HEIGHT_PX}",
-            "photo_size_mm": f"{self.config.TARGET_PHOTO_WIDTH_MM}×{self.config.TARGET_PHOTO_HEIGHT_MM}",
+            "photo_size_mm": f"{self.config.target_photo_width_mm}×{self.config.target_photo_height_mm}",
             "photo_size_px": f"{self.PHOTO_WIDTH_PX}×{self.PHOTO_HEIGHT_PX}",
             "photos_count": self.GRID_ROWS * self.GRID_COLS,
-            "dpi": self.config.TARGET_DPI,
+            "dpi": self.config.target_dpi,
             "margins_px": {"x": self.margin_x, "y": self.margin_y}
         }
         

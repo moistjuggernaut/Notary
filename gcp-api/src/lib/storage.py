@@ -10,7 +10,7 @@ import numpy as np
 from google.cloud import storage
 from google.cloud.exceptions import NotFound
 
-from lib.storage_config import StorageConfig
+from lib.app_config import config
 from lib.storage_base import BaseStorageClient
 
 log = logging.getLogger(__name__)
@@ -111,12 +111,12 @@ def get_storage_client() -> BaseStorageClient:
     """
     Factory function to get the appropriate storage client based on the environment.
     """
-    bucket_name = StorageConfig.get_bucket_name()
-    if StorageConfig.STORAGE_EMULATOR_HOST:
+    bucket_name = config.storage.bucket_name
+    if config.storage.storage_emulator_host:
         log.info("Using EmulatorStorageClient for local development.")
         return EmulatorStorageClient(
             bucket_name=bucket_name,
-            public_host=StorageConfig.GCS_EMULATOR_PUBLIC_HOST,
+            public_host=config.storage.storage_emulator_host,
         )
     else:
         log.info("Using GCSStorageClient for production.")
