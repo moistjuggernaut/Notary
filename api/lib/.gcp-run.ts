@@ -1,7 +1,7 @@
 const serviceUrl = process.env.GCP_API_URL
 
 export interface GCPRunRequest {
-  eventType: 'quick-check' | 'validate-photo' | 'health';
+  eventType: 'quick-check' | 'validate-photo' | 'health' | 'fulfillment';
   orderId?: string;
 }
 

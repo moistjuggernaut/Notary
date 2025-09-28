@@ -13,7 +13,7 @@
     "gcp:dev:down": "docker-compose -f gcp-api/docker-compose.yml down",
     "gcp:test": "docker build -t baby-picture-validator-test -f gcp-api/Dockerfile.test ./gcp-api && docker run --rm baby-picture-validator-test",
     "gcp:logs": "gcloud logs tail --service=baby-picture-validator-api",
-    "stripe:listen": "stripe listen --forward-to localhost:8080/api/stripe/webhook",
+    "stripe:listen": "stripe listen --forward-to localhost:3000/api/stripe/webhook",
     "test:architecture": "node scripts/test-new-architecture.js"
   },
   "dependencies": {

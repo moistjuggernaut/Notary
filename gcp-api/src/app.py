@@ -8,6 +8,7 @@ import logging
 from flask import Flask, request, jsonify
 
 from compliance_checker import ComplianceChecker
+from lib.print_processor import PrintProcessor
 from lib.quick_checker import QuickChecker
 from lib.app_config import config
 from lib.order_storage import OrderStorage
@@ -32,6 +33,14 @@ try:
 except Exception as e:
     logging.critical(f"FATAL: Could not initialize ComplianceChecker: {e}", exc_info=True)
     compliance_checker = None
+
+try:
+    logging.info("Initializing PrintProcessor...")
+    print_processor = PrintProcessor()
+    logging.info("PrintProcessor initialized.")
+except Exception as e:
+    logging.critical(f"FATAL: Could not initialize PrintProcessor: {e}", exc_info=True)
+    print_processor = None
 # --- End Global Initialization ---
 
 app = Flask(__name__)
@@ -115,13 +124,14 @@ def validate_photo():
         original_bgr = OrderStorage.get_order_image_original(order_id)
         # Use the globally loaded checker instance. This call will now handle
         # the lazy-loading of the full analyzer if it hasn't happened yet.
-        result, processed_bgr = compliance_checker.check_image_array(original_bgr)
+        result, validated_bgr = compliance_checker.check_image_array(original_bgr)
         
         # Handle storage if validation was successful
         if result.get("success", False):
             try:
+                print_canvas, _ = print_processor.create_print_layout(validated_bgr)
                 storage_info = OrderStorage.store_validated_order(
-                    order_id, processed_bgr
+                    order_id, print_canvas
                 )
                 result.update(storage_info)
             except Exception as e:
