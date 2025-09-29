@@ -14,9 +14,16 @@ ARTIFACT_REGISTRY_REPO="${SERVICE_NAME}-repo"
 IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${SERVICE_NAME}"
 GCP_API_DIR="gcp-api"
 
-# Storage configuration
+# Order image storage configuration
 STORAGE_BUCKET_NAME="${SERVICE_NAME}-order-pictures"
 STORAGE_LOCATION="europe-west1"
+
+# Model storage configuration (Cloud Storage FUSE mount)
+MODEL_BUCKET_NAME="${SERVICE_NAME}-models"
+MODEL_VOLUME_NAME="model-storage"
+MODEL_MOUNT_TARGET="/gcs"
+MODEL_RELATIVE_PATH="models/buffalo_l"
+MODEL_PATH="${MODEL_MOUNT_TARGET}/${MODEL_RELATIVE_PATH}"
 
 echo "🚀 Starting GCP deployment for service: ${SERVICE_NAME} in ${REGION}"
 
@@ -53,8 +60,8 @@ else
     echo "✅ Repository '${ARTIFACT_REGISTRY_REPO}' created successfully"
 fi
 
-# --- Google Cloud Storage Setup ---
-echo "🗄️  Setting up Google Cloud Storage..."
+# --- Google Cloud Storage Setup (Orders) ---
+echo "🗄️  Setting up Google Cloud Storage for order assets..."
 
 # Create storage bucket (if it doesn't exist)
 echo "📦 Creating storage bucket (if it doesn't exist): ${STORAGE_BUCKET_NAME}"
@@ -74,6 +81,20 @@ fi
 echo "🌐 Configuring CORS settings for frontend access..."
 gcloud storage buckets update "gs://${STORAGE_BUCKET_NAME}" \
     --cors-file="scripts/bucket-cors-${STAGE}.json"
+
+# --- Cloud Storage Setup (Models) ---
+echo "🧠 Setting up dedicated Cloud Storage bucket for ML models..."
+if gcloud storage buckets describe "gs://${MODEL_BUCKET_NAME}" >/dev/null 2>&1; then
+    echo "✅ Model bucket '${MODEL_BUCKET_NAME}' already exists"
+else
+    echo "🪣 Creating model storage bucket..."
+    gcloud storage buckets create "gs://${MODEL_BUCKET_NAME}" \
+        --location="${STORAGE_LOCATION}" \
+        --uniform-bucket-level-access \
+        --public-access-prevention \
+        --project="${PROJECT_ID}"
+    echo "✅ Model bucket '${MODEL_BUCKET_NAME}' created successfully"
+fi
 
 # --- Build Docker Image ---
 echo "🏗️ Building Docker image with Cloud Build..."
@@ -123,6 +144,17 @@ else
     echo "✅ Added creator binding for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
 fi
 
+# Model bucket access for Cloud Storage FUSE
+echo "🔑 Granting read access to model bucket: ${MODEL_BUCKET_NAME}"
+if gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
+    echo "✅ Service account already has access to model bucket"
+else
+    gcloud storage buckets add-iam-policy-binding "gs://${MODEL_BUCKET_NAME}" \
+        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+        --role="roles/storage.objectViewer"
+    echo "✅ Granted service account object viewer role on model bucket"
+fi
+
 # Grant roles/iam.serviceAccountTokenCreator (if not already bound)
 if gcloud projects get-iam-policy "${PROJECT_ID}" \
     --flatten="bindings[].members" \
@@ -151,7 +183,9 @@ gcloud run deploy "$SERVICE_NAME" \
     --concurrency 80 \
     --max-instances 10 \
     --service-account="${SERVICE_ACCOUNT_EMAIL}" \
-    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME}"
+    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME},MODEL_PATH=${MODEL_PATH}" \
+    --add-volume "name=${MODEL_VOLUME_NAME},type=cloud-storage,bucket=${MODEL_BUCKET_NAME}" \
+    --add-mount "path=${MODEL_MOUNT_TARGET},volume=${MODEL_VOLUME_NAME}"
 
 # --- Final Output ---
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --platform managed --region="$REGION" --format="value(status.url)")
