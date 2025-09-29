@@ -1,47 +1,45 @@
-# Use Python 3.12 slim image
-FROM python:3.12-slim
+FROM python:3.12-slim AS builder
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PORT=8080
-ENV PYTHONPATH=/app
-# Tell insightface to not check for the latest version
-ENV INSIGHTFACE_ROUTING_SILENT=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
 
-# Create and set the working directory
 WORKDIR /app
 
-# Install system dependencies
-# wget and unzip are for manually downloading and extracting the model.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    wget \
-    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt ./
+RUN python -m venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=8080 \
+    PYTHONPATH=/app \
+    INSIGHTFACE_ROUTING_SILENT=1 \
+    U2NET_HOME=/root/.u2net
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file and install dependencies first to leverage caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --from=builder /opt/venv /opt/venv
 
-# --- Manually Cache ML Model by Copying ---
-# Copy the pre-downloaded model from the build context. This is more robust
-# than downloading it during the build.
-COPY models/buffalo_l.zip /tmp/buffalo_l.zip
-RUN mkdir -p /root/.insightface/models/buffalo_l && \
-    unzip -j /tmp/buffalo_l.zip -d /root/.insightface/models/buffalo_l && \
-    rm /tmp/buffalo_l.zip
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Pre-cache rembg U2Net model to avoid runtime download
-ENV U2NET_HOME=/root/.u2net
-RUN mkdir -p $U2NET_HOME
-COPY models/u2net.onnx $U2NET_HOME/u2net.onnx
+# Prepare directories expected by the application
+RUN mkdir -p /root/.insightface/models /root/.u2net
 
-# Copy the rest of the application code
-COPY src .
+COPY src ./
 
-# Run the application with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--timeout", "120", "--max-requests", "1000", "app:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--timeout", "120", "--max-requests", "1000", "app:app"]
