@@ -12,6 +12,8 @@ services:
     volumes:
       # Mount the source code for live-reloading during development
       - ./src:/app
+      # Mount models so MODEL_PATH can reference /app/models/... inside the container
+      - ./models:/app/models
 
   gcs-emulator:
     image: fsouza/fake-gcs-server:latest
