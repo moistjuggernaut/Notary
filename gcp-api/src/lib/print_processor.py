@@ -39,7 +39,7 @@ class PrintProcessor:
     def _calculate_layout(self):
         """Calculate the optimal layout for photos on the print paper."""
         # Calculate photo spacing in pixels (ensure at least 1px)
-        spacing_px = int((self.PHOTO_SPACING_MM / 25.4) * self.config.TARGET_DPI)
+        spacing_px = int((self.PHOTO_SPACING_MM / 25.4) * self.config.target_dpi)
         self.spacing_x = max(spacing_px, 1)
         self.spacing_y = max(spacing_px, 1)
 
@@ -66,7 +66,7 @@ class PrintProcessor:
         guide_color = (128, 128, 128)
         guide_thickness = 2
 
-        tick_length = int((6 / 25.4) * self.config.TARGET_DPI)
+        tick_length = int((6 / 25.4) * self.config.target_dpi)
         tick_length = max(tick_length, 6)
 
         for row in range(self.GRID_ROWS):
@@ -160,8 +160,8 @@ class PrintProcessor:
         (info_w, info_h), _ = cv2.getTextSize(info_text, font, font_scale, info_thickness)
 
         # Define margins and spacing
-        bottom_margin = int((4 / 25.4) * self.config.TARGET_DPI)  # 4mm from bottom
-        line_spacing = int((2 / 25.4) * self.config.TARGET_DPI)   # 2mm between lines
+        bottom_margin = int((4 / 25.4) * self.config.target_dpi)  # 4mm from bottom
+        line_spacing = int((2 / 25.4) * self.config.target_dpi)   # 2mm between lines
 
         # Calculate Y positions from the bottom up
         info_y = self.PAPER_HEIGHT_PX - bottom_margin

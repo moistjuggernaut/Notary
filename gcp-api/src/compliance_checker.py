@@ -3,10 +3,7 @@ Main compliance checker orchestrator.
 Coordinates the complete photo validation workflow.
 """
 import logging
-import base64
-import cv2
-import json
-import os
+
 import numpy as np
 from threading import Lock
 
