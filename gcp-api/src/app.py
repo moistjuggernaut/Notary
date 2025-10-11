@@ -12,6 +12,8 @@ from lib.print_processor import PrintProcessor
 from lib.quick_checker import QuickChecker
 from lib.app_config import config
 from lib.order_storage import OrderStorage
+# The following import is intentional and used for its side effect of initializing
+from lib.model_provider import model_provider 
 
 # --- Global Initialization ---
 # Initialize services. Both are lightweight at startup.
@@ -154,4 +156,4 @@ def internal_error(error):
 
 if __name__ == '__main__':
     # No special logic needed here anymore, global init is sufficient and fast.
-    app.run(host='0.0.0.0', port=server_config.port, debug=False) 
+    app.run(host='0.0.0.0', port=config.server.port, debug=False) 
