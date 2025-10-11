@@ -6,6 +6,8 @@ import logging
 
 import numpy as np
 from threading import Lock
+import os
+from pathlib import Path
 
 from lib.app_config import config
 from lib.image_preprocessor import ImagePreprocessor
@@ -46,14 +48,14 @@ class ComplianceChecker:
                 if ComplianceChecker._full_analyzer is None:
                     log.info("First use: lazy-loading heavyweight models...")
                     
-                    # Lazy-load FaceAnalyzer
+                    # Lazy-load FaceAnalyzer. This also triggers the ModelProvider to resolve paths.
                     from lib.face_analyzer import FaceAnalyzer
                     ComplianceChecker._full_analyzer = FaceAnalyzer(
                         model_name=self._model_name,
                         providers=self._providers
                     )
                     
-                    # Lazy-load rembg
+                    # Lazy-load rembg. The ModelProvider has already prepared the symlink.
                     try:
                         from rembg import remove as rembg_remove
                         ComplianceChecker._rembg_remove_func = rembg_remove
@@ -89,7 +91,7 @@ class ComplianceChecker:
         all_logs = {"preprocessing": [], "validation": []}
         
         if image_bgr is None:
-            return {"success": False, "recommendation": "REJECTED: Invalid image data"}
+            return {"success": False, "recommendation": "REJECTED: Invalid image data"}, None
 
         try:
             # Step 1: Get the heavyweight analyzer (lazy-loads on first call)
@@ -101,11 +103,11 @@ class ComplianceChecker:
             
             if not faces:
                 all_logs["preprocessing"].append(("FAIL", "Full Analysis", "No face detected by the analysis model."))
-                return {"success": False, "recommendation": "REJECTED: No face detected", "logs": all_logs}
+                return {"success": False, "recommendation": "REJECTED: No face detected", "logs": all_logs}, None
             
             if len(faces) > 1:
                 all_logs["preprocessing"].append(("FAIL", "Full Analysis", f"Multiple faces ({len(faces)}) detected."))
-                return {"success": False, "recommendation": "REJECTED: Multiple faces detected", "logs": all_logs}
+                return {"success": False, "recommendation": "REJECTED: Multiple faces detected", "logs": all_logs}, None
                 
             all_logs["preprocessing"].append(("PASS", "Full Analysis", "Single face detected."))
             
@@ -117,7 +119,7 @@ class ComplianceChecker:
             
             if not success or processed_bgr is None:
                 log.warning("Preprocessing failed. Aborting validation.")
-                return {"success": False, "recommendation": "REJECTED: Preprocessing failed", "logs": all_logs}
+                return {"success": False, "recommendation": "REJECTED: Preprocessing failed", "logs": all_logs}, None
 
             # Step 4: Validation
             log.info("Starting photo validation...")
@@ -138,4 +140,4 @@ class ComplianceChecker:
 
         except Exception as e:
             log.critical(f"A critical error occurred during full validation: {e}", exc_info=True)
-            return {"success": False, "error": f"Internal server error: {e}", "recommendation": "REJECTED: System error"}
+            return {"success": False, "error": f"Internal server error: {e}", "recommendation": "REJECTED: System error"}, None
