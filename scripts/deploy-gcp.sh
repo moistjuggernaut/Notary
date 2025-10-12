@@ -23,14 +23,6 @@ MODEL_BUCKET_NAME="${SERVICE_NAME}-models"
 MODEL_VOLUME_NAME="model-storage"
 MODEL_MOUNT_TARGET="/gcs"
 
-# Path for the primary InsightFace model
-BUFFALO_RELATIVE_PATH="models/buffalo_l"
-BUFFALO_MODEL_PATH="${MODEL_MOUNT_TARGET}/${BUFFALO_RELATIVE_PATH}"
-
-# Path for the U2Net model used by rembg
-U2NET_RELATIVE_PATH="models/u2net.onnx"
-U2NET_MODEL_PATH="${MODEL_MOUNT_TARGET}/${U2NET_RELATIVE_PATH}"
-
 echo "🚀 Starting GCP deployment for service: ${SERVICE_NAME} in ${REGION}"
 
 # --- Pre-flight Checks ---
@@ -189,7 +181,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --concurrency 80 \
     --max-instances 10 \
     --service-account="${SERVICE_ACCOUNT_EMAIL}" \
-    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME},BUFFALO_MODEL_PATH=${BUFFALO_MODEL_PATH},U2NET_MODEL_PATH=${U2NET_MODEL_PATH}" \
+    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME},MODELS_DIR=${MODEL_MOUNT_TARGET}/models,U2NET_HOME=${MODEL_MOUNT_TARGET}/models" \
     --add-volume "name=${MODEL_VOLUME_NAME},type=cloud-storage,bucket=${MODEL_BUCKET_NAME}" \
     --add-mount "path=${MODEL_MOUNT_TARGET},volume=${MODEL_VOLUME_NAME}"
 

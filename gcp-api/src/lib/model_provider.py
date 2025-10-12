@@ -22,11 +22,17 @@ class ModelProvider:
         log.info("Initializing ModelProvider...")
         self._model_root_path = self._resolve_model_root()
         self.buffalo_model_dir = self._resolve_model_path("buffalo_l")
-        self.u2net_model_path = self._resolve_model_path("u2net")
+        self.u2net_model_path = self._resolve_model_path("u2net.onnx")
         if self.u2net_model_path:
-            u2net_dir = self.u2net_model_path.parent
-            os.environ["U2NET_HOME"] = str(u2net_dir)
-            log.info(f"Set U2NET_HOME environment variable to: {u2net_dir}")
+            log.info(f"U2Net model found at: {self.u2net_model_path}")
+        
+        # Validation: Ensure critical models were found
+        if not self.buffalo_model_dir or not self.u2net_model_path:
+            log.critical(
+                "CRITICAL: Required ML models not found! "
+                f"Buffalo: {self.buffalo_model_dir}, U2Net: {self.u2net_model_path}. "
+                f"Verify MODELS_DIR environment variable is set correctly."
+            )
         log.info("ModelProvider initialized.")
 
     def _resolve_model_root(self) -> Path:
@@ -64,7 +70,12 @@ class ModelProvider:
     def buffalo_model_root(self) -> Optional[Path]:
         """
         Returns the parent directory of the 'models' directory.
-        This is required for InsightFace, which expects a '<root>/models' structure.
+        This is required for InsightFace's quirky API, which expects a '<root>/models/<name>' structure.
+        
+        InsightFace's FaceAnalysis(name="buffalo_l", root="/path") will look for:
+          /path/models/buffalo_l/
+        
+        So if our buffalo_model_dir is /gcs/models/buffalo_l, we return /gcs as the root.
         """
         if self._model_root_path and self._model_root_path.name == DEFAULT_MODELS_SUBDIR:
             return self._model_root_path.parent
