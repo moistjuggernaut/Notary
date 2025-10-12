@@ -6,13 +6,10 @@ import logging
 
 import numpy as np
 from threading import Lock
-import os
-from pathlib import Path
 
 from lib.app_config import config
 from lib.image_preprocessor import ImagePreprocessor
 from lib.photo_validator import PhotoValidator
-# FaceAnalyzer is imported dynamically for lazy loading
 
 log = logging.getLogger(__name__)
 
