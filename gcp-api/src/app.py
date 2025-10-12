@@ -92,25 +92,27 @@ def quick_check():
         # Use the dedicated quick_checker service
         face_count = quick_checker.count_faces(image_bgr)
         
-        if face_count == 0:
-            message = "No face detected in the image."
-            success = False
-        elif face_count == 1:
-            message = "A single face was detected."
-            success = True
+        response_data = {
+            "face_count": face_count
+        }
+
+        if face_count == 1:
+            response_data["success"] = True
+            response_data["message"] = "A single face was detected."
+            status_code = 200
         else:
-            message = f"Multiple faces ({face_count}) were detected."
-            success = False
+            response_data["success"] = False
+            if face_count == 0:
+                response_data["message"] = "No face detected in the image."
+            else:
+                response_data["message"] = f"Multiple faces ({face_count}) were detected."
+            status_code = 422 # Unprocessable Entity
         
-        return jsonify({
-            "success": success,
-            "face_count": face_count,
-            "message": message
-        }), 200
+        return jsonify(response_data), status_code
         
     except Exception as e:
         logging.error(f"Error in /api/quick_check: {e}", exc_info=True)
-        return jsonify({"success": False, "error": f"Internal server error: {str(e)}", "message": f"Internal server error: {str(e)}"}), 500
+        return jsonify({"success": False, "message": f"Internal server error: {str(e)}"}), 500
 
 @app.route('/validate-photo', methods=['GET'])
 def validate_photo():

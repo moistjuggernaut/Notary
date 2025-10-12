@@ -59,10 +59,19 @@ class QuickChecker:
         # Convert to grayscale for the detector
         gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
 
+        # Downscale for performance. Target ~480px on the longest side.
+        h, w = gray.shape
+        scale = 480 / max(h, w)
+        if scale < 1:
+            dsize = (int(w * scale), int(h * scale))
+            gray_small = cv2.resize(gray, dsize, interpolation=cv2.INTER_AREA)
+        else:
+            gray_small = gray
 
         faces = self.face_cascade.detectMultiScale(
-            gray,
+            gray_small,
             scaleFactor=1.1,
-            minNeighbors=5
+            minNeighbors=7,
+            minSize=(30, 30)
         )
         return len(faces) 
