@@ -1,7 +1,6 @@
 import Stripe from 'stripe'
 import { getSignedUrlForImage } from './.gcp-storage.js'
 import { createFamilinkPrintOrder } from './familink.js'
-import { getFamilinkConfig } from './.familink.js'
 
 interface ShippingMetadata {
   first_name: string

@@ -15,9 +15,9 @@ class StorageConfig(BaseSettings):
 
     # Local Development Settings
     storage_emulator_host: Optional[str] = Field(
-        default="http://localhost:4443",
+        default=None,
         alias="STORAGE_EMULATOR_HOST",
-        description="Host for GCS emulator (e.g., 'http://localhost:4443')"
+        description="If set, use EmulatorStorageClient; if None, use GCSStorageClient for production."
     )
 
     # Common Settings
