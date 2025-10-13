@@ -1,7 +1,6 @@
 import Stripe from 'stripe'
 import { getSignedUrlForImage } from './.gcp-storage.js'
 import { createFamilinkPrintOrder } from './familink.js'
-import { getFamilinkConfig } from './.familink.js'
 
 interface ShippingMetadata {
   first_name: string
@@ -62,7 +61,6 @@ export async function handleCheckoutSessionFulfillment(
     paymentStatus: session.payment_status,
   })
 
-  const config = getFamilinkConfig()
   const validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated-print.jpg')
 
   await createFamilinkPrintOrder({
