@@ -4,6 +4,7 @@ Handles client initialization, image storage, and signed URL generation.
 This module provides a factory to get the correct client for the environment.
 """
 import logging
+import os
 from typing import Optional, Union
 import cv2
 import numpy as np
@@ -64,11 +65,11 @@ class GCSStorageClient(BaseStorageClient):
 class EmulatorStorageClient(BaseStorageClient):
     """
     Local development storage client for the GCS emulator.
-    Connects to the emulator and generates simple, direct URLs.
+    The GCS client automatically detects and uses the STORAGE_EMULATOR_HOST environment variable.
     """
-    def __init__(self, bucket_name: str, public_host: str):
+    def __init__(self, bucket_name: str, emulator_host: str):
         self.bucket_name = bucket_name
-        self.public_host = public_host
+        self.emulator_host = emulator_host
         self.client = storage.Client(project="local-dev")
         self.bucket = self._ensure_bucket_exists()
 
@@ -85,7 +86,7 @@ class EmulatorStorageClient(BaseStorageClient):
         return f"gs://{self.bucket_name}/{blob_name}"
 
     def get_signed_url(self, blob_name: str, expiration: int) -> str:
-        return f"{self.public_host}/storage/v1/b/{self.bucket_name}/o/{blob_name}?alt=media"
+        return f"{self.emulator_host}/storage/v1/b/{self.bucket_name}/o/{blob_name}?alt=media"
 
     def get_image(self, blob_name: str) -> np.ndarray:
         """
@@ -107,17 +108,25 @@ class EmulatorStorageClient(BaseStorageClient):
         """
         return cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
 
+# Module-level singleton to cache the storage client
+_storage_client: Optional[BaseStorageClient] = None
+
 def get_storage_client() -> BaseStorageClient:
     """
     Factory function to get the appropriate storage client based on the environment.
+    Uses a singleton pattern to reuse the same client instance per worker process.
+    
+    The client type is determined by checking if STORAGE_EMULATOR_HOST is set in the environment.
     """
-    bucket_name = config.storage.bucket_name
-    if config.storage.storage_emulator_host:
-        log.info("Using EmulatorStorageClient for local development.")
-        return EmulatorStorageClient(
-            bucket_name=bucket_name,
-            public_host=config.storage.storage_emulator_host,
-        )
-    else:
-        log.info("Using GCSStorageClient for production.")
-        return GCSStorageClient(bucket_name=bucket_name)
+    global _storage_client
+    
+    if _storage_client is None:
+        bucket_name = config.storage.bucket_name
+        if config.storage.storage_emulator_host:
+            log.info("Initializing EmulatorStorageClient for local development.")
+            _storage_client = EmulatorStorageClient(bucket_name=bucket_name, emulator_host=config.storage.storage_emulator_host)
+        else:
+            log.info("Initializing GCSStorageClient for production.")
+            _storage_client = GCSStorageClient(bucket_name=bucket_name)
+    
+    return _storage_client
