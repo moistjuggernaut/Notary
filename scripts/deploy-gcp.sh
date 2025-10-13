@@ -144,13 +144,27 @@ fi
 
 # Model bucket access for Cloud Storage FUSE
 echo "🔑 Granting read access to model bucket: ${MODEL_BUCKET_NAME}"
-if gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
-    echo "✅ Service account already has access to model bucket"
+
+# Grant objectViewer role (for reading objects)
+if gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "\"roles/storage.objectViewer\"" && \
+   gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
+    echo "✅ Object Viewer already granted"
 else
     gcloud storage buckets add-iam-policy-binding "gs://${MODEL_BUCKET_NAME}" \
         --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
         --role="roles/storage.objectViewer"
-    echo "✅ Granted service account object viewer role on model bucket"
+    echo "✅ Granted storage.objectViewer role"
+fi
+
+# Grant legacyBucketReader role (required for Cloud Storage FUSE to list directories)
+if gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "\"roles/storage.legacyBucketReader\"" && \
+   gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
+    echo "✅ Legacy Bucket Reader already granted"
+else
+    gcloud storage buckets add-iam-policy-binding "gs://${MODEL_BUCKET_NAME}" \
+        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+        --role="roles/storage.legacyBucketReader"
+    echo "✅ Granted storage.legacyBucketReader role (required for FUSE)"
 fi
 
 # Grant roles/iam.serviceAccountTokenCreator (if not already bound)
