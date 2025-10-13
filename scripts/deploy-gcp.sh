@@ -183,7 +183,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --service-account="${SERVICE_ACCOUNT_EMAIL}" \
     --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME},MODELS_DIR=${MODEL_MOUNT_TARGET}/models,U2NET_HOME=${MODEL_MOUNT_TARGET}/models" \
     --add-volume "name=${MODEL_VOLUME_NAME},type=cloud-storage,bucket=${MODEL_BUCKET_NAME}" \
-    --add-mount "path=${MODEL_MOUNT_TARGET},volume=${MODEL_VOLUME_NAME}"
+    --add-volume-mount "volume=${MODEL_VOLUME_NAME},mount-path=${MODEL_MOUNT_TARGET}"
 
 # --- Final Output ---
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --platform managed --region="$REGION" --format="value(status.url)")
