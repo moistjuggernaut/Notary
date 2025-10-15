@@ -2,6 +2,7 @@ import { CheckCircle, XCircle, AlertTriangle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ValidationResult } from "@/types/validation";
 import { getStatusIcon, getOverallStatus, handleDownload } from "./utils";
+import { CreditCard } from "lucide-react";
 
 interface ValidationResultsProps {
   result: ValidationResult;
@@ -94,17 +95,18 @@ export default function ValidationResults({ result }: ValidationResultsProps) {
           <Download className="w-4 h-4 mr-2" />
           Download
         </Button>
-        {/*<form action={`/api/stripe/create-checkout-session?orderId=${validationResult?.orderId || ''}`} method="POST" className="flex-1 sm:flex-none">
+        
+        <form action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`} method="POST" className="flex-1 sm:flex-none">
           <Button 
             variant="outline" 
             type="submit"
             className="w-full h-11"
-            disabled={!validationResult?.orderId}
+            disabled={!result?.orderId}
           >
             <CreditCard className="w-4 h-4 mr-2" />
             Checkout
           </Button>
-        </form>*/}
+        </form>
       </div>
     </div>
   );
