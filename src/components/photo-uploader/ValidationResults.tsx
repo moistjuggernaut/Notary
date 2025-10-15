@@ -2,6 +2,7 @@ import { CheckCircle, XCircle, AlertTriangle, Download, CreditCard } from "lucid
 import { Button } from "@/components/ui/button";
 import type { ValidationResult } from "@/types/validation";
 import { getStatusIcon, getOverallStatus, handleDownload } from "./utils";
+import { CreditCard } from "lucide-react";
 
 interface ValidationResultsProps {
   result: ValidationResult;
