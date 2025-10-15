@@ -6,6 +6,7 @@ import FilePreview from "./FilePreview";
 import ErrorDisplay from "./ErrorDisplay";
 import ActionButtons from "./ActionButtons";
 import ValidationResults from "./ValidationResults";
+import StepIndicator, { type Step } from "./StepIndicator";
 
 interface PhotoUploaderProps {
   selectedFile: File | null;
@@ -16,6 +17,7 @@ interface PhotoUploaderProps {
   isValidationAllowed: boolean;
   quickCheckError: string | null;
   validationResult?: ValidationResult | null;
+  currentStep: Step;
 }
 
 export default function PhotoUploader({
@@ -27,6 +29,7 @@ export default function PhotoUploader({
   isValidationAllowed,
   quickCheckError,
   validationResult,
+  currentStep,
 }: PhotoUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,12 +70,15 @@ export default function PhotoUploader({
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        {/* Header */}
-        <div className="px-4 py-6 sm:px-6 lg:px-8">
+        {/* Step Indicator */}
+        <StepIndicator currentStep={currentStep} />
+
+        {/* Header - Consistent across all states */}
+        <div className="px-4 py-6 sm:px-6 lg:px-8 border-b border-gray-100">
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-            {validationResult ? 'Validation Results' : 'Upload Your Photo'}
+            EU Photo ID Validator
           </h2>
-          <p className="text-sm text-gray-600 leading-relaxed">
+          <p className="text-sm text-gray-600 leading-relaxed transition-opacity duration-300">
             {validationResult
               ? validationResult.summary
               : 'Select a high-quality photo for passport validation.'
@@ -80,35 +86,43 @@ export default function PhotoUploader({
           </p>
         </div>
 
-        {/* Validation Results */}
-        {validationResult && <ValidationResults result={validationResult} />}
-
-        {/* Upload Area */}
-        {!validationResult && (
-          <div className="px-4 sm:px-6 lg:px-8 pb-6">
-            {!selectedFile ? (
+        {/* Main Content Area - with min-height to prevent jumping */}
+        <div className="px-4 sm:px-6 lg:px-8 pb-6 pt-6 min-h-[400px]">
+          {/* Upload State */}
+          {!selectedFile && !validationResult && (
+            <div className="animate-in fade-in duration-300">
               <UploadArea
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={openFileDialog}
               />
-            ) : (
-              <div className="space-y-4">
-                <FilePreview file={selectedFile} onRemove={onRemoveFile} />
+            </div>
+          )}
 
-                {quickCheckError && <ErrorDisplay error={quickCheckError} />}
+          {/* Review State */}
+          {selectedFile && !validationResult && (
+            <div className="space-y-4 animate-in fade-in duration-300">
+              <FilePreview file={selectedFile} onRemove={onRemoveFile} />
 
-                <ActionButtons
-                  onValidate={onValidatePhoto}
-                  onRemoveFile={onRemoveFile}
-                  isValidating={isValidating}
-                  isValidationAllowed={isValidationAllowed}
-                />
-              </div>
-            )}
-          </div>
-        )}
+              {quickCheckError && <ErrorDisplay error={quickCheckError} />}
+
+              <ActionButtons
+                onValidate={onValidatePhoto}
+                onRemoveFile={onRemoveFile}
+                isValidating={isValidating}
+                isValidationAllowed={isValidationAllowed}
+              />
+            </div>
+          )}
+
+          {/* Results State */}
+          {validationResult && (
+            <div className="animate-in fade-in duration-500">
+              <ValidationResults result={validationResult} />
+            </div>
+          )}
+        </div>
 
         <input
           ref={fileInputRef}

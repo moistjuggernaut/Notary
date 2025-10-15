@@ -14,7 +14,8 @@ export default function Home() {
     handleFileSelect,
     handleRemoveFile,
     handleValidatePhoto,
-    isValidationAllowed
+    isValidationAllowed,
+    currentStep
   } = usePhotoValidation();
 
   return (
@@ -56,6 +57,7 @@ export default function Home() {
             isValidationAllowed={isValidationAllowed}
             quickCheckError={quickCheckError}
             validationResult={validationResult}
+            currentStep={currentStep}
           />
         </div>
 

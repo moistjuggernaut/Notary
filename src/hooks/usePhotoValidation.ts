@@ -2,53 +2,61 @@ import { useState } from "react";
 import type { ValidationResult } from "@/types/validation";
 import { validatePhoto, quickCheckPhoto } from "@/api/client";
 import type { ValidationResponse, QuickCheckResponse } from "@/types/api";
+import type { Step } from "@/components/photo-uploader/StepIndicator";
+
+type ValidationStatus = 'success' | 'warning' | 'error';
+type CheckCategory = 'photo_quality' | 'face_position' | 'framing' | 'technical';
+
+const categorizeCheck = (step: string): CheckCategory => {
+  const stepLower = step.toLowerCase();
+  if (stepLower.includes('quality') || stepLower.includes('lighting') || stepLower.includes('exposure')) {
+    return 'photo_quality';
+  }
+  if (stepLower.includes('face') || stepLower.includes('eye') || stepLower.includes('expression')) {
+    return 'face_position';
+  }
+  if (stepLower.includes('frame') || stepLower.includes('crop') || stepLower.includes('position')) {
+    return 'framing';
+  }
+  return 'technical';
+};
+
+const getValidationStatus = (logs: Array<{ status: string }>): { status: ValidationStatus; summary: string } => {
+  const hasFailures = logs.some(log => log.status === 'FAIL');
+  const hasWarnings = logs.some(log => log.status === 'WARNING');
+
+  if (hasFailures) {
+    return {
+      status: 'error',
+      summary: 'Photo does not meet EU biometric requirements. Please review the issues and submit a corrected photo.'
+    };
+  }
+  
+  if (hasWarnings) {
+    return {
+      status: 'warning',
+      summary: 'Photo mostly meets requirements but has minor issues. Review recommendations for best results.'
+    };
+  }
+  
+  return {
+    status: 'success',
+    summary: ''
+  };
+};
 
 export const usePhotoValidation = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-
-  // Quick check state
   const [isQuickChecking, setIsQuickChecking] = useState(false);
   const [quickCheckResult, setQuickCheckResult] = useState<QuickCheckResponse | null>(null);
   const [quickCheckError, setQuickCheckError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<Step>('upload');
 
-  // Convert API response to frontend ValidationResult format
   const convertApiResponseToValidationResult = (apiResponse: ValidationResponse): ValidationResult => {
     const allLogs = [...apiResponse.logs.preprocessing, ...apiResponse.logs.validation];
-
-    // Determine overall status
-    const hasFailures = allLogs.some(log => log.status === 'FAIL');
-    const hasWarnings = allLogs.some(log => log.status === 'WARNING');
-
-    let status: 'success' | 'warning' | 'error';
-    let summary: string;
-
-    if (hasFailures) {
-      status = 'error';
-      summary = 'Photo does not meet EU biometric requirements. Please review the issues below and submit a corrected photo.';
-    } else if (hasWarnings) {
-      status = 'warning';
-      summary = 'Photo mostly meets requirements but has minor issues. Review recommendations for best results.';
-    } else {
-      status = 'success';
-      summary = 'Photo meets all EU biometric requirements and is ready for passport application submission.';
-    }
-
-    // Convert logs to checks format with categories
-    const categorizeCheck = (step: string): 'photo_quality' | 'face_position' | 'framing' | 'technical' => {
-      const stepLower = step.toLowerCase();
-      if (stepLower.includes('quality') || stepLower.includes('lighting') || stepLower.includes('exposure')) {
-        return 'photo_quality';
-      }
-      if (stepLower.includes('face') || stepLower.includes('eye') || stepLower.includes('expression')) {
-        return 'face_position';
-      }
-      if (stepLower.includes('frame') || stepLower.includes('crop') || stepLower.includes('position')) {
-        return 'framing';
-      }
-      return 'technical';
-    };
+    const { status, summary } = getValidationStatus(allLogs);
 
     const checks = allLogs
       .filter(log => ['PASS', 'FAIL', 'WARNING'].includes(log.status))
@@ -75,6 +83,7 @@ export const usePhotoValidation = () => {
     setQuickCheckResult(null);
     setQuickCheckError(null);
     setIsQuickChecking(true);
+    setCurrentStep('review');
 
     try {
       const result = await quickCheckPhoto(file);
@@ -95,17 +104,20 @@ export const usePhotoValidation = () => {
     setValidationResult(null);
     setQuickCheckResult(null);
     setQuickCheckError(null);
+    setCurrentStep('upload');
   };
 
   const handleValidatePhoto = async () => {
     if (!quickCheckResult?.success || !quickCheckResult.orderId) return;
 
     setIsValidating(true);
+    setCurrentStep('validating');
 
     try {
       const apiResponse = await validatePhoto(quickCheckResult.orderId);
       const validationResultData = convertApiResponseToValidationResult(apiResponse);
       setValidationResult(validationResultData);
+      setCurrentStep('results');
     } catch (error) {
       console.error('Validation failed:', error);
       const errorResult: ValidationResult = {
@@ -120,6 +132,7 @@ export const usePhotoValidation = () => {
         recommendations: ['Please try again or contact support if the problem persists.']
       };
       setValidationResult(errorResult);
+      setCurrentStep('results');
     } finally {
       setIsValidating(false);
     }
@@ -138,6 +151,7 @@ export const usePhotoValidation = () => {
     handleFileSelect,
     handleRemoveFile,
     handleValidatePhoto,
-    isValidationAllowed
+    isValidationAllowed,
+    currentStep
   };
 };
