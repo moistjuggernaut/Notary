@@ -6,6 +6,9 @@ import { getStripe, getWebhookSecret } from './lib/.stripe.js'
 import { getSignedUrlForImage, uploadImageToGCP } from './lib/.gcp-storage.js'
 import { triggerGCPRun } from './lib/.gcp-run.js'
 import { handleStripeWebhookEvent } from './lib/fulfillment.js'
+import { authMiddleware } from './lib/auth-middleware.js'
+import { orderStore, OrderStatus } from './lib/order-store.js'
+import { approveOrder, rejectOrder } from './lib/admin-actions.js'
 
 const app = new Hono()
 
@@ -179,6 +182,84 @@ app.post('/api/stripe/webhook', async (c) => {
   } catch (error) {
     console.error('Webhook error:', error)
     return c.json({ error: 'Webhook signature verification failed' }, 400)
+  }
+})
+
+// Admin routes (protected)
+app.get('/api/admin/orders', authMiddleware, async (c) => {
+  try {
+    const status = c.req.query('status') as OrderStatus | undefined
+    
+    const orders = status 
+      ? orderStore.getAllOrdersByStatus(status)
+      : orderStore.getAllOrders()
+
+    // Add image URLs to each order
+    const ordersWithImages = await Promise.all(
+      orders.map(async (order) => {
+        try {
+          const imageUrl = await getSignedUrlForImage(order.orderId, 'validated.jpg')
+          return { ...order, imageUrl }
+        } catch (error) {
+          console.error(`Failed to get image URL for order ${order.orderId}:`, error)
+          return { ...order, imageUrl: null }
+        }
+      })
+    )
+
+    return c.json({ 
+      success: true,
+      orders: ordersWithImages 
+    })
+  } catch (error) {
+    console.error('Admin orders list error:', error)
+    return c.json({ 
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch orders' 
+    }, 500)
+  }
+})
+
+app.post('/api/admin/orders/:orderId/approve', authMiddleware, async (c) => {
+  try {
+    const orderId = c.req.param('orderId')
+    
+    await approveOrder(orderId)
+    
+    return c.json({ 
+      success: true,
+      message: 'Order approved and sent to printer' 
+    })
+  } catch (error) {
+    console.error('Admin approve error:', error)
+    return c.json({ 
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to approve order' 
+    }, 500)
+  }
+})
+
+const RejectOrderSchema = z.object({
+  reason: z.string().min(1, 'Rejection reason is required')
+})
+
+app.post('/api/admin/orders/:orderId/reject', authMiddleware, zValidator('json', RejectOrderSchema), async (c) => {
+  try {
+    const orderId = c.req.param('orderId')
+    const { reason } = c.req.valid('json')
+    
+    await rejectOrder(orderId, reason)
+    
+    return c.json({ 
+      success: true,
+      message: 'Order rejected and refunded' 
+    })
+  } catch (error) {
+    console.error('Admin reject error:', error)
+    return c.json({ 
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to reject order' 
+    }, 500)
   }
 })
 
