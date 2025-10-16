@@ -8,6 +8,7 @@ import CheckoutSuccess from "@/pages/checkout-success";
 import Home from "@/pages/home";
 import HowItWorks from "@/pages/how-it-works";
 import Requirements from "@/pages/requirements";
+import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route path="/" component={Home} />
           <Route path="/how-it-works" component={HowItWorks} />
           <Route path="/requirements" component={Requirements} />
+          <Route path="/admin" component={Admin} />
           <Route path="/checkout/cancel" component={CheckoutCancel} />
           <Route path="/checkout/success" component={CheckoutSuccess} />
           <Route component={NotFound} />
