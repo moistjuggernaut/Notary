@@ -61,4 +61,55 @@ export interface QuickCheckResponse {
     message: string;
     imageUrl?: string;
     orderId?: string;
-} 
+}
+
+// --- Order Management ---
+export type OrderStatus = 'pending' | 'paid' | 'approved' | 'rejected' | 'sent' | 'refunded'
+
+export interface ShippingInfo {
+    first_name: string
+    last_name: string
+    address_1: string
+    address_2?: string
+    city: string
+    postal_or_zip_code: string
+    state?: string
+    country_code: string
+    email?: string
+    phone?: string
+}
+
+export interface Order {
+    orderId: string
+    status: OrderStatus
+    shipping?: ShippingInfo
+    paymentIntentId?: string
+    stripeSessionId?: string
+    createdAt: string
+    updatedAt: string
+    rejectionReason?: string
+    imageUrl?: string | null
+}
+
+export interface OrdersResponse {
+    success: boolean
+    orders: Order[]
+    error?: string
+}
+
+export interface OrderActionResponse {
+    success: boolean
+    message?: string
+    error?: string
+}
+
+export const REJECTION_REASONS = [
+    'Background incorrect or not uniform',
+    'Face too small or poorly positioned',
+    'Eyes not visible or closed',
+    'Poor lighting or shadows on face',
+    'Glasses with glare or tinted lenses',
+    'Head covering obscuring face',
+    'Image quality too low',
+    'Other violation'
+] as const 

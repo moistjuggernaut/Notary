@@ -1,33 +1,9 @@
 import Stripe from 'stripe'
-import { getSignedUrlForImage } from './.gcp-storage.js'
-import { createFamilinkPrintOrder } from './familink.js'
+import { orderStore } from './order-store.js'
 
-interface ShippingMetadata {
-  first_name: string
-  last_name: string
-  address_1: string
-  address_2?: string
-  city: string
-  postal_or_zip_code: string
-  state?: string
-  country_code: string
-  email?: string
-  phone?: string
-}
 
-function parseShippingMetadata(session: Stripe.Checkout.Session): ShippingMetadata | null {
-  const shippingJson = session.metadata?.shipping
-  if (!shippingJson) {
-    return null
-  }
 
-  try {
-    return JSON.parse(shippingJson) as ShippingMetadata
-  } catch (error) {
-    console.error('[Fulfillment] Failed to parse shipping metadata JSON.', error)
-    return null
-  }
-}
+
 
 export async function handleCheckoutSessionFulfillment(
   session: Stripe.Checkout.Session
@@ -48,43 +24,18 @@ export async function handleCheckoutSessionFulfillment(
     return
   }
 
-  const shipping = parseShippingMetadata(session)
 
-  if (!shipping) {
-    console.warn('[Fulfillment] Missing shipping metadata; Familink order skipped.', orderId)
-    return
-  }
+  
 
-  console.log('[Fulfillment] Creating Familink order.', {
-    sessionId: session.id,
-    orderId,
-    paymentStatus: session.payment_status,
-  })
+  // Save payment information
+  const paymentIntentId = typeof session.payment_intent === 'string' 
+  ? session.payment_intent 
+  : session.payment_intent?.id
+  
+  // Get or create the order
+  orderStore.createOrder(orderId, session.id!, paymentIntentId!)
 
-  const validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated-print.jpg')
-
-  await createFamilinkPrintOrder({
-    merchant_reference: orderId,
-    recipient: {
-      first_name: shipping.first_name,
-      last_name: shipping.last_name,
-      address_1: shipping.address_1,
-      address_2: shipping.address_2,
-      city: shipping.city,
-      postal_or_zip_code: shipping.postal_or_zip_code,
-      state: shipping.state,
-      country_code: shipping.country_code,
-      email: shipping.email,
-      phone: shipping.phone,
-    },
-    photos: [
-      {
-        url: validatedPhotoUrl,
-        copies: 1,
-        format: '10x15cm',
-      },
-    ],
-  })
+  console.log('[Fulfillment] Order marked as paid, awaiting manual review:', orderId)
 }
 
 /**

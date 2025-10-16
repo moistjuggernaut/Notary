@@ -1,4 +1,4 @@
-import { CheckCircle, XCircle, AlertTriangle, Download, CreditCard } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ValidationResult } from "@/types/validation";
 import { getStatusIcon, getOverallStatus, handleDownload } from "./utils";
@@ -87,25 +87,26 @@ export default function ValidationResults({ result }: ValidationResultsProps) {
 
       {/* Download Button */}
       <div className="flex flex-col sm:flex-row gap-3 pb-6 border-b border-gray-200">
+        <form action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`} method="POST" className="flex-1 sm:flex-none">
+          <Button 
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11"
+            disabled={!result?.orderId}
+          >
+            <CreditCard className="w-4 h-4 mr-2" />
+            Checkout - €9.99
+          </Button>
+        </form>
+
         <Button
-          className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white h-11"
+          variant="outline"
+          className="flex-1 sm:flex-none h-11"
           onClick={() => handleDownload(result.imageUrl)}
           disabled={!result.imageUrl}
         >
           <Download className="w-4 h-4 mr-2" />
           Download
         </Button>
-        <form action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`} method="POST" className="flex-1 sm:flex-none">
-          <Button 
-            variant="outline" 
-            type="submit"
-            className="w-full h-11"
-            disabled={!result?.orderId}
-          >
-            <CreditCard className="w-4 h-4 mr-2" />
-            Checkout
-          </Button>
-        </form>
       </div>
     </div>
   );
