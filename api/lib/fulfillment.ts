@@ -1,8 +1,5 @@
 import Stripe from 'stripe'
-import { orderStore } from './order-store.js'
-
-
-
+import { orderService } from './order-service.js'
 
 
 export async function handleCheckoutSessionFulfillment(
@@ -15,6 +12,13 @@ export async function handleCheckoutSessionFulfillment(
     return
   }
 
+  const order = await orderService.getOrderById(orderId)
+
+  if (!order) {
+    console.warn('[Fulfillment] Order not found.', orderId)
+    return
+  }
+
   if (session.payment_status === 'unpaid') {
     console.info('[Fulfillment] Payment still pending, skipping for now.', {
       sessionId: session.id,
@@ -24,16 +28,12 @@ export async function handleCheckoutSessionFulfillment(
     return
   }
 
-
-  
-
   // Save payment information
-  const paymentIntentId = typeof session.payment_intent === 'string' 
-  ? session.payment_intent 
-  : session.payment_intent?.id
-  
-  // Get or create the order
-  orderStore.createOrder(orderId, session.id!, paymentIntentId!)
+  await orderService.updateOrderStripeSessionId(order.id, session.id)
+  if (session.payment_intent) {
+    await orderService.updateOrderStripePaymentIntentId(order.id, session.payment_intent as string)
+  }
+  await orderService.updateOrderStatus(order.id, 'checkout_completed')
 
   console.log('[Fulfillment] Order marked as paid, awaiting manual review:', orderId)
 }
