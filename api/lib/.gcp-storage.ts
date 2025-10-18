@@ -54,10 +54,8 @@ export interface UploadResult {
   imageUrl: string;
 }
 
-export async function uploadImageToGCP(base64Image: string, filename: string): Promise<UploadResult> {
+export async function uploadImageToGCP(orderId: string, base64Image: string, filename: string): Promise<UploadResult> {
   try {
-    // Generate UUID for this upload
-    const orderId = crypto.randomUUID();
     
     // Convert base64 to buffer
     const imageBuffer = Buffer.from(base64Image, 'base64');
