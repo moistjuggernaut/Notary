@@ -144,7 +144,7 @@ class PrintProcessor:
         """Add printing information text to the canvas."""
         # Font settings
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.8 # Increased size
+        font_scale = 2 # Increased size
         font_color = (64, 64, 64)  # Dark gray
         
         # Text content
@@ -152,7 +152,7 @@ class PrintProcessor:
         info_text = f"4x Passport Photos (35x45mm) - Cut along guides"
 
         # Thicknesses
-        url_thickness = 2  # Bold
+        url_thickness = 3  # Bold
         info_thickness = 1 # Regular
 
         # Get text sizes to calculate layout
