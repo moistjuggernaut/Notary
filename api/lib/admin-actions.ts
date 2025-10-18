@@ -1,9 +1,10 @@
-import { orderStore } from './order-store.js'
+import { orderService } from './order-service.js'
 import { getSignedUrlForImage } from './.gcp-storage.js'
 import { createFamilinkPrintOrder } from './familink.js'
 import { refundPayment } from './stripe-refunds.js'
 import Stripe from 'stripe'
 import { getStripe } from './.stripe.js'
+import { Order } from './schema.js'
 
 interface ShippingMetadata {
   first_name: string
@@ -23,17 +24,17 @@ interface ShippingMetadata {
 export async function approveOrder(orderId: string): Promise<void> {
   console.log('[AdminActions] Approving order:', orderId)
 
-  const order = orderStore.getOrder(orderId)
+  const order: Order | null = await orderService.getOrderById(orderId)
   
   if (!order) {
     throw new Error('Order not found')
   }
 
-  if (order.status !== 'paid') {
+  if (order.status !== 'checkout_completed') {
     throw new Error(`Order cannot be approved. Current status: ${order.status}`)
   }
   const stripe = getStripe()
-  const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId)
+  const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId!)
   const shipping = parseShippingMetadata(session)
 
   if (!shipping) {
@@ -69,13 +70,13 @@ export async function approveOrder(orderId: string): Promise<void> {
     })
 
     // Update status to sent
-    orderStore.updateOrderStatus(orderId, 'sent')
+    await orderService.updateOrderStatus(orderId, 'familink_order_created')
 
     console.log('[AdminActions] Order approved and sent to Familink:', orderId)
   } catch (error) {
     console.error('[AdminActions] Failed to send order to Familink:', error)
-    // Revert to paid status if Familink fails
-    orderStore.updateOrderStatus(orderId, 'paid')
+    // Mark as failed instead of reverting to checkout_completed
+    await orderService.updateOrderStatus(orderId, 'familink_order_creation_failed')
     throw new Error(`Failed to send order to printer: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
@@ -86,34 +87,35 @@ export async function approveOrder(orderId: string): Promise<void> {
 export async function rejectOrder(orderId: string, reason: string): Promise<void> {
   console.log('[AdminActions] Rejecting order:', { orderId, reason })
 
-  const order = orderStore.getOrder(orderId)
+  const order = await orderService.getOrderById(orderId)
   
   if (!order) {
     throw new Error('Order not found')
   }
 
-  if (order.status !== 'paid') {
+  if (order.status !== 'checkout_completed') {
     throw new Error(`Order cannot be rejected. Current status: ${order.status}`)
   }
 
-  if (!order.paymentIntentId) {
+  if (!order.stripePaymentIntentId) {
     throw new Error('Order missing payment information')
   }
 
   // Update status to rejected
-  orderStore.updateOrderStatus(orderId, 'rejected', reason)
+  await orderService.updateOrderStatus(orderId, 'rejected')
 
   try {
     // Process refund
-    await refundPayment(order.paymentIntentId, orderId, reason)
-
-    // Update status to refunded
-    orderStore.updateOrderStatus(orderId, 'refunded', reason)
+    await refundPayment(order.stripePaymentIntentId, orderId, reason)
+    
+    // Update status to refund succeeded
+    await orderService.updateOrderStatus(orderId, 'refund_succeeded')
 
     console.log('[AdminActions] Order rejected and refunded:', orderId)
   } catch (error) {
     console.error('[AdminActions] Failed to refund order:', error)
-    // Keep status as rejected even if refund fails - admin can handle manually
+    // Update status to refund failed
+    await orderService.updateOrderStatus(orderId, 'refund_failed')
     throw new Error(`Failed to process refund: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
