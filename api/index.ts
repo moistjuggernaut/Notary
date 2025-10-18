@@ -7,8 +7,10 @@ import { getSignedUrlForImage, uploadImageToGCP } from './lib/.gcp-storage.js'
 import { triggerGCPRun } from './lib/.gcp-run.js'
 import { handleStripeWebhookEvent } from './lib/fulfillment.js'
 import { authMiddleware } from './lib/auth-middleware.js'
-import { orderStore, OrderStatus } from './lib/order-store.js'
 import { approveOrder, rejectOrder } from './lib/admin-actions.js'
+import { createDatabaseConnection } from './lib/database.js'
+import { orderService } from './lib/order-service.js'
+import { OrderStatus, Order } from './lib/schema.js'
 
 const app = new Hono()
 
@@ -17,6 +19,9 @@ app.use('*', logger())
 
 // Initialize Stripe
 const stripe = getStripe()
+
+// Initialize database connection
+await createDatabaseConnection();
 
 // Validation schemas
 const QuickCheckSchema = z.object({
@@ -51,23 +56,31 @@ app.get('/api/health', async (c) => {
 app.post('/api/photo/quick-check', zValidator('json', QuickCheckSchema), async (c) => {
   try {
     const { image } = c.req.valid('json')
-    
+
+
+    const order = await orderService.createOrder()
+
     // 1. Upload image to GCP storage
-    const uploadResult = await uploadImageToGCP(image, 'original.jpg')
+    const uploadResult = await uploadImageToGCP(order.id, image, 'original.jpg')
+
+    await orderService.updateOrderStatus(order.id, 'original_uploaded')
     
     // 2. Trigger GCP Run for quick check
     const gcpResponse = await triggerGCPRun({
       eventType: 'quick-check',
-      orderId: uploadResult.orderId,
+      orderId: order.id,
     })
     
     if (!gcpResponse.success) {
+      await orderService.updateOrderStatus(order.id, 'quick_check_failed')
       return c.json({ 
         success: false, 
         error: gcpResponse.error || 'GCP processing failed' 
       }, 500)
     }
     
+    await orderService.updateOrderStatus(order.id, 'quick_check_completed')
+
     // 3. Return results to frontend
     return c.json({
       success: true,
@@ -90,28 +103,38 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
     // 1. Get orderId from request
     const { orderId } = c.req.valid('json')
 
+    const order = await orderService.getOrderById(orderId)
+
+    if (!order) {
+      return c.json({ error: 'Order not found' }, 404)
+    }
+
+    await orderService.updateOrderStatus(order.id, 'validation_started')
+
     // 2. Trigger GCP Run for full validation
     const gcpResponse = await triggerGCPRun({
       eventType: 'validate-photo',
-      orderId: orderId,
+      orderId: order.id,
     })
     
     if (!gcpResponse.success) {
+      await orderService.updateOrderStatus(order.id, 'validation_failed')
       return c.json({ 
         success: false, 
         error: gcpResponse.error || 'GCP processing failed' 
       }, 500)
     }
 
-    const imageUrl = await getSignedUrlForImage(orderId, 'validated.jpg')
+    await orderService.updateOrderStatus(order.id, 'validation_completed')
 
+    const imageUrl = await getSignedUrlForImage(order.id, 'validated.jpg')
     
     // 3. Return results to frontend
     return c.json({
       success: true,
       recommendation: gcpResponse.data.recommendation,
       logs: gcpResponse.data.logs,
-      orderId: orderId,
+      orderId: order.id,
       imageUrl: imageUrl,
     })
   } catch (error) {
@@ -133,6 +156,18 @@ app.post('/api/stripe/create-checkout-session', async (c) => {
       return c.json({ error: 'Order ID is required' }, 400)
     }
 
+    const order = await orderService.getOrderById(orderId)
+
+    if (!order) {
+      return c.json({ error: 'Order not found' }, 404)
+    }
+
+    if (order.status !== 'validation_completed') {
+      return c.json({ error: 'Order is not in a valid state for checkout' }, 400)
+    }
+
+    await orderService.updateOrderStatus(order.id, 'checkout_started')
+
     const session = await stripe.checkout.sessions.create({
       line_items: [{
         price: process.env.STRIPE_PRICE_ID,
@@ -143,7 +178,7 @@ app.post('/api/stripe/create-checkout-session', async (c) => {
       cancel_url: `${process.env.APP_PUBLIC_BASE_URL}/checkout/cancel?canceled=true`,
       allow_promotion_codes: true,
       automatic_tax: { enabled: false },
-      client_reference_id: orderId,
+      client_reference_id: order.id,
       shipping_options: [
         {
           shipping_rate_data: {
@@ -211,18 +246,21 @@ app.get('/api/admin/orders', authMiddleware, async (c) => {
   try {
     const status = c.req.query('status') as OrderStatus | undefined
     
-    const orders = status 
-      ? orderStore.getAllOrdersByStatus(status)
-      : orderStore.getAllOrders()
+    let orders: Order[] = []
+    if (status) {
+      orders = await orderService.getOrdersByStatus(status)
+    } else {
+      orders = await orderService.getAllOrders()
+    }
 
     // Add image URLs to each order
     const ordersWithImages = await Promise.all(
       orders.map(async (order) => {
         try {
-          const imageUrl = await getSignedUrlForImage(order.orderId, 'validated.jpg')
+          const imageUrl = await getSignedUrlForImage(order.id, 'validated.jpg')
           return { ...order, imageUrl }
         } catch (error) {
-          console.error(`Failed to get image URL for order ${order.orderId}:`, error)
+          console.error(`Failed to get image URL for order ${order.id}:`, error)
           return { ...order, imageUrl: null }
         }
       })
