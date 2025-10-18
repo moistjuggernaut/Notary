@@ -94,6 +94,17 @@ else
     echo "✅ Model bucket '${MODEL_BUCKET_NAME}' created successfully"
 fi
 
+# Check if models are already uploaded
+echo "🔍 Checking if models are already present in bucket..."
+if gcloud storage ls "gs://${MODEL_BUCKET_NAME}/models/" >/dev/null 2>&1; then
+    echo "✅ Models already exist in bucket. Skipping upload."
+    echo "💡 To force re-upload, manually delete with: gcloud storage rm -r gs://${MODEL_BUCKET_NAME}/models/"
+else
+    echo "📤 Uploading models to bucket: ${MODEL_BUCKET_NAME}"
+    gcloud storage cp -r gcp-api/models "gs://${MODEL_BUCKET_NAME}/"
+    echo "✅ Models uploaded successfully"
+fi
+
 # --- Build Docker Image ---
 echo "🏗️ Building Docker image with Cloud Build..."
 # We submit the gcp-api directory to Cloud Build
