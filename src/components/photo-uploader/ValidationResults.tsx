@@ -73,12 +73,11 @@ export default function ValidationResults({ result }: ValidationResultsProps) {
       {result.imageUrl && (
         <div className="mb-6">
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Validated Image</h4>
             <div className="flex justify-center">
               <img
                 src={result.imageUrl}
                 alt="Validated passport photo"
-                className="max-w-full max-h-64 rounded-lg shadow-sm border border-gray-200"
+                className="max-w-full max-h-96 rounded-lg shadow-sm border border-gray-200"
               />
             </div>
           </div>
