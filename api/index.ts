@@ -144,6 +144,27 @@ app.post('/api/stripe/create-checkout-session', async (c) => {
       allow_promotion_codes: true,
       automatic_tax: { enabled: false },
       client_reference_id: orderId,
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: {
+              amount: 0,
+              currency: 'eur',
+            },
+            display_name: 'Standard Shipping',
+            delivery_estimate: {
+              minimum: {
+                unit: 'business_day',
+                value: 3,
+              },
+              maximum: {
+                unit: 'business_day',
+                value: 4,
+              },
+            },
+          },
+        }],
       shipping_address_collection: {
         allowed_countries: ['BE', 'NL', 'DE'],
       },
