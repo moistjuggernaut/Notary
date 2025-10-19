@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: photo-validator-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: photo_validator
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # GCP API Service
+  api:
+    build:
+      context: ./gcp-api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - gcs-emulator
+      - postgres
+    volumes:
+      # Mount the source code for live-reloading during development
+      - ./gcp-api/src:/app
+      # Mount models so MODEL_PATH can reference /app/models/... inside the container
+      - ./gcp-api/models:/app/models
+
+  # Google Cloud Storage Emulator
+  gcs-emulator:
+    image: fsouza/fake-gcs-server:latest
+    ports:
+      - "4443:4443"
+    command: -scheme http -host 0.0.0.0
+    volumes:
+      # Persist data between runs
+      - gcs_data:/data
+
+volumes:
+  postgres_data:
+  gcs_data:
