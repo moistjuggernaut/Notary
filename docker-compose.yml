@@ -47,8 +47,7 @@ services:
     command: -scheme http -host 0.0.0.0
     volumes:
       # Persist data between runs
-      - gcs_data:/data
+      - ./gcs_data:/data
 
 volumes:
   postgres_data:
-  gcs_data:
