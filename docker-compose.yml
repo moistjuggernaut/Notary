@@ -17,9 +17,37 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 1s
+      timeout: 1s
+      retries: 10
+
+  # Database Migration Service
+  migrations:
+    image: node:20-alpine
+    container_name: photo-validator-migrations
+    working_dir: /app
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: photo_validator
+    volumes:
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./drizzle.config.ts:/app/drizzle.config.ts
+      - ./drizzle:/app/drizzle
+      - ./api:/app/api
+      - ./tsconfig.json:/app/tsconfig.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+        npm ci &&
+        npx drizzle-kit migrate
+      "
+    restart: "no"
 
   # GCP API Service
   api:
@@ -32,7 +60,7 @@ services:
       - .env
     depends_on:
       - gcs-emulator
-      - postgres
+      - migrations
     volumes:
       # Mount the source code for live-reloading during development
       - ./gcp-api/src:/app
