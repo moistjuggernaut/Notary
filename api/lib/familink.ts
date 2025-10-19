@@ -1,17 +1,15 @@
 import { getFamilinkConfig } from './.familink.js'
 
 export interface FamilinkRecipient {
-  company?: string
-  first_name: string
+  company: string | null
+  first_name: string | null
   last_name: string
   address_1: string
-  address_2?: string
+  address_2: string | null
   city: string
   postal_or_zip_code: string
-  state?: string
+  state: string | null
   country_code: string
-  email?: string
-  phone?: string
 }
 
 export interface FamilinkPhotoPayload {
