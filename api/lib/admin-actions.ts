@@ -6,17 +6,19 @@ import Stripe from 'stripe'
 import { getStripe } from './.stripe.js'
 import { Order } from './schema.js'
 
-interface ShippingMetadata {
-  first_name: string
-  last_name: string
-  address_1: string
-  address_2?: string
-  city: string
-  postal_or_zip_code: string
-  state?: string
-  country_code: string
-  email?: string
-  phone?: string
+interface ShippingDetails {
+  address: {
+    city: string,
+    country: string,
+    line1: string,
+    line2: string | null,
+    postal_code: string,
+    state: string | null
+    },
+  carrier: string | null,
+  name: string,
+  phone: string | null,
+  tracking_number: string | null
 }
 /**
  * Approve an order and send it to Familink for printing
@@ -35,9 +37,9 @@ export async function approveOrder(orderId: string): Promise<void> {
   }
   const stripe = getStripe()
   const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId!)
-  const shipping = parseShippingMetadata(session)
+  const shipping_details = parseShippingDetails(session)
 
-  if (!shipping) {
+  if (!shipping_details) {
     throw new Error('Order missing shipping information')
   }
 
@@ -49,16 +51,15 @@ export async function approveOrder(orderId: string): Promise<void> {
     await createFamilinkPrintOrder({
       merchant_reference: orderId,
       recipient: {
-        first_name: shipping.first_name,
-        last_name: shipping.last_name,
-        address_1: shipping.address_1,
-        address_2: shipping.address_2,
-        city: shipping.city,
-        postal_or_zip_code: shipping.postal_or_zip_code,
-        state: shipping.state,
-        country_code: shipping.country_code,
-        email: shipping.email,
-        phone: shipping.phone,
+        company: null,
+        first_name: null,
+        last_name: shipping_details.name,
+        address_1: shipping_details.address.line1,
+        address_2: shipping_details.address.line2,
+        city: shipping_details.address.city,
+        postal_or_zip_code: shipping_details.address.postal_code,
+        state: shipping_details.address.state,
+        country_code: shipping_details.address.country,
       },
       photos: [
         {
@@ -119,17 +120,11 @@ export async function rejectOrder(orderId: string, reason: string): Promise<void
     throw new Error(`Failed to process refund: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
-function parseShippingMetadata(session: Stripe.Checkout.Session): ShippingMetadata | null {
-    const shippingJson = session.metadata?.shipping
-    if (!shippingJson) {
-      return null
-    }
-  
-    try {
-      return JSON.parse(shippingJson) as ShippingMetadata
-    } catch (error) {
-      console.error('[Fulfillment] Failed to parse shipping metadata JSON.', error)
-      return null
-    }
+function parseShippingDetails(session: Stripe.Checkout.Session): ShippingDetails | null {
+  const shippingDetails = session.shipping_details as ShippingDetails | null
+  if (!shippingDetails) {
+    console.error('[AdminActions] Failed to parse shipping details:', session)
   }
+  return shippingDetails
+}
 
