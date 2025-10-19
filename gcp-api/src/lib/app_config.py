@@ -14,10 +14,10 @@ class StorageConfig(BaseSettings):
     bucket_name: str = Field(default="local-bucket", alias="GCS_BUCKET_NAME")
 
     # Local Development Settings
-    storage_emulator_host: Optional[str] = Field(
-        default=None,
-        alias="STORAGE_EMULATOR_HOST",
-        description="If set, use EmulatorStorageClient; if None, use GCSStorageClient for production."
+    use_local_storage: bool = Field(
+        default=False,
+        alias="USE_LOCAL_STORAGE",
+        description="If True, use EmulatorStorageClient; if False, use GCSStorageClient for production."
     )
 
     # Common Settings

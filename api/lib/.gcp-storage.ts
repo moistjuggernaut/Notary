@@ -39,12 +39,6 @@ if (process.env.USE_LOCAL_STORAGE !== 'true') {
     apiEndpoint: "http://localhost:4443",
     projectId: "test",
   });
-  
-  const bucket = storage.bucket('local-bucket');
-  const [buckets] = await storage.getBuckets();
-  if (!buckets.find((bucket) => bucket.id === 'local-bucket')) {
-    await bucket.create();
-  }
 }
 
 const bucketName = process.env.GCP_STORAGE_BUCKET || 'local-bucket';
