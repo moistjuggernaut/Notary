@@ -10,6 +10,8 @@ import cv2
 import numpy as np
 from google.cloud import storage
 from google.cloud.exceptions import NotFound
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
 
 from lib.app_config import config
 from lib.storage_base import BaseStorageClient
@@ -65,12 +67,15 @@ class GCSStorageClient(BaseStorageClient):
 class EmulatorStorageClient(BaseStorageClient):
     """
     Local development storage client for the GCS emulator.
-    The GCS client automatically detects and uses the STORAGE_EMULATOR_HOST environment variable.
     """
     def __init__(self, bucket_name: str, emulator_host: str):
         self.bucket_name = bucket_name
         self.emulator_host = emulator_host
-        self.client = storage.Client(project="local-dev")
+        self.client = storage.Client(
+            project="local-dev",
+            credentials=AnonymousCredentials(),
+            client_options=ClientOptions(api_endpoint='http://gcs-emulator:4443')
+        )
         self.bucket = self._ensure_bucket_exists()
 
     def _ensure_bucket_exists(self) -> storage.Bucket:
@@ -115,16 +120,16 @@ def get_storage_client() -> BaseStorageClient:
     """
     Factory function to get the appropriate storage client based on the environment.
     Uses a singleton pattern to reuse the same client instance per worker process.
-    
-    The client type is determined by checking if STORAGE_EMULATOR_HOST is set in the environment.
+
+    The client type is determined by checking if USE_LOCAL_STORAGE is set in the environment.
     """
     global _storage_client
     
     if _storage_client is None:
         bucket_name = config.storage.bucket_name
-        if config.storage.storage_emulator_host:
+        if config.storage.use_local_storage:
             log.info("Initializing EmulatorStorageClient for local development.")
-            _storage_client = EmulatorStorageClient(bucket_name=bucket_name, emulator_host=config.storage.storage_emulator_host)
+            _storage_client = EmulatorStorageClient(bucket_name=bucket_name, emulator_host="http://gcs-emulator:4443")
         else:
             log.info("Initializing GCSStorageClient for production.")
             _storage_client = GCSStorageClient(bucket_name=bucket_name)
