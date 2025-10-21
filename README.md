@@ -1,129 +1,188 @@
 # Photo Validator
 
-A passport photo validation system using computer vision and ML to ensure compliance with official ICAO photo requirements.
+A comprehensive passport photo validation system using computer vision and machine learning to ensure compliance with official ICAO photo requirements. The system provides both quick face detection checks and full ICAO compliance validation for passport photos.
 
-This project uses a modern hybrid architecture with React frontend, Vercel API for orchestration, and GCP Cloud Run for heavy ML processing.
+## System Overview
 
-## Architecture Overview
+The Photo Validator is a modern, cloud-native application that validates passport photos against international standards. It combines a React frontend with serverless backend processing to deliver fast, accurate photo validation services.
 
--   **Frontend**: A modern React & TypeScript single-page application, deployed to **Vercel's Edge Network** for global, low-latency access.
--   **Vercel API**: A fast Hono.js API that handles image uploads to GCP Storage and orchestrates GCP Cloud Run processing.
--   **GCP Cloud Run**: Heavy ML processing service for photo validation and face detection.
--   **GCP Storage**: Temporary storage for uploaded images during processing.
+
+## System Components
+
+### Frontend (React/TypeScript)
+- **Location**: `src/` directory
+- **Technology**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- **Features**: Photo upload, validation results display, payment integration
+- **Deployment**: Vercel Edge Network for global performance
+
+### Backend API (Hono.js)
+- **Location**: `api/` directory  
+- **Technology**: Hono.js, TypeScript, Zod validation
+- **Features**: Image upload orchestration, payment processing, order management
+- **Deployment**: Vercel Serverless Functions
+
+### ML Processing Service (Python/Flask)
+- **Location**: `gcp-api/` directory
+- **Technology**: Python, Flask, OpenCV, InsightFace, ONNX Runtime
+- **Features**: Face detection, ICAO compliance checking, image processing
+- **Deployment**: Google Cloud Run
+
+### Database (PostgreSQL)
+- **Technology**: PostgreSQL with Drizzle ORM
+- **Features**: Order tracking, payment records, validation results
+- **Deployment**: Supabase (production) or Docker (development)
+
+## External Services
+
+### Google Cloud Platform
+- **Cloud Run**: Serverless container execution for ML processing
+- **Cloud Storage**: Temporary image storage during processing
+
+### Database
+- **Supabase**: Managed PostgreSQL database with additional features
+
+### Payment Processing
+- **Stripe**: Payment processing and webhook handling
+- **Features**: One-time payments, webhook validation, refund processing
+
+### Print Fulfillment
+- **Familink API**: Photo printing and delivery service
+- **Features**: Order printed photos, shipping to users, order tracking
+
+### Development Tools
+- **Docker**: Local development environment
+- **Drizzle ORM**: Database schema management and migrations
+- **Vercel**: Frontend and API deployment platform
+
+## Architecture Diagram
 
 ```mermaid
 graph TD
-    subgraph Vercel
-        A[React Frontend] --> B[Hono API];
+    subgraph "Frontend"
+        A[React Frontend]
     end
-    subgraph GCP
-        B --> C[GCP Storage];
-        B --> D[GCP Cloud Run];
-        D --> C;
+    
+    subgraph "Vercel Platform"
+        B[Hono.js API]
     end
-    B --> E[Stripe Integration];
-
-    style A fill:#000,color:#fff,stroke:#fff
-    style B fill:#888,color:#fff,stroke:#fff
-    style C fill:#4285F4,color:#fff,stroke:#fff
-    style D fill:#34A853,color:#fff,stroke:#fff
-    style E fill:#00D4AA,color:#fff,stroke:#fff
+    
+    subgraph "Google Cloud Platform"
+        C[Cloud Storage]
+        D[Cloud Run ML Service]
+    end
+    
+    subgraph "Database"
+        E[Supabase]
+    end
+    
+    subgraph "Payment"
+        F[Stripe]
+    end
+    
+    subgraph "Print Fulfillment"
+        G[Familink API]
+    end
+    
+    A --> B
+    B --> C
+    B --> D
+    B --> E
+    B --> F
+    B --> G
+    D --> C
+    
+    style A fill:#61dafb,color:#000
+    style B fill:#000,color:#fff
+    style C fill:#4285f4,color:#fff
+    style D fill:#34a853,color:#fff
+    style E fill:#3ecf8e,color:#fff
+    style F fill:#00d4aa,color:#fff
+    style G fill:#ff6b35,color:#fff
 ```
 
 ## Tech Stack
 
-| Area      | Technology                                                                                                   |
-| --------- | ------------------------------------------------------------------------------------------------------------ |
-| **Frontend**  | React 19, TypeScript, Vite, Wouter, Tailwind CSS, shadcn/ui                                                  |
-| **Vercel API**   | Hono.js, TypeScript, Zod validation, Stripe integration, GCP Storage integration                     |
-| **GCP Cloud Run** | Python, Flask, OpenCV, InsightFace, ONNX Runtime                                                          |
-| **Deployment**| Vercel (Frontend & API), GCP Cloud Run (ML Processing), GCP Storage (Image Storage)                                                          |
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS | User interface and photo upload |
+| **Backend API** | Hono.js, TypeScript, Zod | Request handling and orchestration |
+| **ML Processing** | Python, Flask, OpenCV, InsightFace | Photo validation and compliance checking |
+| **Database** | PostgreSQL, Drizzle ORM | Data persistence and order management |
+| **Payments** | Stripe API | Payment processing and webhooks |
+| **Print Fulfillment** | Familink API | Photo printing and delivery service |
+| **Storage** | Google Cloud Storage | Temporary image storage |
+| **Deployment** | Vercel, Google Cloud Run | Serverless hosting and container execution |
 
 ## Project Structure
 
 ```
-.
-├── src/                  # React/TypeScript frontend source
-│   ├── api/              # Frontend API client (uses Tanstack Query)
-│   ├── components/       # Reusable UI components
-│   └── pages/            # Application pages
-├── api/                  # Hono.js API backend (Vercel)
-│   ├── index.ts          # Main Hono application
-│   └── lib/              # Shared utilities
-│       ├── gcp-storage.ts # GCP Storage integration
-│       ├── gcp-run.ts    # GCP Cloud Run client
-│       └── .stripe.ts    # Stripe configuration
-├── gcp-api/              # GCP Cloud Run service
-│   ├── src/
-│   │   ├── app.py        # Flask application
-│   │   ├── lib/          # ML processing modules
-│   │   └── requirements.txt
-│   └── Dockerfile        # Container configuration
-├── public/               # Static assets for the frontend
-├── .gitignore            # Git ignore configuration
-├── vercel.json           # Vercel project configuration
-└── env.example           # Environment variables template
+photo-validator/
+├── src/                          # React frontend
+│   ├── components/               # UI components
+│   │   ├── photo-uploader/      # Photo upload interface
+│   │   └── ui/                   # Reusable UI components
+│   ├── pages/                    # Application pages
+│   ├── hooks/                    # Custom React hooks
+│   └── lib/                      # Utility functions
+├── api/                          # Hono.js backend
+│   ├── index.ts                  # Main API application
+│   └── lib/                      # Backend utilities
+│       ├── database.ts           # Database connection
+│       ├── order-service.ts      # Order management
+│       ├── fulfillment.ts        # Payment fulfillment
+│       └── admin-actions.ts     # Admin operations
+├── gcp-api/                      # ML processing service
+│   ├── src/                      # Python source code
+│   │   ├── app.py               # Flask application
+│   │   ├── lib/                 # ML processing modules
+│   │   └── models/              # ML model files
+│   └── Dockerfile               # Container configuration
+├── drizzle/                     # Database migrations
+├── docker-compose.yml           # Local development setup
+└── vercel.json                 # Vercel configuration
 ```
 
-## API Flow
+## Getting Started
 
-### Quick Check Flow
-1. Frontend uploads image to Vercel API
-2. Vercel API uploads image to GCP Storage with UUID
-3. Vercel API triggers GCP Cloud Run with quick_check event
-4. GCP Cloud Run downloads image and performs face detection
-5. Results returned to Vercel API, then to frontend
+For detailed setup instructions, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
-### Full Validation Flow
-1. Frontend uploads image to Vercel API
-2. Vercel API uploads image to GCP Storage with UUID
-3. Vercel API triggers GCP Cloud Run with validate_photo event
-4. GCP Cloud Run downloads image and performs full ICAO validation
-5. Validated image stored back to GCP Storage
-6. Results returned to Vercel API, then to frontend
+### Quick Start
 
-## Local Development & Deployment
+1. **Clone and Install**
+   ```bash
+   git clone <repository-url>
+   cd photo-validator
+   npm install
+   ```
 
-### Prerequisites
+2. **Environment Setup**
+   ```bash
+   cp env.example .env
+   # Configure your environment variables
+   ```
 
--   Node.js (v20+)
--   npm or yarn
--   GCP Project with Cloud Run and Storage enabled
--   Docker (for local GCP API testing)
+3. **Start Development**
+   ```bash
+   # Terminal 1: Start infrastructure services
+   npm run dev:full
+   
+   # Terminal 2: Start frontend and API
+   vercel dev
+   ```
 
-### Running Locally
+   **What `npm run dev:full` does:**
+   - Starts PostgreSQL database with Docker
+   - Runs Drizzle database migrations
+   - Starts Google Cloud Storage emulator
+   - Starts GCP API service (ML processing) in Docker
+   - Starts Stripe webhook listener
+   - Provides the infrastructure services needed for development
 
-1.  **Install Dependencies**:
-    ```bash
-    npm install
-    ```
-
-2.  **Set up Environment Variables**:
-    ```bash
-    cp env.example .env
-    # Edit .env with your Stripe keys and GCP configuration
-    ```
-
-3.  **Start Development Server**:
-    ```bash
-    npm run dev
-    ```
-    
-    This will start both the frontend and Vercel API using Vite with the Hono dev server plugin.
-    The application will be available at `http://localhost:3000`
-
-4.  **Run GCP API Locally** (optional):
-    ```bash
-    npm run gcp:run
-    ```
-
-### Deployment
-
-This project requires deployment to both Vercel and GCP:
-
--   **Frontend & Vercel API**: Pushing to the `main` branch automatically deploys both to Vercel.
--   **GCP Cloud Run**: Deploy using the provided Dockerfile and deployment scripts.
--   **Environment Variables**: Set up your environment variables in both Vercel and GCP.
+   **What `vercel dev` does:**
+   - Starts the React frontend development server
+   - Starts the Hono.js API server
+   - Provides hot-reloading for both frontend and API changes
+   - Simulates the Vercel production environment locally
 
 ## License
 
