@@ -269,10 +269,10 @@ export default function Admin() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {orders.map((order) => (
-              <Card key={order.orderId} className="overflow-hidden">
+              <Card key={order.id} className="overflow-hidden">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-sm font-mono text-gray-600 truncate">
-                    {order.orderId}
+                    {order.id}
                   </CardTitle>
                   <CardDescription>
                     {new Date(order.createdAt).toLocaleString()}
@@ -310,36 +310,36 @@ export default function Admin() {
                   <div className="space-y-2 pt-2">
                     <div className="flex gap-2">
                       <Button
-                        onClick={() => handleApprove(order.orderId)}
-                        disabled={loadingOrders.has(order.orderId)}
+                        onClick={() => handleApprove(order.id)}
+                        disabled={loadingOrders.has(order.id)}
                         className="flex-1 bg-green-600 hover:bg-green-700"
                       >
-                        {loadingOrders.has(order.orderId) ? 'Approving...' : 'Approve'}
+                        {loadingOrders.has(order.id) ? 'Approving...' : 'Approve'}
                       </Button>
                       
                       <div className="relative flex-1">
                         <Button
                           onClick={() => {
-                            console.log('🔽 Reject button clicked for order:', order.orderId, 'current openDropdown:', openDropdown)
-                            const newDropdown = openDropdown === order.orderId ? null : order.orderId
+                            console.log('🔽 Reject button clicked for order:', order.id, 'current openDropdown:', openDropdown)
+                            const newDropdown = openDropdown === order.id ? null : order.id
                             console.log('🔽 Setting dropdown to:', newDropdown)
                             setOpenDropdown(newDropdown)
                           }}
-                          disabled={loadingOrders.has(order.orderId)}
+                          disabled={loadingOrders.has(order.id)}
                           variant="destructive"
                           className="w-full"
                         >
-                          {loadingOrders.has(order.orderId) ? 'Processing...' : 'Reject ▼'}
+                          {loadingOrders.has(order.id) ? 'Processing...' : 'Reject ▼'}
                         </Button>
                         
-                        {openDropdown === order.orderId && (
+                        {openDropdown === order.id && (
                           <div className="absolute bottom-full mb-1 left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
                             {REJECTION_REASONS.map((reason) => (
                               <button
                                 key={reason}
-                                onClick={() => handleReject(order.orderId, reason)}
+                                onClick={() => handleReject(order.id, reason)}
                                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors"
-                                disabled={loadingOrders.has(order.orderId)}
+                                disabled={loadingOrders.has(order.id)}
                               >
                                 {reason}
                               </button>
@@ -350,12 +350,12 @@ export default function Admin() {
                     </div>
                     
                     <Button
-                      onClick={() => handleFamilinkContent(order.orderId)}
-                      disabled={loadingOrders.has(order.orderId)}
+                      onClick={() => handleFamilinkContent(order.id)}
+                      disabled={loadingOrders.has(order.id)}
                       variant="outline"
                       className="w-full"
                     >
-                      {loadingOrders.has(order.orderId) ? 'Loading...' : 'Familink Content'}
+                      {loadingOrders.has(order.id) ? 'Loading...' : 'Familink Content'}
                     </Button>
                   </div>
                 </CardContent>
