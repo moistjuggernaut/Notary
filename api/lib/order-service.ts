@@ -53,6 +53,20 @@ export class OrderService {
     return order || null;
   }
 
+  async updateOrderFamilinkId(id: string, familinkId: string): Promise<Order | null> {
+    const db = await this.getDb();
+    const [order] = await db
+      .update(orders)
+      .set({ 
+        familinkId, 
+        updatedAt: new Date() 
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    
+    return order || null;
+  }
+
   async updateOrderStatus(id: string, status: OrderStatus): Promise<Order | null> {
     const db = await this.getDb();
     const [order] = await db
@@ -138,6 +152,7 @@ export const orderService = {
   get getOrderByStripeSessionId() { return getOrderService().getOrderByStripeSessionId.bind(getOrderService()); },
   get getOrderByStripePaymentIntentId() { return getOrderService().getOrderByStripePaymentIntentId.bind(getOrderService()); },
   get updateOrderStatus() { return getOrderService().updateOrderStatus.bind(getOrderService()); },
+  get updateOrderFamilinkId() { return getOrderService().updateOrderFamilinkId.bind(getOrderService()); },
   get updateOrderStripeSessionId() { return getOrderService().updateOrderStripeSessionId.bind(getOrderService()); },
   get updateOrderStripePaymentIntentId() { return getOrderService().updateOrderStripePaymentIntentId.bind(getOrderService()); },
   get getOrdersByStatus() { return getOrderService().getOrdersByStatus.bind(getOrderService()); },
