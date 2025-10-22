@@ -1,4 +1,4 @@
-import type { OrdersResponse, OrderActionResponse, OrderStatus } from '@/types/api'
+import type { OrdersResponse, OrderActionResponse } from '@/types/api'
 
 const API_BASE_URL = '/api'
 
@@ -33,18 +33,14 @@ export function isAuthenticated(): boolean {
 /**
  * Fetch orders by status
  */
-export async function fetchOrders(status?: OrderStatus): Promise<OrdersResponse> {
+export async function fetchOrders(): Promise<OrdersResponse> {
   const token = getAdminToken()
   
   if (!token) {
     throw new Error('Not authenticated')
   }
 
-  const url = status 
-    ? `${API_BASE_URL}/admin/orders?status=${status}`
-    : `${API_BASE_URL}/admin/orders`
-
-  const response = await fetch(url, {
+  const response = await fetch(`${API_BASE_URL}/admin/orders`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -121,3 +117,30 @@ export async function rejectOrder(orderId: string, reason: string): Promise<Orde
   return response.json()
 }
 
+/**
+ * Get Familink order details
+ */
+export async function getFamilinkOrder(familinkId: string): Promise<unknown> {
+  const token = getAdminToken()
+  
+  if (!token) {
+    throw new Error('Not authenticated')
+  }
+
+  const response = await fetch(`${API_BASE_URL}/admin/familink/${familinkId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  })
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearAdminToken()
+      throw new Error('Authentication failed')
+    }
+    const data = await response.json()
+    throw new Error(data.error || `Failed to fetch Familink order: ${response.statusText}`)
+  }
+
+  return response.json()
+}
