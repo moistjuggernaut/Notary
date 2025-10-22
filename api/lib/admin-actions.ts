@@ -48,7 +48,7 @@ export async function approveOrder(orderId: string): Promise<void> {
     const validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated.jpg')
 
     // Create Familink print order
-    await createFamilinkPrintOrder({
+    const familinkResponse = await createFamilinkPrintOrder({
       merchant_reference: orderId,
       recipient: {
         company: null,
@@ -72,6 +72,7 @@ export async function approveOrder(orderId: string): Promise<void> {
 
     // Update status to sent
     await orderService.updateOrderStatus(orderId, 'familink_order_created')
+    await orderService.updateOrderFamilinkId(orderId, familinkResponse.pk)
 
     console.log('[AdminActions] Order approved and sent to Familink:', orderId)
   } catch (error) {
@@ -120,6 +121,7 @@ export async function rejectOrder(orderId: string, reason: string): Promise<void
     throw new Error(`Failed to process refund: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
+
 function parseShippingDetails(session: Stripe.Checkout.Session): ShippingDetails | null {
   const shippingDetails = session.shipping_details as ShippingDetails | null
   if (!shippingDetails) {

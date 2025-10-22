@@ -59,11 +59,11 @@ export async function createFamilinkPrintOrder(
   return data
 }
 
-export async function getFamilinkOrderContent(
-  familinkOrderId: string
+export async function getFamilinkOrder(
+  familinkId: string
 ): Promise<unknown> {
   const config = getFamilinkConfig()
-  const url = `${config.baseUrl}/api/prints/external-order/${familinkOrderId}`
+  const url = `${config.baseUrl}/api/prints/external-order/${familinkId}`
   
   const response = await fetch(url, {
     method: 'GET',
