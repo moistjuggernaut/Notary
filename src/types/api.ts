@@ -64,7 +64,6 @@ export interface QuickCheckResponse {
 }
 
 // --- Order Management ---
-export type OrderStatus = 'pending' | 'paid' | 'approved' | 'rejected' | 'sent' | 'refunded'
 
 export interface ShippingInfo {
     first_name: string
@@ -80,15 +79,16 @@ export interface ShippingInfo {
 }
 
 export interface Order {
-    orderId: string
-    status: OrderStatus
-    shipping?: ShippingInfo
-    paymentIntentId?: string
-    stripeSessionId?: string
-    createdAt: string
-    updatedAt: string
-    rejectionReason?: string
-    imageUrl?: string | null
+  orderId: string
+  status: string
+  familinkId?: string
+  shipping?: ShippingInfo
+  paymentIntentId?: string
+  stripeSessionId?: string
+  createdAt: string
+  updatedAt: string
+  rejectionReason?: string
+  imageUrl?: string | null
 }
 
 export interface OrdersResponse {
@@ -111,5 +111,6 @@ export const REJECTION_REASONS = [
     'Glasses with glare or tinted lenses',
     'Head covering obscuring face',
     'Image quality too low',
+    'Non neutral expression (smiling, frowning, etc.)',
     'Other violation'
 ] as const 
