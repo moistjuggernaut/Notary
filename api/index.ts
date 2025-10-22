@@ -10,7 +10,8 @@ import { authMiddleware } from './lib/auth-middleware.js'
 import { approveOrder, rejectOrder } from './lib/admin-actions.js'
 import { createDatabaseConnection } from './lib/database.js'
 import { orderService } from './lib/order-service.js'
-import { OrderStatus, Order } from './lib/schema.js'
+import { Order } from './lib/schema.js'
+import { getFamilinkOrder } from './lib/familink.js'
 
 const app = new Hono()
 
@@ -243,15 +244,9 @@ app.post('/api/stripe/webhook', async (c) => {
 
 // Admin routes (protected)
 app.get('/api/admin/orders', authMiddleware, async (c) => {
-  try {
-    const status = c.req.query('status') as OrderStatus | undefined
-    
+  try {    
     let orders: Order[] = []
-    if (status) {
-      orders = await orderService.getOrdersByStatus(status)
-    } else {
-      orders = await orderService.getAllOrders()
-    }
+    orders = await orderService.getOrdersByStatus('checkout_completed')
 
     // Add image URLs to each order
     const ordersWithImages = await Promise.all(
@@ -318,6 +313,35 @@ app.post('/api/admin/orders/:orderId/reject', authMiddleware, zValidator('json',
     return c.json({ 
       success: false,
       error: error instanceof Error ? error.message : 'Failed to reject order' 
+    }, 500)
+  }
+})
+
+app.get('/api/admin/familink/:orderId', authMiddleware, async (c) => {
+  try {
+    const orderId = c.req.param('orderId')
+
+    const order = await orderService.getOrderById(orderId)
+
+    if (!order) {
+      return c.json({ error: 'Order not found' }, 404)
+    }
+
+    if (!order.familinkId) {
+      return c.json({ error: 'Order has no Familink ID' }, 400)
+    }
+
+    const familinkOrder = await getFamilinkOrder(order.familinkId)
+    
+    return c.json({ 
+      success: true,
+      data: familinkOrder 
+    })
+  } catch (error) {
+    console.error('Familink order fetch error:', error)
+    return c.json({ 
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch Familink order' 
     }, 500)
   }
 })
