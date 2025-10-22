@@ -7,6 +7,7 @@ import {
   fetchOrders, 
   approveOrder, 
   rejectOrder, 
+  getFamilinkOrder,
   setAdminToken, 
   isAuthenticated,
   clearAdminToken 
@@ -20,8 +21,8 @@ export default function Admin() {
   const [isAuth, setIsAuth] = useState(isAuthenticated())
   const [password, setPassword] = useState('')
   const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(false)
-  const [loadingOrders, setLoadingOrders] = useState(false)
+  const [loadingOrdersList, setLoadingOrdersList] = useState(false)
+  const [loadingOrders, setLoadingOrders] = useState<Set<string>>(new Set())
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
   useEffect(() => {
@@ -31,9 +32,9 @@ export default function Admin() {
   }, [isAuth])
 
   const loadOrders = async () => {
-    setLoadingOrders(true)
+    setLoadingOrdersList(true)
     try {
-      const response = await fetchOrders('paid')
+      const response = await fetchOrders()
       if (response.success) {
         setOrders(response.orders)
       } else {
@@ -60,7 +61,7 @@ export default function Admin() {
         })
       }
     } finally {
-      setLoadingOrders(false)
+      setLoadingOrdersList(false)
     }
   }
 
@@ -78,7 +79,13 @@ export default function Admin() {
   }
 
   const handleApprove = async (orderId: string) => {
-    setLoading(true)
+    console.log('🟢 Approve clicked for order:', orderId)
+    setLoadingOrders(prev => {
+      const newSet = new Set(prev)
+      newSet.add(orderId)
+      console.log('🟢 Loading orders after add:', Array.from(newSet))
+      return newSet
+    })
     try {
       const response = await approveOrder(orderId)
       if (response.success) {
@@ -102,12 +109,23 @@ export default function Admin() {
         variant: 'destructive',
       })
     } finally {
-      setLoading(false)
+      setLoadingOrders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(orderId)
+        console.log('🟢 Loading orders after remove:', Array.from(newSet))
+        return newSet
+      })
     }
   }
 
   const handleReject = async (orderId: string, reason: string) => {
-    setLoading(true)
+    console.log('🔴 Reject clicked for order:', orderId, 'reason:', reason)
+    setLoadingOrders(prev => {
+      const newSet = new Set(prev)
+      newSet.add(orderId)
+      console.log('🔴 Loading orders after add:', Array.from(newSet))
+      return newSet
+    })
     setOpenDropdown(null)
     try {
       const response = await rejectOrder(orderId, reason)
@@ -132,7 +150,52 @@ export default function Admin() {
         variant: 'destructive',
       })
     } finally {
-      setLoading(false)
+      setLoadingOrders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(orderId)
+        console.log('🔴 Loading orders after remove:', Array.from(newSet))
+        return newSet
+      })
+    }
+  }
+
+  const handleFamilinkContent = async (orderId: string) => {
+    console.log('🔵 Familink clicked for order:', orderId)
+    setLoadingOrders(prev => {
+      const newSet = new Set(prev)
+      newSet.add(orderId)
+      console.log('🔵 Loading orders after add:', Array.from(newSet))
+      return newSet
+    })
+    try {
+      const familinkData = await getFamilinkOrder(orderId)
+      const jsonString = JSON.stringify(familinkData, null, 2)
+      
+      toast({
+        title: 'Familink Order Data',
+        description: (
+          <div className="max-w-md">
+            <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-32">
+              {jsonString}
+            </pre>
+          </div>
+        ),
+        duration: 10000, // Show for 10 seconds
+      })
+    } catch (error) {
+      console.error('Failed to fetch Familink data:', error)
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to fetch Familink data',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoadingOrders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(orderId)
+        console.log('🔵 Loading orders after remove:', Array.from(newSet))
+        return newSet
+      })
     }
   }
 
@@ -184,8 +247,8 @@ export default function Admin() {
             <p className="text-gray-600 mt-1">Review and approve paid orders</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={loadOrders} variant="outline" disabled={loadingOrders}>
-              {loadingOrders ? 'Refreshing...' : 'Refresh'}
+            <Button onClick={loadOrders} variant="outline" disabled={loadingOrdersList}>
+              {loadingOrdersList ? 'Refreshing...' : 'Refresh'}
             </Button>
             <Button onClick={handleLogout} variant="outline">
               Logout
@@ -193,7 +256,7 @@ export default function Admin() {
           </div>
         </div>
 
-        {loadingOrders ? (
+        {loadingOrdersList ? (
           <div className="text-center py-12">
             <p className="text-gray-600">Loading orders...</p>
           </div>
@@ -244,42 +307,56 @@ export default function Admin() {
                     </div>
                   )}
 
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      onClick={() => handleApprove(order.orderId)}
-                      disabled={loading}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                    >
-                      Approve
-                    </Button>
-                    
-                    <div className="relative flex-1">
+                  <div className="space-y-2 pt-2">
+                    <div className="flex gap-2">
                       <Button
-                        onClick={() => setOpenDropdown(
-                          openDropdown === order.orderId ? null : order.orderId
-                        )}
-                        disabled={loading}
-                        variant="destructive"
-                        className="w-full"
+                        onClick={() => handleApprove(order.orderId)}
+                        disabled={loadingOrders.has(order.orderId)}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
                       >
-                        Reject ▼
+                        {loadingOrders.has(order.orderId) ? 'Approving...' : 'Approve'}
                       </Button>
                       
-                      {openDropdown === order.orderId && (
-                        <div className="absolute bottom-full mb-1 left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
-                          {REJECTION_REASONS.map((reason) => (
-                            <button
-                              key={reason}
-                              onClick={() => handleReject(order.orderId, reason)}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors"
-                              disabled={loading}
-                            >
-                              {reason}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <div className="relative flex-1">
+                        <Button
+                          onClick={() => {
+                            console.log('🔽 Reject button clicked for order:', order.orderId, 'current openDropdown:', openDropdown)
+                            const newDropdown = openDropdown === order.orderId ? null : order.orderId
+                            console.log('🔽 Setting dropdown to:', newDropdown)
+                            setOpenDropdown(newDropdown)
+                          }}
+                          disabled={loadingOrders.has(order.orderId)}
+                          variant="destructive"
+                          className="w-full"
+                        >
+                          {loadingOrders.has(order.orderId) ? 'Processing...' : 'Reject ▼'}
+                        </Button>
+                        
+                        {openDropdown === order.orderId && (
+                          <div className="absolute bottom-full mb-1 left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
+                            {REJECTION_REASONS.map((reason) => (
+                              <button
+                                key={reason}
+                                onClick={() => handleReject(order.orderId, reason)}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors"
+                                disabled={loadingOrders.has(order.orderId)}
+                              >
+                                {reason}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    
+                    <Button
+                      onClick={() => handleFamilinkContent(order.orderId)}
+                      disabled={loadingOrders.has(order.orderId)}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {loadingOrders.has(order.orderId) ? 'Loading...' : 'Familink Content'}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

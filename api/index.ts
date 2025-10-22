@@ -245,8 +245,7 @@ app.post('/api/stripe/webhook', async (c) => {
 // Admin routes (protected)
 app.get('/api/admin/orders', authMiddleware, async (c) => {
   try {    
-    let orders: Order[] = []
-    orders = await orderService.getOrdersByStatus('checkout_completed')
+    const orders = await orderService.getOrdersByStatus('checkout_completed')
 
     // Add image URLs to each order
     const ordersWithImages = await Promise.all(
