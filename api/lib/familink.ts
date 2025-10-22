@@ -25,7 +25,7 @@ export interface FamilinkOrderRequest {
 }
 
 export interface FamilinkOrderResponse {
-  id: string
+  pk: string
   status: string
   tracking_number?: string
 }
@@ -43,7 +43,7 @@ export async function createFamilinkPrintOrder(
     },
     body: JSON.stringify({
       sandbox: config.sandbox,
-      enveloppe: config.envelope,
+      envelope: config.envelope,
       merchant_reference: payload.merchant_reference,
       recipient: payload.recipient,
       photos: payload.photos,
@@ -57,4 +57,25 @@ export async function createFamilinkPrintOrder(
 
   const data = (await response.json()) as FamilinkOrderResponse
   return data
+}
+
+export async function getFamilinkOrderContent(
+  familinkOrderId: string
+): Promise<unknown> {
+  const config = getFamilinkConfig()
+  const url = `${config.baseUrl}/api/prints/external-order/${familinkOrderId}`
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Token ${config.apiKey}`,
+    },
+  })
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`Familink error ${response.status}: ${body}`)
+  }
+
+  return (await response.json())
 }

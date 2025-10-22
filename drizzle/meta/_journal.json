@@ -8,6 +8,13 @@
       "when": 1761158417732,
       "tag": "0000_tranquil_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1761161893402,
+      "tag": "0001_gigantic_power_man",
+      "breakpoints": true
     }
   ]
 }

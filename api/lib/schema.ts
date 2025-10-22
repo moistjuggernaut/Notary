@@ -23,6 +23,7 @@ export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
   stripeSessionId: varchar('stripe_session_id', { length: 255 }),
   stripePaymentIntentId: varchar('stripe_payment_intent_id', { length: 255 }),
+  familinkId: varchar('familink_id', { length: 255 }),
   status: orderStatusEnum('status').notNull().default('created'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
