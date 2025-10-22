@@ -79,11 +79,11 @@ export interface ShippingInfo {
 }
 
 export interface Order {
-  orderId: string
+  id: string
   status: string
   familinkId?: string
   shipping?: ShippingInfo
-  paymentIntentId?: string
+  stripePaymentIntentId?: string
   stripeSessionId?: string
   createdAt: string
   updatedAt: string
