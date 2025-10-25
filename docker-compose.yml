@@ -66,6 +66,8 @@ services:
       - ./gcp-api/src:/app
       # Mount models so MODEL_PATH can reference /app/models/... inside the container
       - ./gcp-api/models:/app/models
+      # Mount prompt templates used by GeminiValidator
+      - ./prompts:/app/prompts
 
   # Google Cloud Storage Emulator
   gcs-emulator:
