@@ -9,7 +9,7 @@ from threading import Lock
 
 from lib.app_config import config
 from lib.image_preprocessor import ImagePreprocessor
-from lib.photo_validator import PhotoValidator
+from lib.gemini_validator import GeminiValidator
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class ComplianceChecker:
         self._model_name = model_name
         self._providers = providers
         self.preprocessor = None
-        self.validator = PhotoValidator()
+        self.validator = GeminiValidator()
         self.config = config.icao
         log.info("ComplianceChecker orchestrator initialized.")
 
@@ -69,16 +69,20 @@ class ComplianceChecker:
             log.debug("ImagePreprocessor initialized with shared analyzer.")
         return ComplianceChecker._full_analyzer
 
-    def _get_final_recommendation(self, validation_results_log):
-        """Determines the final recommendation based on all validation checks."""
-        fails = sum(1 for status, _, _ in validation_results_log if status == "FAIL")
-        warnings = sum(1 for status, _, _ in validation_results_log if status == "WARNING")
-        
-        if fails > 0:
-            return f"REJECTED: {fails} critical issue(s) found."
-        if warnings > 0:
-            return f"NEEDS REVIEW: {warnings} warning(s) found."
-        return "LOOKS PROMISING: All primary checks passed."
+    def _get_final_recommendation(self, validation_result: dict) -> str:
+        """Determines the final recommendation based on the Gemini result."""
+        status = validation_result.get("status")
+
+        if status == "COMPLIANT":
+            return "LOOKS PROMISING: All primary checks passed."
+
+        reason = (
+            validation_result.get("status_reason_description")
+            or validation_result.get("status_reason")
+            or validation_result.get("error")
+        )
+        reason_str = reason or "UNKNOWN_REASON"
+        return f"REJECTED: Gemini detected issue ({reason_str})."
 
     def check_image_array(self, image_bgr) -> tuple[dict, np.ndarray]:
         """
@@ -120,16 +124,37 @@ class ComplianceChecker:
 
             # Step 4: Validation
             log.info("Starting photo validation...")
-            validation_results = self.validator.validate_photo(processed_bgr, face_data, rembg_mask)
-            all_logs["validation"].extend(validation_results)
-            recommendation = self._get_final_recommendation(validation_results)
+            validation_result = self.validator.validate(processed_bgr)
+
+            if validation_result.get("success"):
+                gemini_log = (
+                    "PASS",
+                    "Gemini Validation",
+                    "Gemini reports the photo is compliant."
+                )
+            else:
+                failure_message = (
+                    validation_result.get("status_reason_description")
+                    or validation_result.get("status_reason")
+                    or validation_result.get("error")
+                    or "Gemini reported a validation error."
+                )
+                gemini_log = (
+                    "FAIL",
+                    "Gemini Validation",
+                    failure_message
+                )
+
+            all_logs["validation"].append(gemini_log)
+            recommendation = self._get_final_recommendation(validation_result)
             log.info("Photo validation finished.")
         
             # Step 5: Prepare and return final result
             result = {
                 "success": "REJECTED" not in recommendation,
                 "recommendation": recommendation,
-                "logs": all_logs
+                "logs": all_logs,
+                "gemini_validation": validation_result
             }
             log.debug(f"Final logs: {all_logs}")
         
