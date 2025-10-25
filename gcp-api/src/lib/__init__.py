@@ -11,6 +11,7 @@ Contains the main validation logic and processing modules:
 from .app_config import config
 from .face_analyzer import FaceAnalyzer
 from .image_preprocessor import ImagePreprocessor
-from .photo_validator import PhotoValidator
 
-__all__ = ['config', 'FaceAnalyzer', 'ImagePreprocessor', 'PhotoValidator'] 
+from .gemini_validator import GeminiValidator, GeminiStatusReason
+
+__all__ = ['config', 'FaceAnalyzer', 'ImagePreprocessor', 'GeminiValidator', 'GeminiStatusReason']
