@@ -14,6 +14,8 @@ services:
       - ./src:/app
       # Mount models so MODEL_PATH can reference /app/models/... inside the container
       - ./models:/app/models
+      # Mount prompt templates used by GeminiValidator
+      - ./prompts:/app/prompts
 
   gcs-emulator:
     image: fsouza/fake-gcs-server:latest
