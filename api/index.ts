@@ -130,11 +130,9 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
 
     const imageUrl = await getSignedUrlForImage(order.id, 'validated.jpg')
     
-    // 3. Return results to frontend
+    // 3. Return results to frontend - forward GCP response with added metadata
     return c.json({
-      success: true,
-      recommendation: gcpResponse.data.recommendation,
-      logs: gcpResponse.data.logs,
+      ...gcpResponse.data,
       orderId: order.id,
       imageUrl: imageUrl,
     })
