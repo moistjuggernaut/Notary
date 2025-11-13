@@ -1,73 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ValidationResult } from "@/types/validation";
 import { validatePhoto, quickCheckPhoto } from "@/api/client";
-import type { ValidationResponse, QuickCheckResponse } from "@/types/api";
+import type { QuickCheckResponse } from "@/types/api";
+import { convertApiResponseToValidationResult } from "@/lib/validation-utils";
 
 export const usePhotoValidation = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   // Quick check state
   const [isQuickChecking, setIsQuickChecking] = useState(false);
   const [quickCheckResult, setQuickCheckResult] = useState<QuickCheckResponse | null>(null);
   const [quickCheckError, setQuickCheckError] = useState<string | null>(null);
 
-  // Convert API response to frontend ValidationResult format
-  const convertApiResponseToValidationResult = (apiResponse: ValidationResponse): ValidationResult => {
-    const allLogs = [...apiResponse.logs.preprocessing, ...apiResponse.logs.validation];
-
-    // Determine overall status
-    const hasFailures = allLogs.some(log => log.status === 'FAIL');
-    const hasWarnings = allLogs.some(log => log.status === 'WARNING');
-
-    let status: 'success' | 'warning' | 'error';
-    let summary: string;
-
-    if (hasFailures) {
-      status = 'error';
-      summary = 'Photo does not meet EU biometric requirements. Please review the issues below and submit a corrected photo.';
-    } else if (hasWarnings) {
-      status = 'warning';
-      summary = 'Photo mostly meets requirements but has minor issues. Review recommendations for best results.';
-    } else {
-      status = 'success';
-      summary = 'Photo meets all EU biometric requirements and is ready for passport application submission.';
+  // Auto-advance to step 2 when file is selected
+  useEffect(() => {
+    if (selectedFile && currentStep === 1) {
+      setCurrentStep(2);
     }
+  }, [selectedFile, currentStep]);
 
-    // Convert logs to checks format with categories
-    const categorizeCheck = (step: string): 'photo_quality' | 'face_position' | 'framing' | 'technical' => {
-      const stepLower = step.toLowerCase();
-      if (stepLower.includes('quality') || stepLower.includes('lighting') || stepLower.includes('exposure')) {
-        return 'photo_quality';
-      }
-      if (stepLower.includes('face') || stepLower.includes('eye') || stepLower.includes('expression')) {
-        return 'face_position';
-      }
-      if (stepLower.includes('frame') || stepLower.includes('crop') || stepLower.includes('position')) {
-        return 'framing';
-      }
-      return 'technical';
-    };
+  // Auto-advance to step 3 when validation starts
+  useEffect(() => {
+    if (isValidating && currentStep === 2) {
+      setCurrentStep(3);
+    }
+  }, [isValidating, currentStep]);
 
-    const checks = allLogs
-      .filter(log => ['PASS', 'FAIL', 'WARNING'].includes(log.status))
-      .map(log => ({
-        name: log.step,
-        description: log.message,
-        status: log.status.toLowerCase() as 'pass' | 'warning' | 'fail',
-        category: categorizeCheck(log.step)
-      }));
-
-    return {
-      status,
-      summary,
-      checks,
-      recommendations: [apiResponse.recommendation].filter(Boolean),
-      orderId: apiResponse.orderId,
-      imageUrl: apiResponse.imageUrl
-    };
-  };
+  // Auto-advance to step 4 when validation completes
+  useEffect(() => {
+    if (validationResult && currentStep === 3) {
+      setCurrentStep(4);
+    }
+  }, [validationResult, currentStep]);
 
   const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
@@ -95,6 +62,16 @@ export const usePhotoValidation = () => {
     setValidationResult(null);
     setQuickCheckResult(null);
     setQuickCheckError(null);
+    setCurrentStep(1);
+  };
+
+  const handleReset = () => {
+    setSelectedFile(null);
+    setValidationResult(null);
+    setQuickCheckResult(null);
+    setQuickCheckError(null);
+    setCurrentStep(1);
+    setIsValidating(false);
   };
 
   const handleValidatePhoto = async () => {
@@ -114,8 +91,7 @@ export const usePhotoValidation = () => {
         checks: [{
           name: 'API Error',
           description: error instanceof Error ? error.message : 'Unknown error occurred',
-          status: 'fail',
-          category: 'technical'
+          status: 'fail'
         }],
         recommendations: ['Please try again or contact support if the problem persists.']
       };
@@ -138,6 +114,8 @@ export const usePhotoValidation = () => {
     handleFileSelect,
     handleRemoveFile,
     handleValidatePhoto,
-    isValidationAllowed
+    isValidationAllowed,
+    currentStep,
+    handleReset
   };
 };

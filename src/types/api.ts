@@ -19,18 +19,14 @@ export interface ValidationRequest {
     orderId: string; // UUID from quick check response
 }
 
-export interface ValidationLogEntry {
-    status: 'PASS' | 'FAIL' | 'WARNING' | 'INFO' | 'UNKNOWN';
-    step: string;
-    message: string;
-}
-
 export interface ValidationResponse {
     success: boolean;
-    recommendation: string;
-    logs: {
-        preprocessing: ValidationLogEntry[];
-        validation: ValidationLogEntry[];
+    status: 'COMPLIANT' | 'REJECTED';
+    reason_code: string;
+    details?: {
+        validator_reason_code?: string;
+        validator_reason_description?: string;
+        error?: string;
     };
     orderId?: string; // UUID of the stored order
     imageUrl?: string; // Signed URL to access the validated image

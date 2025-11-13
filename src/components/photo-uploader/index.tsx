@@ -1,11 +1,12 @@
 import { useRef } from "react";
 import { validateImageFile } from "@/lib/file-utils";
 import type { ValidationResult } from "@/types/validation";
-import UploadArea from "./UploadArea";
-import FilePreview from "./FilePreview";
-import ErrorDisplay from "./ErrorDisplay";
-import ActionButtons from "./ActionButtons";
-import ValidationResults from "./ValidationResults";
+import Stepper from "../ui/Stepper";
+import UploadStep from "./steps/UploadStep";
+import PreviewStep from "./steps/PreviewStep";
+import ValidationStep from "./steps/ValidationStep";
+import SuccessStep from "./steps/SuccessStep";
+import ErrorStep from "./steps/ErrorStep";
 
 interface PhotoUploaderProps {
   selectedFile: File | null;
@@ -16,7 +17,16 @@ interface PhotoUploaderProps {
   isValidationAllowed: boolean;
   quickCheckError: string | null;
   validationResult?: ValidationResult | null;
+  currentStep: number;
+  onReset: () => void;
 }
+
+const STEPS = [
+  { id: 1, label: "Upload" },
+  { id: 2, label: "Preview" },
+  { id: 3, label: "Validate" },
+  { id: 4, label: "Results" },
+];
 
 export default function PhotoUploader({
   selectedFile,
@@ -27,6 +37,8 @@ export default function PhotoUploader({
   isValidationAllowed,
   quickCheckError,
   validationResult,
+  currentStep,
+  onReset,
 }: PhotoUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,57 +79,45 @@ export default function PhotoUploader({
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        {/* Header */}
-        <div className="px-4 py-6 sm:px-6 lg:px-8">
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-            {validationResult ? 'Validation Results' : 'Upload Your Photo'}
-          </h2>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            {validationResult
-              ? validationResult.summary
-              : 'Select a high-quality photo for passport validation.'
-            }
-          </p>
+        {/* Stepper */}
+        <div className="px-4 sm:px-6 lg:px-8 py-8 border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
+          <Stepper steps={STEPS} currentStep={currentStep} />
         </div>
 
-        {/* Validation Results */}
-        {validationResult && <ValidationResults result={validationResult} />}
-
-        {/* Upload Area */}
-        {!validationResult && (
-          <div className="px-4 sm:px-6 lg:px-8 pb-6">
-            {!selectedFile ? (
-              <UploadArea
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={openFileDialog}
-              />
-            ) : (
-              <div className="space-y-4">
-                <FilePreview file={selectedFile} onRemove={onRemoveFile} />
-
-                {quickCheckError && <ErrorDisplay error={quickCheckError} />}
-
-                <ActionButtons
-                  onValidate={onValidatePhoto}
-                  onRemoveFile={onRemoveFile}
-                  isValidating={isValidating}
-                  isValidationAllowed={isValidationAllowed}
-                />
-              </div>
-            )}
-          </div>
+        {/* Step Content */}
+        {currentStep === 1 && (
+          <UploadStep
+            onFileSelect={onFileSelect}
+            fileInputRef={fileInputRef}
+            handleDragOver={handleDragOver}
+            handleDragLeave={handleDragLeave}
+            handleDrop={handleDrop}
+            openFileDialog={openFileDialog}
+          />
         )}
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="sr-only"
-          accept="image/jpeg,image/jpg,image/png,image/webp"
-          onChange={handleFileChange}
-          aria-label="Select photo file"
-        />
+        {currentStep === 2 && selectedFile && (
+          <PreviewStep
+            file={selectedFile}
+            onRemoveFile={onRemoveFile}
+            onValidate={onValidatePhoto}
+            isValidating={isValidating}
+            isValidationAllowed={isValidationAllowed}
+            quickCheckError={quickCheckError}
+          />
+        )}
+
+        {currentStep === 3 && <ValidationStep />}
+
+        {currentStep === 4 && validationResult && (
+          <>
+            {validationResult.status === "success" ? (
+              <SuccessStep result={validationResult} onUploadNew={onReset} />
+            ) : (
+              <ErrorStep result={validationResult} onTryAgain={onReset} />
+            )}
+          </>
+        )}
       </div>
     </div>
   );
