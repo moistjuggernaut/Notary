@@ -5,9 +5,13 @@ Handles cropping, resizing, and background removal operations.
 
 import cv2
 import numpy as np
+import logging
 from google.cloud import vision
+from rembg import remove, new_session
 from lib.app_config import config
 from types import SimpleNamespace
+
+log = logging.getLogger(__name__)
 
 class ImagePreprocessor:
     """Handles image cropping and resizing for passport photo validation."""
@@ -15,6 +19,12 @@ class ImagePreprocessor:
     def __init__(self):
         """Initialize the ImagePreprocessor."""
         self.config = config.icao
+        # Initialize rembg session with a human-specific model for better segmentation
+        try:
+            self.rembg_session = new_session("u2net_human_seg")
+        except Exception as e:
+            log.warning(f"Failed to load u2net_human_seg model, falling back to default: {e}")
+            self.rembg_session = new_session("u2net")
 
     def _get_face_details_for_crop(self, face_annotation: vision.FaceAnnotation):
         """
@@ -127,10 +137,36 @@ class ImagePreprocessor:
         
         return transformed_landmarks
 
+    def _remove_background(self, image_bgr: np.ndarray) -> np.ndarray:
+        """
+        Removes the background from the image and replaces it with white.
+        
+        Args:
+            image_bgr: Image in BGR format
+            
+        Returns:
+            np.ndarray: Image with white background
+        """
+        # Remove background - returns RGBA image
+        # Use alpha_matting=True for better edge detection (hair, etc.)
+        # Use the session initialized with u2net_human_seg
+        output_rgba = remove(image_bgr, session=self.rembg_session, alpha_matting=True)
+        
+        # Create white background
+        white_background = np.ones_like(image_bgr) * 255
+        
+        # Extract alpha channel
+        alpha = output_rgba[:, :, 3:4] / 255.0
+        
+        # Composite: foreground * alpha + background * (1 - alpha)
+        result = (output_rgba[:, :, :3] * alpha + white_background * (1 - alpha)).astype(np.uint8)
+        
+        return result
+
     def process_image(self, original_image_bgr, face_annotation: vision.FaceAnnotation):
         """
         Processes the image for validation using Cloud Vision API response.
-        Pipeline: Extract face details → Crop → Resize → Transform landmarks
+        Pipeline: Extract face details → Crop → Remove background → Resize → Transform landmarks
         
         Args:
             original_image_bgr: Original image in BGR format
@@ -165,18 +201,27 @@ class ImagePreprocessor:
             return None, None, logs, False
         logs.append(("INFO", "Preprocessing", "Image cropped to ICAO standards."))
 
-        # Step 3: Resize to final dimensions
+        # Step 3: Remove background (on high-res crop)
+        try:
+            # Remove background on the full-resolution crop for better quality
+            cropped_bgr = self._remove_background(cropped_bgr)
+            logs.append(("INFO", "Preprocessing", "Background removed and replaced with white (High-Res)."))
+        except Exception as e:
+            log.error(f"Background removal failed: {e}", exc_info=True)
+            logs.append(("WARN", "Preprocessing", f"Background removal failed, using original: {str(e)}"))
+
+        # Step 4: Resize to final dimensions
         final_shape = (self.config.final_output_width_px, self.config.final_output_height_px)
         processed_bgr = cv2.resize(cropped_bgr, final_shape, interpolation=cv2.INTER_AREA)
         logs.append(("INFO", "Preprocessing", "Image resized to final dimensions."))
 
-        # Step 4: Transform landmarks to final coordinate space
+        # Step 5: Transform landmarks to final coordinate space
         transformed_landmarks = self._transform_landmarks(original_landmarks, crop_coords, final_shape)
         if transformed_landmarks is None:
             logs.append(("FAIL", "Preprocessing", "Landmark transformation failed."))
             return processed_bgr, None, logs, False
         
-        # Step 5: Create final face data object with ACCURATE Head Dimensions
+        # Step 6: Create final face data object with ACCURATE Head Dimensions
         # We must transform the Crown/Chin Y-coordinates to the new resized image space
         # so the validator measures the full head, not just the face features.
         
