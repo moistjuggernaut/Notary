@@ -19,8 +19,8 @@ class ComplianceChecker:
     
     Validation Flow:
     1. Call Cloud Vision API
-    2. Perform initial checks (non-geometric)
-    3. Process image using Cloud Vision response
+    2. Perform initial checks (non-geometric, including background validation)
+    3. Process image using Cloud Vision response (crop, resize, remove background)
     4. Perform final geometry validation
     5. Prepare and return final result
     """
@@ -69,8 +69,8 @@ class ComplianceChecker:
         
         Flow:
         1. Call Cloud Vision API
-        2. Perform initial checks (non-geometric)
-        3. Process image using Cloud Vision response
+        2. Perform initial checks (non-geometric, including background validation)
+        3. Process image using Cloud Vision response (crop, resize, remove background)
         4. Perform final geometry validation
         5. Prepare and return final result
         """
