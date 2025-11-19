@@ -90,6 +90,7 @@ graph TD
 -   npm or yarn
 -   GCP Project with Cloud Run and Storage enabled
 -   Docker (for local GCP API testing)
+-   **`u2net_human_seg.onnx` model file**: Download the model from [a known source] and place it in the `gcp-api/models/` directory.
 
 ### Running Locally
 
@@ -110,11 +111,11 @@ graph TD
     ```
     
     This will start both the frontend and Vercel API using Vite with the Hono dev server plugin.
-    The application will be available at `http://localhost:3000`
+    The application will be available at `http://localhost:5173`
 
 4.  **Run GCP API Locally** (optional):
     ```bash
-    npm run gcp:run
+    npm run gcp:dev
     ```
 
 ### Deployment
@@ -122,7 +123,7 @@ graph TD
 This project requires deployment to both Vercel and GCP:
 
 -   **Frontend & Vercel API**: Pushing to the `main` branch automatically deploys both to Vercel.
--   **GCP Cloud Run**: Deploy using the provided Dockerfile and deployment scripts.
+-   **GCP Cloud Run**: Deploy using the `scripts/deploy-gcp.sh` script. See `DEPLOYMENT.md` for details.
 -   **Environment Variables**: Set up your environment variables in both Vercel and GCP.
 
 ## License
