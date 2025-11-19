@@ -40,16 +40,7 @@ export default function PhotoUploader({
   currentStep,
   onReset,
 }: PhotoUploaderProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const validation = validateImageFile(files[0]);
-      if (!validation.isValid) return;
-      onFileSelect(files[0]);
-    }
-  };
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
