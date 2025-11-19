@@ -169,6 +169,11 @@ For detailed setup instructions, see [DEVELOPMENT.md](./DEVELOPMENT.md).
    # Terminal 2: Start frontend and API
    vercel dev
    ```
+-   Node.js (v20+)
+-   npm or yarn
+-   GCP Project with Cloud Run and Storage enabled
+-   Docker (for local GCP API testing)
+-   **`u2net_human_seg.onnx` model file**: Download the model from [a known source] and place it in the `gcp-api/models/` directory.
 
    **What `npm run dev:full` does:**
    - Starts PostgreSQL database with Docker
@@ -183,6 +188,37 @@ For detailed setup instructions, see [DEVELOPMENT.md](./DEVELOPMENT.md).
    - Starts the Hono.js API server
    - Provides hot-reloading for both frontend and API changes
    - Simulates the Vercel production environment locally
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+
+2.  **Set up Environment Variables**:
+    ```bash
+    cp env.example .env
+    # Edit .env with your Stripe keys and GCP configuration
+    ```
+
+3.  **Start Development Server**:
+    ```bash
+    npm run dev
+    ```
+    
+    This will start both the frontend and Vercel API using Vite with the Hono dev server plugin.
+    The application will be available at `http://localhost:5173`
+
+4.  **Run GCP API Locally** (optional):
+    ```bash
+    npm run gcp:dev
+    ```
+
+### Deployment
+
+This project requires deployment to both Vercel and GCP:
+
+-   **Frontend & Vercel API**: Pushing to the `main` branch automatically deploys both to Vercel.
+-   **GCP Cloud Run**: Deploy using the `scripts/deploy-gcp.sh` script. See `DEPLOYMENT.md` for details.
+-   **Environment Variables**: Set up your environment variables in both Vercel and GCP.
 
 ## License
 
