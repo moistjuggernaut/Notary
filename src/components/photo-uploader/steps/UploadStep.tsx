@@ -2,7 +2,7 @@ import UploadArea from "../UploadArea";
 
 interface UploadStepProps {
   onFileSelect: (file: File) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleDragOver: (e: React.DragEvent) => void;
   handleDragLeave: (e: React.DragEvent) => void;
   handleDrop: (e: React.DragEvent) => void;
