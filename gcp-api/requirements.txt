@@ -2,13 +2,11 @@ Flask
 gunicorn==22.0.0
 numpy
 opencv-python-headless
-onnxruntime
-insightface==0.7.3
 rembg
+onnxruntime
 pydantic~=2.8
 pydantic-settings
 google-cloud-storage==3.3.0
 google-cloud-vision>=3.5.0
 google-auth>=2.0.0
-google-generativeai
 requests>=2.28.0

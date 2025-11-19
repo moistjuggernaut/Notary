@@ -2,13 +2,14 @@
 Centralized application configuration using Pydantic.
 All configuration values are managed here for consistency and validation.
 """
-from typing import List, Optional
+from typing import Optional
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class StorageConfig(BaseSettings):
     """Configuration for Google Cloud Storage settings."""
+    model_config = SettingsConfigDict(env_prefix="")
 
     # GCS Settings
     bucket_name: str = Field(default="local-bucket", alias="GCS_BUCKET_NAME")
@@ -23,24 +24,17 @@ class StorageConfig(BaseSettings):
     # Common Settings
     jpeg_quality: int = Field(default=95, alias="JPEG_QUALITY")
 
-    class Config:
-        env_prefix = ""  # No prefix for storage config
-
 
 class ServerConfig(BaseSettings):
     """Configuration for server settings."""
+    model_config = SettingsConfigDict(env_prefix="")
 
     port: int = Field(default=8080, alias="PORT")
-
-    class Config:
-        env_prefix = ""
 
 
 class ICAOConfig(BaseSettings):
     """Configuration constants for ICAO passport photo validation."""
-
-    # Model Configuration
-    recommended_model_name: str = "buffalo_l"
+    model_config = SettingsConfigDict(env_prefix="")
 
     # Target Photo Dimensions (mm) and DPI for high-resolution output
     target_photo_width_mm: float = 35
@@ -71,62 +65,21 @@ class ICAOConfig(BaseSettings):
     max_abs_pitch: int = 10
     max_abs_roll: int = 7
 
-    # Background Check Parameters
-    bg_prelim_min_light_rgb: int = 220
-    bg_prelim_std_dev_max: int = 15
-    bg_final_min_light_rgb: tuple = (220, 220, 220)
-    bg_final_max_rgb: tuple = (255, 255, 255)
-    bg_final_std_dev_max: int = 25
-    contrast_threshold_gray: int = 35
-
-    # Face Detection Confidence
-    min_detection_score: float = 0.6
-
-    # Infant-Specific Crop Logic
-    infant_crown_estimation_multiplier: float = 2.0
-
-    # Eye Aspect Ratio (EAR) threshold for detecting closed eyes
-    eye_ar_thresh: float = 0.35
-
-    # Eye level positioning requirements (mm from bottom edge of photo)
-    eye_level_min_from_bottom_mm: int = 18
-    eye_level_max_from_bottom_mm: int = 29
-
-    @property
-    def eye_level_min_from_bottom_px(self) -> int:
-        return int((self.eye_level_min_from_bottom_mm / 25.4) * self.target_dpi)
-
-    @property
-    def eye_level_max_from_bottom_px(self) -> int:
-        return int((self.eye_level_max_from_bottom_mm / 25.4) * self.target_dpi)
-
     # Red-eye detection parameters
     red_eye_pixel_percentage_thresh: float = 0.1
-
-    # Landmark Indices (106-point model)
-    chin_landmark_index: int = 16
-    left_eye_landmarks: List[int] = [35, 36, 33, 37, 39, 42]
-    right_eye_landmarks: List[int] = [74, 93, 90, 94, 96, 97]
-    left_pupil_approx_index: int = 35
-    right_pupil_approx_index: int = 74
 
     # Face Alignment & Cropping Ratios
     target_head_height_ratio: float = 0.66
     head_pos_ratio_vertical: float = 0.12
 
-    class Config:
-        env_prefix = ""
-
 
 class AppConfig(BaseSettings):
     """Main application configuration combining all sub-configurations."""
+    model_config = SettingsConfigDict(env_prefix="")
 
     storage: StorageConfig = StorageConfig()
     server: ServerConfig = ServerConfig()
     icao: ICAOConfig = ICAOConfig()
-
-    class Config:
-        env_prefix = ""  # No global prefix
 
 
 # Global configuration instance
