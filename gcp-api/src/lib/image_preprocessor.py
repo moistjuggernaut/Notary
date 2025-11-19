@@ -18,37 +18,40 @@ class ImagePreprocessor:
 
     def _get_face_details_for_crop(self, face_annotation: vision.FaceAnnotation):
         """
-        Extracts face details for cropping using the head's bounding polygon
-        from the Google Vision API response, as per official recommendation.
-        
-        Args:
-            face_annotation (vision.FaceAnnotation): Face annotation from Vision API.
-            
-        Returns:
-            tuple: (face_details_dict, error_message)
+        Extracts face details using a hybrid approach:
+        - 'bounding_poly' for the Crown (includes hair).
+        - 'fd_bounding_poly' for the Chin (more accurate for face bottom).
         """
-        # Per Google's recommendation, fd_bounding_poly is preferred for the full head.
-        poly = face_annotation.fd_bounding_poly
+        # 1. Get the "True Crown" from the full bounding poly (includes hair)
+        full_poly = face_annotation.bounding_poly
+        if not full_poly or not full_poly.vertices:
+             return None, "Full bounding polygon not found."
         
-    
-        if not poly or not poly.vertices:
-            return None, "Bounding polygon not found in face annotation."
+        # This is the top of the hair
+        true_crown_y = min([v.y for v in full_poly.vertices])
 
-        y_coords = [vertex.y for vertex in poly.vertices]
-        x_coords = [vertex.x for vertex in poly.vertices]
+        # 2. Get the "True Chin" from the tight fd_bounding_poly 
+        # (This is usually more accurate for the chin position than the full box)
+        fd_poly = face_annotation.fd_bounding_poly
+        if not fd_poly or not fd_poly.vertices:
+            return None, "FD bounding polygon not found."
 
-        if not y_coords or not x_coords:
-             return None, "Bounding polygon vertices are empty."
-
-        crown_y = min(y_coords)
-        chin_y = max(y_coords)
+        fd_y_coords = [v.y for v in fd_poly.vertices]
+        fd_x_coords = [v.x for v in fd_poly.vertices]
         
-        bbox = np.array([min(x_coords), crown_y, max(x_coords), chin_y])
+        # Use the tight box for chin and width reference
+        chin_y = max(fd_y_coords)
+        
+        # Create a hybrid bbox:
+        # Top: Top of hair (bounding_poly)
+        # Bottom: Chin (fd_bounding_poly)
+        # Left/Right: Face width (fd_bounding_poly) - typically sufficient for centering
+        bbox = np.array([min(fd_x_coords), true_crown_y, max(fd_x_coords), chin_y])
 
         return {
             "bbox": bbox,
             "chin_y": chin_y,
-            "crown_y": crown_y
+            "crown_y": true_crown_y # Now accurately represents top of hair
         }, None
 
     def _calculate_crop_coordinates(self, original_shape, face_details):
@@ -173,12 +176,27 @@ class ImagePreprocessor:
             logs.append(("FAIL", "Preprocessing", "Landmark transformation failed."))
             return processed_bgr, None, logs, False
         
-        # Step 5: Create final face data object for geometry validation
+        # Step 5: Create final face data object with ACCURATE Head Dimensions
+        # We must transform the Crown/Chin Y-coordinates to the new resized image space
+        # so the validator measures the full head, not just the face features.
+        
+        crop_h = y2 - y1
+        scale_y = final_shape[1] / crop_h
+        
+        # Transform the original crown/chin to the new coordinate space
+        # Note: crop_coords = (x1, y1, x2, y2) from Step 2
+        final_crown_y = (face_details["crown_y"] - y1) * scale_y
+        final_chin_y = (face_details["chin_y"] - y1) * scale_y
+        
+        # Use landmarks for width (x-coords), but use the hybrid height for y-coords
+        x_coords = transformed_landmarks[:, 0]
+        
         final_face_data = SimpleNamespace(
-            landmark_2d_106=transformed_landmarks
+            landmark_2d_106=transformed_landmarks,
+            # The BBox is now: [Left_X, Crown_Y, Right_X, Chin_Y]
+            # This ensures validation measures the full "ICAO Head Height"
+            bbox=np.array([min(x_coords), final_crown_y, max(x_coords), final_chin_y])
         )
-        x_coords, y_coords = transformed_landmarks[:, 0], transformed_landmarks[:, 1]
-        final_face_data.bbox = np.array([min(x_coords), min(y_coords), max(x_coords), max(y_coords)])
         
         logs.append(("PASS", "Preprocessing", "Image preprocessing complete."))
-        return processed_bgr, final_face_data, logs, True 
+        return processed_bgr, final_face_data, logs, True
