@@ -113,13 +113,16 @@ class ImagePreprocessor:
             log.error("Cropped image is empty")
             return None, None, [], False
 
+        final_shape = (self.config.final_output_width_px, self.config.final_output_height_px)
+        log.info(f"Resizing image...")
+        cropped_bgr = cv2.resize(cropped_bgr, final_shape, interpolation=cv2.INTER_AREA)
+
         try:
             cropped_bgr = self._remove_background(cropped_bgr)
         except Exception as e:
             log.warning(f"Background removal failed: {e}")
 
-        final_shape = (self.config.final_output_width_px, self.config.final_output_height_px)
-        processed_bgr = cv2.resize(cropped_bgr, final_shape, interpolation=cv2.INTER_AREA)
+        processed_bgr = cropped_bgr
 
         transformed_landmarks = self._transform_landmarks(original_landmarks, crop_coords, final_shape)
         if transformed_landmarks is None:
