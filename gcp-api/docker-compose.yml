@@ -12,8 +12,6 @@ services:
     volumes:
       # Mount the source code for live-reloading during development
       - ./src:/app
-      # Mount the model to the location expected by the U2NET_HOME env var
-      - ./models:/root/.u2net
       # Mount your local Google Cloud credentials (read-only) to the correct home directory
       - ~/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
 

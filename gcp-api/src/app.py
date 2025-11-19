@@ -36,7 +36,7 @@ def check_services():
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint."""
-    healthy = quick_checker and compliance_checker
+    healthy = all(service is not None for service in (quick_checker, compliance_checker, print_processor))
     return jsonify({
         "status": "healthy" if healthy else "unhealthy",
         "version": "1.3.0"
