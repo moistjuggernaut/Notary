@@ -54,13 +54,6 @@ htmlcov/
 *.tar.gz
 .docker/
 
-# ML Models (will be stored in GCP Cloud Storage)
-*.onnx
-*.pkl
-*.h5
-*.pb
-models/
-
 # Temporary files
 *.tmp
 *.temp
@@ -69,3 +62,4 @@ models/
 .photo-validator-dev-key.json
 gcp-api/models/
 .gcloud-credentials.json
+gcp-api/models/u2net_human_seg.onnx

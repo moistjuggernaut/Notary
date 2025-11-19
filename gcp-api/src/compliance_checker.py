@@ -61,6 +61,7 @@ class ComplianceChecker:
 
         try:
             # 1. Initial Validation
+            log.info("Validating initial image...")
             initial_result = self.validator.validate_initial(image_bgr)
             
             if not initial_result.success:
@@ -76,6 +77,7 @@ class ComplianceChecker:
                 }, None
             
             # 2. Preprocessing
+            log.info("Processing image...")
             processed_bgr, face_data, _, success = self.preprocessor.process_image(
                 image_bgr, 
                 initial_result.face_annotation
@@ -90,7 +92,9 @@ class ComplianceChecker:
                 }, None
             
             # 3. Final Geometry Validation
+            log.info("Validating final geometry...")
             geometry_result = self.validator.validate_final_geometry(processed_bgr, face_data)
+            
             return self._get_final_status(geometry_result), processed_bgr
 
         except Exception as e:

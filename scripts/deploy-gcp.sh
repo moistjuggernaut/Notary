@@ -18,11 +18,6 @@ GCP_API_DIR="gcp-api"
 STORAGE_BUCKET_NAME="${SERVICE_NAME}-order-pictures"
 STORAGE_LOCATION="europe-west1"
 
-# Model storage configuration (Cloud Storage FUSE mount)
-MODEL_BUCKET_NAME="${SERVICE_NAME}-models"
-MODEL_VOLUME_NAME="model-storage"
-MODEL_MOUNT_TARGET="/gcs"
-
 echo "🚀 Starting GCP deployment for service: ${SERVICE_NAME} in ${REGION}"
 
 # --- Pre-flight Checks ---
@@ -80,31 +75,6 @@ echo "🌐 Configuring CORS settings for frontend access..."
 gcloud storage buckets update "gs://${STORAGE_BUCKET_NAME}" \
     --cors-file="scripts/bucket-cors-${STAGE}.json"
 
-# --- Cloud Storage Setup (Models) ---
-echo "🧠 Setting up dedicated Cloud Storage bucket for ML models..."
-if gcloud storage buckets describe "gs://${MODEL_BUCKET_NAME}" >/dev/null 2>&1; then
-    echo "✅ Model bucket '${MODEL_BUCKET_NAME}' already exists"
-else
-    echo "🪣 Creating model storage bucket..."
-    gcloud storage buckets create "gs://${MODEL_BUCKET_NAME}" \
-        --location="${STORAGE_LOCATION}" \
-        --uniform-bucket-level-access \
-        --public-access-prevention \
-        --project="${PROJECT_ID}"
-    echo "✅ Model bucket '${MODEL_BUCKET_NAME}' created successfully"
-fi
-
-# Check if models are already uploaded
-echo "🔍 Checking if models are already present in bucket..."
-if gcloud storage ls "gs://${MODEL_BUCKET_NAME}/models/" >/dev/null 2>&1; then
-    echo "✅ Models already exist in bucket. Skipping upload."
-    echo "💡 To force re-upload, manually delete with: gcloud storage rm -r gs://${MODEL_BUCKET_NAME}/models/"
-else
-    echo "📤 Uploading models to bucket: ${MODEL_BUCKET_NAME}"
-    gcloud storage cp -r gcp-api/models "gs://${MODEL_BUCKET_NAME}/"
-    echo "✅ Models uploaded successfully"
-fi
-
 # --- Build Docker Image ---
 echo "🏗️ Building Docker image with Cloud Build..."
 # We submit the gcp-api directory to Cloud Build
@@ -153,31 +123,6 @@ else
     echo "✅ Added creator binding for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
 fi
 
-# Model bucket access for Cloud Storage FUSE
-echo "🔑 Granting read access to model bucket: ${MODEL_BUCKET_NAME}"
-
-# Grant objectViewer role (for reading objects)
-if gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "\"roles/storage.objectViewer\"" && \
-   gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
-    echo "✅ Object Viewer already granted"
-else
-    gcloud storage buckets add-iam-policy-binding "gs://${MODEL_BUCKET_NAME}" \
-        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-        --role="roles/storage.objectViewer"
-    echo "✅ Granted storage.objectViewer role"
-fi
-
-# Grant legacyBucketReader role (required for Cloud Storage FUSE to list directories)
-if gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "\"roles/storage.legacyBucketReader\"" && \
-   gcloud storage buckets get-iam-policy "gs://${MODEL_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
-    echo "✅ Legacy Bucket Reader already granted"
-else
-    gcloud storage buckets add-iam-policy-binding "gs://${MODEL_BUCKET_NAME}" \
-        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-        --role="roles/storage.legacyBucketReader"
-    echo "✅ Granted storage.legacyBucketReader role (required for FUSE)"
-fi
-
 # Grant roles/iam.serviceAccountTokenCreator (if not already bound)
 if gcloud projects get-iam-policy "${PROJECT_ID}" \
     --flatten="bindings[].members" \
@@ -192,17 +137,18 @@ else
 fi
 
 # Grant Cloud Vision API User role
-echo "🔑 Granting Cloud Vision API User role..."
+echo "🔑 Granting AI Platform User role for Vision API access..."
+AI_PLATFORM_USER_ROLE="roles/aiplatform.user"
 if gcloud projects get-iam-policy "${PROJECT_ID}" \
     --flatten="bindings[].members" \
-    --filter="bindings.role=roles/vision.user AND bindings.members=serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-    --format="value(bindings.role)" | grep -q "roles/vision.user"; then
-    echo "✅ Project binding roles/vision.user already exists for ${SERVICE_ACCOUNT_EMAIL}"
+    --filter="bindings.role=${AI_PLATFORM_USER_ROLE} AND bindings.members=serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+    --format="value(bindings.role)" | grep -q "${AI_PLATFORM_USER_ROLE}"; then
+    echo "✅ Project binding ${AI_PLATFORM_USER_ROLE} already exists for ${SERVICE_ACCOUNT_EMAIL}"
 else
     gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
         --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-        --role="roles/vision.user"
-    echo "✅ Added project binding roles/vision.user for ${SERVICE_ACCOUNT_EMAIL}"
+        --role="${AI_PLATFORM_USER_ROLE}"
+    echo "✅ Added project binding ${AI_PLATFORM_USER_ROLE} for ${SERVICE_ACCOUNT_EMAIL}"
 fi
 
 # --- Deploy to Cloud Run ---
@@ -220,9 +166,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --concurrency 80 \
     --max-instances 10 \
     --service-account="${SERVICE_ACCOUNT_EMAIL}" \
-    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME},MODELS_DIR=${MODEL_MOUNT_TARGET}/models,U2NET_HOME=${MODEL_MOUNT_TARGET}/models" \
-    --add-volume "name=${MODEL_VOLUME_NAME},type=cloud-storage,bucket=${MODEL_BUCKET_NAME}" \
-    --add-volume-mount "volume=${MODEL_VOLUME_NAME},mount-path=${MODEL_MOUNT_TARGET}"
+    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME},U2NET_HOME=/root/.u2net"
 
 # --- Final Output ---
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --platform managed --region="$REGION" --format="value(status.url)")

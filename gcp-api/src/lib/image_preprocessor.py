@@ -18,11 +18,7 @@ class ImagePreprocessor:
     
     def __init__(self):
         self.config = config.icao
-        try:
-            self.rembg_session = new_session("u2net_human_seg")
-        except Exception as e:
-            log.warning(f"Failed to load u2net_human_seg: {e}")
-            self.rembg_session = new_session("u2net")
+        self.rembg_session = new_session("u2net_human_seg")
 
     def _get_face_details_for_crop(self, face_annotation: vision.FaceAnnotation):
         full_poly = face_annotation.bounding_poly

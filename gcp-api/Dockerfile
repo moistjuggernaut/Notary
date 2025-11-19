@@ -22,7 +22,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8080 \
     PYTHONPATH=/app \
-    INSIGHTFACE_ROUTING_SILENT=1 \
     U2NET_HOME=/root/.u2net
 
 WORKDIR /app
@@ -37,8 +36,9 @@ COPY --from=builder /opt/venv /opt/venv
 
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Prepare directories expected by the application
-RUN mkdir -p /root/.insightface/models /root/.u2net
+# Prepare directory for rembg model and copy it into the image
+RUN mkdir -p /root/.u2net
+COPY models/u2net_human_seg.onnx /root/.u2net/u2net_human_seg.onnx
 
 COPY src ./
 
