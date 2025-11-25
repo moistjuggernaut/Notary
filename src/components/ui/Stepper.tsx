@@ -19,7 +19,7 @@ export default function Stepper({ steps, currentStep }: StepperProps) {
           const isCurrent = currentStep === step.id;
 
           return (
-            <div key={step.id} className="flex items-center flex-1">
+            <div key={step.id} className="flex items-start flex-1">
               {/* Step Circle */}
               <div className="flex flex-col items-center flex-1">
                 <div
@@ -49,10 +49,9 @@ export default function Stepper({ steps, currentStep }: StepperProps) {
               {/* Connector Line */}
               {index < steps.length - 1 && (
                 <div
-                  className={`flex-1 h-px transition-all ${
+                  className={`flex-1 h-px mt-4 transition-all ${
                     isCompleted ? "bg-emerald-500" : "bg-gray-200"
                   }`}
-                  style={{ marginBottom: "1.75rem" }}
                 />
               )}
             </div>
