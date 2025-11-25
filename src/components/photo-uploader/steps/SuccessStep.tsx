@@ -53,7 +53,8 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
           >
             <Button 
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11"
+              size="lg"
+              className="w-full"
               disabled={!result?.orderId}
             >
               <CreditCard className="w-4 h-4 mr-2" />
@@ -63,7 +64,8 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
 
           <Button
             variant="outline"
-            className="flex-1 sm:flex-none h-11"
+            size="lg"
+            className="flex-1 sm:flex-none"
             onClick={() => handleDownload(result.imageUrl)}
             disabled={!result.imageUrl}
           >
