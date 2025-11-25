@@ -64,7 +64,8 @@ export default function ErrorStep({ result, onTryAgain }: ErrorStepProps) {
       <div>
         <Button
           onClick={onTryAgain}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11"
+          size="lg"
+          className="w-full"
         >
           <Upload className="w-4 h-4 mr-2" />
           Try Different Photo
