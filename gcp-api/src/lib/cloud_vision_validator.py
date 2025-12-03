@@ -82,6 +82,7 @@ class CloudVisionValidator:
     
     # Validation thresholds
     LANDMARKING_CONFIDENCE_THRESHOLD = 0.6
+    DETECTION_CONFIDENCE_THRESHOLD = 0.9
     BACKGROUND_LIGHT_RGB_THRESHOLD = 200
     BACKGROUND_UNIFORMITY_THRESHOLD = 0.6
     BACKGROUND_SECONDARY_COLOR_THRESHOLD = 0.4
@@ -89,6 +90,7 @@ class CloudVisionValidator:
     RED_EYE_RGB_THRESHOLD = 150
     PUPIL_ROI_RADIUS_RATIO = 0.01
     PUPIL_ROI_MIN_RADIUS = 5
+    MIN_EYE_OPENING_PIXELS = 12
     
     def __init__(self):
         self.client = vision.ImageAnnotatorClient()
@@ -190,8 +192,35 @@ class CloudVisionValidator:
         return None
 
     def _validate_eyes_visible(self, face: vision.FaceAnnotation) -> Optional[ValidationReason]:
-        if face.landmarking_confidence < self.LANDMARKING_CONFIDENCE_THRESHOLD:
-            return ValidationReason.EYES_OBS
+        landmarks_by_type = {lm.type_: lm for lm in face.landmarks}
+        left_pupil = landmarks_by_type.get(vision.FaceAnnotation.Landmark.Type.LEFT_EYE_PUPIL)
+        right_pupil = landmarks_by_type.get(vision.FaceAnnotation.Landmark.Type.RIGHT_EYE_PUPIL)
+        
+        if left_pupil and right_pupil:
+            return None
+        
+        # Fallback: check eye opening using boundary landmarks
+        left_top = landmarks_by_type.get(vision.FaceAnnotation.Landmark.Type.LEFT_EYE_TOP_BOUNDARY)
+        left_bottom = landmarks_by_type.get(vision.FaceAnnotation.Landmark.Type.LEFT_EYE_BOTTOM_BOUNDARY)
+        right_top = landmarks_by_type.get(vision.FaceAnnotation.Landmark.Type.RIGHT_EYE_TOP_BOUNDARY)
+        right_bottom = landmarks_by_type.get(vision.FaceAnnotation.Landmark.Type.RIGHT_EYE_BOTTOM_BOUNDARY)
+        
+        # Check if we have boundary landmarks for at least one eye
+        if not (left_top and left_bottom) and not (right_top and right_bottom):
+            return ValidationReason.EYES_CL
+        
+        # Check left eye opening (using absolute pixel coordinates)
+        if left_top and left_bottom:
+            left_opening = abs(left_top.position.y - left_bottom.position.y)
+            if left_opening < self.MIN_EYE_OPENING_PIXELS:
+                return ValidationReason.EYES_CL
+        
+        # Check right eye opening (using absolute pixel coordinates)
+        if right_top and right_bottom:
+            right_opening = abs(right_top.position.y - right_bottom.position.y)
+            if right_opening < self.MIN_EYE_OPENING_PIXELS:
+                return ValidationReason.EYES_CL
+        
         return None
 
     def _validate_glasses_glare(self, response: vision.AnnotateImageResponse, face: vision.FaceAnnotation) -> Optional[ValidationReason]:
@@ -224,8 +253,17 @@ class CloudVisionValidator:
     def _run_initial_checks(self, response: vision.AnnotateImageResponse, image_bgr: np.ndarray) -> Dict[str, Any]:
         face = response.face_annotations[0]
 
+        if face.landmarking_confidence < self.LANDMARKING_CONFIDENCE_THRESHOLD:
+            return self._build_response("ERROR", ValidationReason.VALIDATION_ERROR)
+
+        if face.detection_confidence < self.DETECTION_CONFIDENCE_THRESHOLD:
+            return self._build_response("ERROR", ValidationReason.VALIDATION_ERROR)
+
         if face.blurred_likelihood in self.FAIL_LIKELIHOODS:
             return self._build_response("NON_COMPLIANT", ValidationReason.QUAL_BLUR)
+
+        if (reason := self._validate_eyes_visible(face)):
+            return self._build_response("NON_COMPLIANT", reason)
         
         if (reason := self._validate_red_eye(image_bgr, face)):
             return self._build_response("NON_COMPLIANT", reason)
@@ -238,12 +276,9 @@ class CloudVisionValidator:
            abs(face.tilt_angle) > self.config.max_abs_pitch:
             return self._build_response("NON_COMPLIANT", ValidationReason.POSE_DIR)
 
-        if any(l in self.FAIL_LIKELIHOODS for l in [face.joy_likelihood, face.sorrow_likelihood, face.anger_likelihood]):
+        if any(l in self.FAIL_LIKELIHOODS for l in [face.joy_likelihood, face.sorrow_likelihood, face.anger_likelihood, face.surprise_likelihood]):
             return self._build_response("NON_COMPLIANT", ValidationReason.EXPR)
-        
-        if (reason := self._validate_eyes_visible(face)):
-            return self._build_response("NON_COMPLIANT", reason)
-        
+                
         if (reason := self._validate_glasses_glare(response, face)):
             return self._build_response("NON_COMPLIANT", reason)
         
@@ -264,12 +299,12 @@ class CloudVisionValidator:
                 vision.Feature(type_=vision.Feature.Type.FACE_DETECTION, max_results=1),
                 vision.Feature(type_=vision.Feature.Type.LABEL_DETECTION, max_results=5),
                 vision.Feature(type_=vision.Feature.Type.IMAGE_PROPERTIES),
-                vision.Feature(type_=vision.Feature.Type.OBJECT_LOCALIZATION),
             ]
             
             response = self.client.annotate_image(request=vision.AnnotateImageRequest(image=image, features=features))
             raw_response = vision.AnnotateImageResponse.to_dict(response)
-            
+            log.info(f"Raw response: {raw_response}")
+
             if response.error.message:
                 return InitialValidationResult(success=False, reason=ValidationReason.VALIDATION_ERROR, details=response.error.message, raw_response_dict=raw_response)
             
