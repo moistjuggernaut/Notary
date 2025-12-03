@@ -73,7 +73,7 @@ export default function Home() {
 
         {/* Quick Tips */}
         <PageSection>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6 text-center">
             <h3 className="text-lg font-semibold text-blue-900 mb-2">
               Need Help Getting Started?
             </h3>
@@ -85,7 +85,7 @@ export default function Home() {
                 <Link 
                   href="/requirements" 
                 >
-                  <FileText className="w-4 h-4 mr-2" />
+                  <FileText className="w-4 h-4" />
                   View Requirements
                 </Link>
               </Button>
@@ -93,7 +93,7 @@ export default function Home() {
                 <Link 
                   href="/how-it-works" 
                 >
-                  <HelpCircle className="w-4 h-4 mr-2" />
+                  <HelpCircle className="w-4 h-4" />
                   How It Works
                 </Link>
               </Button>

@@ -1,5 +1,6 @@
 import { CheckCircle, Download, CreditCard, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StepActions } from "@/components/ui/step-actions";
 import { handleDownload } from "../utils";
 import type { ValidationResult } from "@/types/validation";
 
@@ -19,7 +20,7 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg sm:text-xl font-semibold text-emerald-800">
-              Photo Approved ✓
+              Photo Approved
             </h3>
             <p className="mt-1 text-sm text-emerald-800 opacity-90">
               Ready for passport application
@@ -45,32 +46,34 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
 
       {/* Action Buttons */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
+        <StepActions>
           <form 
             action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`} 
             method="POST" 
-            className="flex-1 sm:flex-none"
+            className="flex-1"
           >
             <Button 
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11"
+              size="lg"
+              className="w-full"
               disabled={!result?.orderId}
             >
-              <CreditCard className="w-4 h-4 mr-2" />
+              <CreditCard className="w-4 h-4" />
               Checkout - €9.99
             </Button>
           </form>
 
           <Button
             variant="outline"
-            className="flex-1 sm:flex-none h-11"
+            size="lg"
+            className="flex-1 sm:flex-none"
             onClick={() => handleDownload(result.imageUrl)}
             disabled={!result.imageUrl}
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-4 h-4" />
             Download
           </Button>
-        </div>
+        </StepActions>
 
         <div className="pt-4 border-t border-gray-200">
           <Button
@@ -78,7 +81,7 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
             className="w-full text-gray-600 hover:text-gray-900"
             onClick={onUploadNew}
           >
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4" />
             Upload New Photo
           </Button>
         </div>
