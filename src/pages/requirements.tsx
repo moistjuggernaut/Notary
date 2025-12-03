@@ -2,6 +2,7 @@ import Header from "@/components/header";
 import EURequirements from "@/components/eu-requirements";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Requirements() {
   return (
@@ -42,12 +43,11 @@ export default function Requirements() {
             Now that you understand the EU requirements, upload your photo
             to check compliance with European biometric passport standards.
           </p>
-          <Link
-            href="/"
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Start Photo Validation
-          </Link>
+          <Button asChild>
+            <Link href="/">
+              Start Photo Validation
+            </Link>
+          </Button>
         </div>
       </main>
     </div>
