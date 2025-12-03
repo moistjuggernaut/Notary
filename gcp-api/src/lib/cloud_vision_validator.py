@@ -91,6 +91,9 @@ class CloudVisionValidator:
     PUPIL_ROI_RADIUS_RATIO = 0.01
     PUPIL_ROI_MIN_RADIUS = 5
     MIN_EYE_OPENING_PIXELS = 12
+    LIGHTING_UNIFORMITY_THRESHOLD = 0.25
+    LIGHTING_SAMPLE_RADIUS_RATIO = 0.02
+    LIGHTING_SAMPLE_MIN_RADIUS = 10
     
     def __init__(self):
         self.client = vision.ImageAnnotatorClient()
@@ -153,6 +156,40 @@ class CloudVisionValidator:
             
             if np.count_nonzero(mask) / (roi.shape[0] * roi.shape[1]) > self.config.red_eye_pixel_percentage_thresh:
                 return ValidationReason.QUAL_REDEYE
+        
+        return None
+
+    def _validate_lighting_uniformity(self, image_bgr: np.ndarray, face: vision.FaceAnnotation) -> Optional[ValidationReason]:
+        """Check for non-uniform lighting across the face using symmetric landmarks."""
+        landmarks_by_type = {lm.type_: lm for lm in face.landmarks}
+        
+        left_cheek = landmarks_by_type.get(vision.FaceAnnotation.Landmark.Type.LEFT_CHEEK_CENTER)
+        right_cheek = landmarks_by_type.get(vision.FaceAnnotation.Landmark.Type.RIGHT_CHEEK_CENTER)
+        
+        if not left_cheek or not right_cheek:
+            return None
+        
+        gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+        sample_radius = max(self.LIGHTING_SAMPLE_MIN_RADIUS, int(image_bgr.shape[0] * self.LIGHTING_SAMPLE_RADIUS_RATIO))
+        
+        def sample_brightness(x: float, y: float) -> Optional[float]:
+            x, y = int(x), int(y)
+            roi = gray[max(0, y - sample_radius):min(gray.shape[0], y + sample_radius),
+                       max(0, x - sample_radius):min(gray.shape[1], x + sample_radius)]
+            return np.mean(roi) if roi.size > 0 else None
+        
+        left_brightness = sample_brightness(left_cheek.position.x, left_cheek.position.y)
+        right_brightness = sample_brightness(right_cheek.position.x, right_cheek.position.y)
+        
+        if left_brightness is None or right_brightness is None:
+            return None
+        
+        max_brightness = max(left_brightness, right_brightness)
+        if max_brightness == 0:
+            return None
+        
+        if abs(left_brightness - right_brightness) / max_brightness > self.LIGHTING_UNIFORMITY_THRESHOLD:
+            return ValidationReason.LIGHT
         
         return None
 
@@ -270,6 +307,9 @@ class CloudVisionValidator:
         
         if face.under_exposed_likelihood in self.FAIL_LIKELIHOODS:
             return self._build_response("NON_COMPLIANT", ValidationReason.LIGHT)
+        
+        if (reason := self._validate_lighting_uniformity(image_bgr, face)):
+            return self._build_response("NON_COMPLIANT", reason)
         
         if abs(face.roll_angle) > self.config.max_abs_roll or \
            abs(face.pan_angle) > self.config.max_abs_yaw or \
