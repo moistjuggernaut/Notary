@@ -1,6 +1,7 @@
 import { CheckCircle, Download, CreditCard, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepActions } from "@/components/ui/step-actions";
+import { InfoCard } from "@/components/ui/info-card";
 import { handleDownload } from "../utils";
 import type { ValidationResult } from "@/types/validation";
 
@@ -13,21 +14,14 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-12">
       {/* Success Card */}
-      <div className="mb-8 p-4 sm:p-6 rounded-lg bg-emerald-50 border-l-4 border-emerald-500">
-        <div className="flex items-start space-x-4">
-          <div className="flex-shrink-0">
-            <CheckCircle className="w-8 h-8 text-emerald-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg sm:text-xl font-semibold text-emerald-800">
-              Photo Approved
-            </h3>
-            <p className="mt-1 text-sm text-emerald-800 opacity-90">
-              Ready for passport application
-            </p>
-          </div>
-        </div>
-      </div>
+      <InfoCard variant="success" icon={CheckCircle} className="mb-8">
+        <h3 className="text-lg sm:text-xl font-semibold">
+          Photo Approved
+        </h3>
+        <p className="mt-1 text-sm opacity-90">
+          Ready for passport application
+        </p>
+      </InfoCard>
 
       {/* Processed Image */}
       {result.imageUrl && (
@@ -89,4 +83,3 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
     </div>
   );
 }
-
