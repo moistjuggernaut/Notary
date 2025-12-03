@@ -1,5 +1,6 @@
 import { XCircle, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StepActions } from "@/components/ui/step-actions";
 import type { ValidationResult } from "@/types/validation";
 
 interface ErrorStepProps {
@@ -47,7 +48,7 @@ export default function ErrorStep({ result, onTryAgain }: ErrorStepProps) {
 
       {/* Recommendations */}
       {result.recommendations && result.recommendations.length > 0 && (
-        <div className="mb-8 p-5 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mb-8 p-5 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
           <h4 className="text-sm font-semibold text-blue-900 mb-2">Recommendations</h4>
           <ul className="space-y-1">
             {result.recommendations.map((recommendation, index) => (
@@ -61,16 +62,16 @@ export default function ErrorStep({ result, onTryAgain }: ErrorStepProps) {
       )}
 
       {/* Action Button */}
-      <div>
+      <StepActions>
         <Button
           onClick={onTryAgain}
           size="lg"
           className="w-full"
         >
-          <Upload className="w-4 h-4 mr-2" />
+          <Upload className="w-4 h-4" />
           Try Different Photo
         </Button>
-      </div>
+      </StepActions>
     </div>
   );
 }
