@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import CheckoutCancel from "@/pages/checkout-cancel";
 import CheckoutSuccess from "@/pages/checkout-success";
 import Home from "@/pages/home";
+import Validate from "@/pages/validate";
 import HowItWorks from "@/pages/how-it-works";
 import Requirements from "@/pages/requirements";
 import Admin from "@/pages/admin";
@@ -17,6 +18,7 @@ function App() {
       <TooltipProvider>
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/validate" component={Validate} />
           <Route path="/how-it-works" component={HowItWorks} />
           <Route path="/requirements" component={Requirements} />
           <Route path="/admin" component={Admin} />
