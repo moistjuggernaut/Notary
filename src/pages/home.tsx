@@ -95,6 +95,18 @@ export default function Home() {
           </div>
         </PageSection>
 
+        {/* Mobile CTA Button */}
+        <PageSection className="py-4 sm:hidden">
+          <div className="text-center">
+            <Button asChild size="lg" className="text-lg px-8 py-6 w-full" onClick={handleStartValidating}>
+              <Link href="/validate">
+                Start Validating
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+            </Button>
+          </div>
+        </PageSection>
+
         {/* Quick Links */}
         <PageSection className="py-6 sm:py-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
