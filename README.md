@@ -157,7 +157,7 @@ For detailed setup instructions, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 2. **Environment Setup**
    ```bash
-   cp env.example .env
+   cp .env.example .env
    # Configure your environment variables
    ```
 
