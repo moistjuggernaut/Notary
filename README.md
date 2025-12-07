@@ -161,6 +161,8 @@ For detailed setup instructions, see [DEVELOPMENT.md](./DEVELOPMENT.md).
    # Configure your environment variables
    ```
 
+   Download a service account key to have access to Cloud Vision API and store it as `.gcloud-credentials.json` in the root of the project. Never commit this file (it is in .gitignore).
+
 3. **Start Development**
    ```bash
    # Terminal 1: Start infrastructure services

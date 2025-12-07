@@ -67,3 +67,5 @@ models/
 .cache/
 
 .photo-validator-dev-key.json
+gcp-api/models/
+.gcloud-credentials.json
