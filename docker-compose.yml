@@ -64,6 +64,8 @@ services:
     volumes:
       # Mount the source code for live-reloading during development
       - ./gcp-api/src:/app
+      # Mount your local Google Cloud credentials (read-only) to the correct home directory
+      - .gcloud-credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
       # Mount models so MODEL_PATH can reference /app/models/... inside the container
       - ./gcp-api/models:/app/models
 

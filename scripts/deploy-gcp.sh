@@ -44,7 +44,7 @@ echo "📦 Setting GCP project to ${PROJECT_ID}..."
 gcloud config set project $PROJECT_ID
 
 echo "🔧 Enabling required GCP services..."
-gcloud services enable cloudbuild.googleapis.com run.googleapis.com artifactregistry.googleapis.com storage.googleapis.com storage-component.googleapis.com
+gcloud services enable cloudbuild.googleapis.com run.googleapis.com artifactregistry.googleapis.com storage.googleapis.com storage-component.googleapis.com vision.googleapis.com
 
 echo "🖼️  Creating Artifact Registry repository (if it doesn't exist)..."
 if gcloud artifacts repositories describe "${ARTIFACT_REGISTRY_REPO}" --location="${REGION}" >/dev/null 2>&1; then
@@ -189,6 +189,20 @@ else
         --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
         --role="roles/iam.serviceAccountTokenCreator"
     echo "✅ Added project binding roles/iam.serviceAccountTokenCreator for ${SERVICE_ACCOUNT_EMAIL}"
+fi
+
+# Grant Cloud Vision API User role
+echo "🔑 Granting Cloud Vision API User role..."
+if gcloud projects get-iam-policy "${PROJECT_ID}" \
+    --flatten="bindings[].members" \
+    --filter="bindings.role=roles/vision.user AND bindings.members=serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+    --format="value(bindings.role)" | grep -q "roles/vision.user"; then
+    echo "✅ Project binding roles/vision.user already exists for ${SERVICE_ACCOUNT_EMAIL}"
+else
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+        --role="roles/vision.user"
+    echo "✅ Added project binding roles/vision.user for ${SERVICE_ACCOUNT_EMAIL}"
 fi
 
 # --- Deploy to Cloud Run ---
