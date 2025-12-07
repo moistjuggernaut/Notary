@@ -3,6 +3,8 @@ import PhotoUploader from "@/components/photo-uploader";
 import { Link } from "wouter";
 import { FileText, HelpCircle } from "lucide-react";
 import { usePhotoValidation } from "@/hooks/usePhotoValidation";
+import { Button } from "@/components/ui/button";
+import { PageSection } from "@/components/ui/page-section";
 
 export default function Home() {
   const {
@@ -14,39 +16,47 @@ export default function Home() {
     handleFileSelect,
     handleRemoveFile,
     handleValidatePhoto,
-    isValidationAllowed
+    isValidationAllowed,
+    currentStep,
+    handleReset
   } = usePhotoValidation();
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        {/* Page Header */}
-        <div className="text-center mb-12 sm:mb-16">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
-            EU Photo ID Validator
-          </h1>
-          <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
-            Ensure your passport photo meets European Union biometric standards. 
-            Valid for all EU member states under Regulations 2252/2004 & 444/2009.
-          </p>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <PageSection>
+          {/* Page Header */}
+          <div className="text-center">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
+              EU Photo ID Validator
+            </h1>
+            <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
+              Ensure your passport photo meets European Union biometric standards. 
+              Valid for all EU member states under Regulations 2252/2004 & 444/2009.
+            </p>
 
-          {/* Quick Navigation */}
-          <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <Link href="/requirements" className="flex items-center text-blue-600 hover:text-blue-700 transition-colors">
-              <FileText className="w-4 h-4 mr-1" />
-              EU Requirements
-            </Link>
-            <Link href="/how-it-works" className="flex items-center text-blue-600 hover:text-blue-700 transition-colors">
-              <HelpCircle className="w-4 h-4 mr-1" />
-              How It Works
-            </Link>
+            {/* Quick Navigation */}
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
+              <Button variant="link" asChild>
+                <Link href="/requirements">
+                  <FileText />
+                  EU Requirements
+                </Link>
+              </Button>
+              <Button variant="link" asChild>
+                <Link href="/how-it-works">
+                  <HelpCircle />
+                  How It Works
+                </Link>
+              </Button>
+            </div>
           </div>
-        </div>
+        </PageSection>
 
         {/* Main Upload/Validation Component */}
-        <div className="mb-12 sm:mb-16">
+        <PageSection>
           <PhotoUploader 
             selectedFile={selectedFile}
             onFileSelect={handleFileSelect}
@@ -56,34 +66,40 @@ export default function Home() {
             isValidationAllowed={isValidationAllowed}
             quickCheckError={quickCheckError}
             validationResult={validationResult}
+            currentStep={currentStep}
+            onReset={handleReset}
           />
-        </div>
+        </PageSection>
 
         {/* Quick Tips */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">
-            Need Help Getting Started?
-          </h3>
-          <p className="text-blue-800 mb-4">
-            Check our guidelines for taking the perfect baby passport photo.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link 
-              href="/requirements" 
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              View Requirements
-            </Link>
-            <Link 
-              href="/how-it-works" 
-              className="inline-flex items-center px-4 py-2 bg-white text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors text-sm"
-            >
-              <HelpCircle className="w-4 h-4 mr-2" />
-              How It Works
-            </Link>
+        <PageSection>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+            <h3 className="text-lg font-semibold text-blue-900 mb-2">
+              Need Help Getting Started?
+            </h3>
+            <p className="text-blue-800 mb-4">
+              Check our guidelines for taking the perfect baby passport photo.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button asChild>
+                <Link 
+                  href="/requirements" 
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  View Requirements
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link 
+                  href="/how-it-works" 
+                >
+                  <HelpCircle className="w-4 h-4 mr-2" />
+                  How It Works
+                </Link>
+              </Button>
+            </div>
           </div>
-        </div>
+        </PageSection>
       </main>
 
       {/* Footer */}

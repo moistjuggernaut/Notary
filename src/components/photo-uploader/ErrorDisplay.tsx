@@ -68,7 +68,7 @@ export default function ErrorDisplay({ error }: ErrorDisplayProps) {
   const errorInfo = getErrorMessage(error);
 
   return (
-    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+    <div className="bg-red-50 border border-red-200 rounded-lg p-5">
       <div className="flex items-start">
         <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
         <div className="ml-3 flex-1">
