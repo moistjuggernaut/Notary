@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ValidationResult } from "@/types/validation";
 import { validatePhoto, quickCheckPhoto } from "@/api/client";
 import type { QuickCheckResponse } from "@/types/api";
@@ -8,11 +8,33 @@ export const usePhotoValidation = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   // Quick check state
   const [isQuickChecking, setIsQuickChecking] = useState(false);
   const [quickCheckResult, setQuickCheckResult] = useState<QuickCheckResponse | null>(null);
   const [quickCheckError, setQuickCheckError] = useState<string | null>(null);
+
+  // Auto-advance to step 2 when file is selected
+  useEffect(() => {
+    if (selectedFile && currentStep === 1) {
+      setCurrentStep(2);
+    }
+  }, [selectedFile, currentStep]);
+
+  // Auto-advance to step 3 when validation starts
+  useEffect(() => {
+    if (isValidating && currentStep === 2) {
+      setCurrentStep(3);
+    }
+  }, [isValidating, currentStep]);
+
+  // Auto-advance to step 4 when validation completes
+  useEffect(() => {
+    if (validationResult && currentStep === 3) {
+      setCurrentStep(4);
+    }
+  }, [validationResult, currentStep]);
 
   const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
@@ -40,6 +62,16 @@ export const usePhotoValidation = () => {
     setValidationResult(null);
     setQuickCheckResult(null);
     setQuickCheckError(null);
+    setCurrentStep(1);
+  };
+
+  const handleReset = () => {
+    setSelectedFile(null);
+    setValidationResult(null);
+    setQuickCheckResult(null);
+    setQuickCheckError(null);
+    setCurrentStep(1);
+    setIsValidating(false);
   };
 
   const handleValidatePhoto = async () => {
@@ -59,7 +91,7 @@ export const usePhotoValidation = () => {
         checks: [{
           name: 'API Error',
           description: error instanceof Error ? error.message : 'Unknown error occurred',
-          status: 'fail',
+          status: 'fail'
         }],
         recommendations: ['Please try again or contact support if the problem persists.']
       };
@@ -82,6 +114,8 @@ export const usePhotoValidation = () => {
     handleFileSelect,
     handleRemoveFile,
     handleValidatePhoto,
-    isValidationAllowed
+    isValidationAllowed,
+    currentStep,
+    handleReset
   };
 };
