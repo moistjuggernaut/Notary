@@ -16,8 +16,7 @@ from lib.order_storage import OrderStorage
 from lib.model_provider import model_provider 
 
 # --- Global Initialization ---
-# Initialize services. Both are lightweight at startup.
-# The heavy ML model is lazy-loaded by the ComplianceChecker.
+# Initialize services. All services are lightweight at startup.
 logging.basicConfig(level=logging.INFO)
 
 try:
@@ -30,7 +29,7 @@ except Exception as e:
 
 try:
     logging.info("Initializing ComplianceChecker orchestrator...")
-    compliance_checker = ComplianceChecker(model_name=config.icao.recommended_model_name)
+    compliance_checker = ComplianceChecker()
     logging.info("ComplianceChecker orchestrator initialized.")
 except Exception as e:
     logging.critical(f"FATAL: Could not initialize ComplianceChecker: {e}", exc_info=True)
@@ -73,12 +72,11 @@ def health_check():
     return jsonify({
         "status": "healthy" if is_fully_healthy else "unhealthy",
         "service": "baby-picture-validator-api",
-        "version": "1.2.0", # Version bumped to reflect architecture change
+        "version": "1.3.0", # Version bumped to reflect Cloud Vision architecture
         "services": {
             "quick_checker": "ok" if quick_checker_healthy else "failed",
             "compliance_checker": "ok" if compliance_checker_healthy else "failed"
-        },
-        "heavy_model_lazy_loaded": compliance_checker._full_analyzer is not None if compliance_checker_healthy else False
+        }
     }), status_code
 
 @app.route('/quick-check', methods=['GET'])
@@ -117,8 +115,7 @@ def quick_check():
 @app.route('/validate-photo', methods=['GET'])
 def validate_photo():
     """
-    Full ICAO compliance validation.
-    This will trigger the lazy-loading of the heavyweight model on the first call.
+    Full ICAO compliance validation using Google Cloud Vision API.
     """
     try:
         # Get the UUID from the URL
@@ -126,18 +123,14 @@ def validate_photo():
         
         # Download image from GCP storage URL
         original_bgr = OrderStorage.get_order_image_original(order_id)
-        # Use the globally loaded checker instance. This call will now handle
-        # the lazy-loading of the full analyzer if it hasn't happened yet.
+        # Use the globally loaded checker instance
         result, validated_bgr = compliance_checker.check_image_array(original_bgr)
         
         # Handle storage if validation was successful
         if result.get("success", False):
             try:
                 print_canvas, _ = print_processor.create_print_layout(validated_bgr)
-                storage_info = OrderStorage.store_validated_order(
-                    order_id, print_canvas
-                )
-                result.update(storage_info)
+                OrderStorage.store_validated_order(order_id, print_canvas)
             except Exception as e:
                 return jsonify({"success": False, "error": "Failed to store images", "message": "Failed to store images"}), 500 
         
@@ -157,5 +150,4 @@ def internal_error(error):
     return jsonify({"error": "An unexpected internal server error occurred", "message": "An unexpected internal server error occurred"}), 500
 
 if __name__ == '__main__':
-    # No special logic needed here anymore, global init is sufficient and fast.
     app.run(host='0.0.0.0', port=config.server.port, debug=False) 

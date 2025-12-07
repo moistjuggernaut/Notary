@@ -2,139 +2,131 @@
 Main compliance checker orchestrator.
 Coordinates the complete photo validation workflow.
 """
-import logging
+from __future__ import annotations
 
-import numpy as np
-from threading import Lock
+import logging
 
 from lib.app_config import config
 from lib.image_preprocessor import ImagePreprocessor
-from lib.photo_validator import PhotoValidator
+from lib.constants import ComplianceStatus, ReasonCode 
+from lib.cloud_vision_validator import CloudVisionValidator
 
 log = logging.getLogger(__name__)
 
 class ComplianceChecker:
     """
-    Orchestrates the full photo validation process by lazy-loading
-    a heavyweight analyzer.
-    """
-    _full_analyzer = None
-    _full_analyzer_lock = Lock()
-    _rembg_remove_func = None
+    Orchestrates the full photo validation process using Google Cloud Vision.
     
-    def __init__(self, model_name=config.icao.recommended_model_name, providers=None):
-        """
-        Initializes the ComplianceChecker orchestrator.
-        The heavyweight FaceAnalyzer is NOT loaded on initialization.
-        """
+    Validation Flow:
+    1. Call Cloud Vision API
+    2. Perform initial checks (non-geometric)
+    3. Process image using Cloud Vision response
+    4. Perform final geometry validation
+    5. Prepare and return final result
+    """
+    
+    def __init__(self):
+        """Initializes the ComplianceChecker orchestrator."""
         log.info("Initializing ComplianceChecker orchestrator...")
-        self._model_name = model_name
-        self._providers = providers
-        self.preprocessor = None
-        self.validator = PhotoValidator()
+        self.validator = CloudVisionValidator()
+        self.preprocessor = ImagePreprocessor()
         self.config = config.icao
         log.info("ComplianceChecker orchestrator initialized.")
 
-    def _get_full_analyzer(self):
+    def _get_final_status(self, validation_result: dict) -> dict:
         """
-        Lazy-loads the heavyweight FaceAnalyzer on first use.
-        This method is thread-safe.
+        Determines the final status data based on a validation result dictionary.
+        This can be used for both initial and final geometry validation results.
         """
-        if ComplianceChecker._full_analyzer is None:
-            with ComplianceChecker._full_analyzer_lock:
-                if ComplianceChecker._full_analyzer is None:
-                    log.info("First use: lazy-loading heavyweight models...")
-                    
-                    # Lazy-load FaceAnalyzer. This also triggers the ModelProvider to resolve paths.
-                    from lib.face_analyzer import FaceAnalyzer
-                    ComplianceChecker._full_analyzer = FaceAnalyzer(
-                        model_name=self._model_name,
-                        providers=self._providers
-                    )
-                    
-                    # Lazy-load rembg. The ModelProvider has already prepared the symlink.
-                    try:
-                        from rembg import remove as rembg_remove
-                        ComplianceChecker._rembg_remove_func = rembg_remove
-                        log.info("rembg library loaded successfully.")
-                    except ImportError:
-                        log.warning("rembg library not found. Background removal will be skipped.")
+        if validation_result.get("status") == "COMPLIANT":
+            return {
+                "success": True,
+                "status": ComplianceStatus.COMPLIANT,
+                "reason_code": ReasonCode.ALL_CHECKS_PASSED
+            }
 
-        # Inject dependencies into the preprocessor (idempotent)
-        if self.preprocessor is None:
-            self.preprocessor = ImagePreprocessor(
-                ComplianceChecker._full_analyzer,
-                rembg_func=ComplianceChecker._rembg_remove_func
-            )
-            log.debug("ImagePreprocessor initialized with shared analyzer.")
-        return ComplianceChecker._full_analyzer
+        # Get a machine-readable code from the validator if available
+        validator_reason_code = validation_result.get("status_reason", ReasonCode.UNKNOWN_REASON)
+        reason_details = (
+            validation_result.get("status_reason_description")
+            or validation_result.get("error")
+            or "Unknown validation failure"
+        )
 
-    def _get_final_recommendation(self, validation_results_log):
-        """Determines the final recommendation based on all validation checks."""
-        fails = sum(1 for status, _, _ in validation_results_log if status == "FAIL")
-        warnings = sum(1 for status, _, _ in validation_results_log if status == "WARNING")
+        return {
+            "success": False,
+            "status": ComplianceStatus.REJECTED,
+            "reason_code": ReasonCode.VALIDATION_FAILED,
+            "details": {
+                "validator_reason_code": validator_reason_code,
+                "validator_reason_description": reason_details
+            }
+        }
+
+    def check_image_array(self, image_bgr) -> tuple[dict, object]:
+        """
+        Runs the full compliance check using Cloud Vision API.
         
-        if fails > 0:
-            return f"REJECTED: {fails} critical issue(s) found."
-        if warnings > 0:
-            return f"NEEDS REVIEW: {warnings} warning(s) found."
-        return "LOOKS PROMISING: All primary checks passed."
-
-    def check_image_array(self, image_bgr) -> tuple[dict, np.ndarray]:
+        Flow:
+        1. Call Cloud Vision API
+        2. Perform initial checks (non-geometric)
+        3. Process image using Cloud Vision response
+        4. Perform final geometry validation
+        5. Prepare and return final result
         """
-        Runs the full, heavyweight compliance check on an image array.
-        This will trigger the lazy-loading of the InsightFace model on first run.
-        """
-        all_logs = {"preprocessing": [], "validation": []}
-        
         if image_bgr is None:
-            return {"success": False, "recommendation": "REJECTED: Invalid image data"}, None
+            return {"success": False, "status": ComplianceStatus.REJECTED, "reason_code": ReasonCode.INVALID_IMAGE_DATA}, None
 
         try:
-            # Step 1: Get the heavyweight analyzer (lazy-loads on first call)
-            full_analyzer = self._get_full_analyzer()
+            # ===== STEP 1: Call Cloud Vision API =====
+            log.info("Step 1: Calling Cloud Vision API...")
+            initial_result = self.validator.validate_initial(image_bgr)
             
-            # Step 2: Perform high-accuracy face analysis
-            log.info("Performing full analysis with InsightFace model...")
-            faces = full_analyzer.analyze_image(image_bgr)
+            # ===== STEP 2: Perform initial checks (non-geometric) =====
+            log.info("Step 2: Performing initial validation checks...")
+            if not initial_result.success:
+                log.warning(f"Initial validation failed: {initial_result.reason.value} - {initial_result.details}")
+                return {
+                    "success": False,
+                    "status": ComplianceStatus.REJECTED,
+                    "reason_code": ReasonCode.VALIDATION_FAILED,
+                    "details": {
+                        "validator_reason_code": initial_result.reason.value,
+                        "validator_reason_description": initial_result.details or initial_result.reason.description
+                    }
+                }, None
             
-            if not faces:
-                all_logs["preprocessing"].append(("FAIL", "Full Analysis", "No face detected by the analysis model."))
-                return {"success": False, "recommendation": "REJECTED: No face detected", "logs": all_logs}, None
-            
-            if len(faces) > 1:
-                all_logs["preprocessing"].append(("FAIL", "Full Analysis", f"Multiple faces ({len(faces)}) detected."))
-                return {"success": False, "recommendation": "REJECTED: Multiple faces detected", "logs": all_logs}, None
-                
-            all_logs["preprocessing"].append(("PASS", "Full Analysis", "Single face detected."))
-            
-            # Step 3: Preprocessing
-            log.info("Starting image preprocessing...")
-            processed_bgr, face_data, preprocess_logs, success, rembg_mask = self.preprocessor.process_image(image_bgr, faces)
-            all_logs["preprocessing"].extend(preprocess_logs)
-            log.info("Image preprocessing finished.")
+            log.info("Initial validation passed.")
+
+            # ===== STEP 3: Process image using Cloud Vision response =====
+            log.info("Step 3: Processing image using Cloud Vision API response...")
+            processed_bgr, face_data, preprocess_logs, success = self.preprocessor.process_image(
+                image_bgr, 
+                initial_result.face_annotation
+            )
             
             if not success or processed_bgr is None:
-                log.warning("Preprocessing failed. Aborting validation.")
-                return {"success": False, "recommendation": "REJECTED: Preprocessing failed", "logs": all_logs}, None
+                log.warning("Image preprocessing failed.")
+                return {
+                    "success": False,
+                    "status": ComplianceStatus.REJECTED,
+                    "reason_code": ReasonCode.PREPROCESSING_FAILED
+                }, None
+            
+            log.info("Image preprocessing complete.")
 
-            # Step 4: Validation
-            log.info("Starting photo validation...")
-            validation_results = self.validator.validate_photo(processed_bgr, face_data, rembg_mask)
-            all_logs["validation"].extend(validation_results)
-            recommendation = self._get_final_recommendation(validation_results)
-            log.info("Photo validation finished.")
-        
-            # Step 5: Prepare and return final result
-            result = {
-                "success": "REJECTED" not in recommendation,
-                "recommendation": recommendation,
-                "logs": all_logs
-            }
-            log.debug(f"Final logs: {all_logs}")
-        
-            return result, processed_bgr
+            # ===== STEP 4: Perform final geometry validation =====
+            log.info("Step 4: Performing final geometry validation...")
+            geometry_result = self.validator.validate_final_geometry(processed_bgr, face_data)
+            
+            final_status = self._get_final_status(geometry_result)
+            
+            log.info("Final geometry validation complete.")
+
+            # ===== STEP 5: Prepare and return final result =====
+            log.info("Step 5: Preparing final result...")
+            return final_status, processed_bgr
 
         except Exception as e:
-            log.critical(f"A critical error occurred during full validation: {e}", exc_info=True)
-            return {"success": False, "error": f"Internal server error: {e}", "recommendation": "REJECTED: System error"}, None
+            log.critical(f"A critical error occurred during validation: {e}", exc_info=True)
+            return {"success": False, "status": ComplianceStatus.REJECTED, "reason_code": ReasonCode.INTERNAL_SERVER_ERROR, "details": {"error": str(e)}}, None

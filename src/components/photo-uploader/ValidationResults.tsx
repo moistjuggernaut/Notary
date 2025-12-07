@@ -9,21 +9,6 @@ interface ValidationResultsProps {
 }
 
 export default function ValidationResults({ result }: ValidationResultsProps) {
-  const groupedChecks = result.checks.reduce((acc, check) => {
-    if (!acc[check.category]) {
-      acc[check.category] = [];
-    }
-    acc[check.category].push(check);
-    return acc;
-  }, {} as Record<string, typeof result.checks>);
-
-  const categoryTitles = {
-    photo_quality: 'Photo Quality',
-    face_position: 'Face Position',
-    framing: 'Framing',
-    technical: 'Technical'
-  };
-
   const overallStatus = getOverallStatus(result);
 
   return (
@@ -48,26 +33,21 @@ export default function ValidationResults({ result }: ValidationResultsProps) {
       </div>
 
       {/* Detailed Checks */}
-      <div className="space-y-4 mb-6">
-        {Object.entries(groupedChecks).map(([category, checks]) => (
-          <div key={category} className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-900 uppercase tracking-wide">
-              {categoryTitles[category as keyof typeof categoryTitles]}
-            </h4>
-            {checks.map((check, index) => (
-              <div key={index} className="flex items-start space-x-3 p-3 rounded-lg border bg-gray-50">
-                <div className="flex-shrink-0 mt-0.5">
-                  <span className="text-sm">{getStatusIcon(check.status)}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{check.name}</p>
-                  <p className="text-xs text-gray-600 mt-1">{check.description}</p>
-                </div>
+      {result.checks && result.checks.length > 0 && (
+        <div className="space-y-2 mb-6">
+          {result.checks.map((check, index) => (
+            <div key={index} className="flex items-start space-x-3 p-3 rounded-lg border bg-gray-50">
+              <div className="flex-shrink-0 mt-0.5">
+                <span className="text-sm">{getStatusIcon(check.status)}</span>
               </div>
-            ))}
-          </div>
-        ))}
-      </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">{check.name}</p>
+                <p className="text-xs text-gray-600 mt-1">{check.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Processed Image */}
       {result.imageUrl && (
