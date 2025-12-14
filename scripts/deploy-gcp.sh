@@ -160,13 +160,14 @@ gcloud run deploy "$SERVICE_NAME" \
     --platform managed \
     --region "$REGION" \
     --allow-unauthenticated \
-    --memory 8Gi \
-    --cpu 4 \
+    --memory 4Gi \
+    --cpu 2 \
     --timeout 300s \
-    --concurrency 80 \
-    --max-instances 10 \
+    --concurrency 1 \
+    --max-instances 2 \
     --service-account="${SERVICE_ACCOUNT_EMAIL}" \
-    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME},U2NET_HOME=/root/.u2net"
+    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME},U2NET_HOME=/root/.u2net" \
+    --cpu-boost
 
 # --- Final Output ---
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --platform managed --region="$REGION" --format="value(status.url)")
