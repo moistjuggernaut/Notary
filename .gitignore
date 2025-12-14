@@ -35,7 +35,7 @@ __pycache__/
 venv/
 .venv/
 env/
-.env
+.env*
 
 # Python cache and build artifacts
 *.pyc
