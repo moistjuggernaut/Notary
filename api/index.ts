@@ -229,7 +229,7 @@ app.post('/api/stripe/webhook', async (c) => {
       getWebhookSecret()
     )
 
-    handleStripeWebhookEvent(event).catch((err) => {
+    await handleStripeWebhookEvent(event).catch((err) => {
       console.error('Fulfillment error:', err)
     })
 
