@@ -10,7 +10,6 @@ import { authMiddleware } from './lib/auth-middleware.js'
 import { approveOrder, rejectOrder } from './lib/admin-actions.js'
 import { createDatabaseConnection } from './lib/database.js'
 import { orderService } from './lib/order-service.js'
-import { Order } from './lib/schema.js'
 import { getFamilinkOrder } from './lib/familink.js'
 
 const app = new Hono()
