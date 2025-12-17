@@ -44,8 +44,13 @@ export async function approveOrder(orderId: string): Promise<void> {
   }
 
   try {
-    // Get the validated print image
-    const validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated.jpg')
+    // Prefer bg-removed output if it exists, otherwise fall back to validated.png
+    let validatedPhotoUrl: string
+    try {
+      validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated_bg_removed.png')
+    } catch {
+      validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated.png')
+    }
 
     // Create Familink print order
     const familinkResponse = await createFamilinkPrintOrder({

@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
     photo: {
         validate: '/photo/validate',
         quickCheck: '/photo/quick-check',
+        removeBackground: '/photo/remove-background',
     },
 } as const;
 
@@ -57,6 +58,18 @@ export interface QuickCheckResponse {
     message: string;
     imageUrl?: string;
     orderId?: string;
+}
+
+// --- Remove Background ---
+export interface RemoveBackgroundRequest {
+    orderId: string;
+}
+
+export interface RemoveBackgroundResponse {
+    success: boolean;
+    orderId?: string;
+    imageUrl?: string;
+    error?: string;
 }
 
 // --- Order Management ---

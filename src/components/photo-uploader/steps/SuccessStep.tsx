@@ -1,9 +1,11 @@
-import { CheckCircle, Download, CreditCard, Upload } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CheckCircle, Download, CreditCard, Upload, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepActions } from "@/components/ui/step-actions";
 import { InfoCard } from "@/components/ui/info-card";
 import { handleDownload } from "../utils";
 import type { ValidationResult } from "@/types/validation";
+import { removeBackground } from "@/api/client";
 
 interface SuccessStepProps {
   result: ValidationResult;
@@ -11,6 +13,30 @@ interface SuccessStepProps {
 }
 
 export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
+  const [displayImageUrl, setDisplayImageUrl] = useState<string | undefined>(result.imageUrl);
+  const [isRemovingBackground, setIsRemovingBackground] = useState(false);
+
+  useEffect(() => {
+    setDisplayImageUrl(result.imageUrl);
+  }, [result.imageUrl]);
+
+  const handleRemoveBackground = async () => {
+    if (!result.orderId) return;
+
+    setIsRemovingBackground(true);
+    try {
+      const response = await removeBackground(result.orderId);
+      if (!response.success || !response.imageUrl) {
+        throw new Error(response.error || 'Background removal failed');
+      }
+      setDisplayImageUrl(response.imageUrl);
+    } catch (error) {
+      console.error('Background removal failed:', error);
+    } finally {
+      setIsRemovingBackground(false);
+    }
+  };
+
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-12">
       {/* Success Card */}
@@ -24,12 +50,12 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
       </InfoCard>
 
       {/* Processed Image */}
-      {result.imageUrl && (
+      {displayImageUrl && (
         <div className="mb-8">
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
             <div className="flex justify-center">
               <img
-                src={result.imageUrl}
+                src={displayImageUrl}
                 alt="Validated passport photo"
                 className="max-w-full max-h-96 rounded-lg shadow-sm border border-gray-200"
               />
@@ -41,28 +67,41 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
       {/* Action Buttons */}
       <div className="space-y-4">
         <StepActions>
-          <form 
-            action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`} 
-            method="POST" 
-            className="flex-1"
-          >
-            <Button 
-              type="submit"
+          <div className="flex-1 space-y-3">
+            <form
+              action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`}
+              method="POST"
+            >
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={!result?.orderId}
+              >
+                <CreditCard className="w-4 h-4" />
+                Checkout - €9.99
+              </Button>
+            </form>
+
+            <Button
+              type="button"
+              variant="secondary"
               size="lg"
               className="w-full"
-              disabled={!result?.orderId}
+              onClick={handleRemoveBackground}
+              disabled={!result?.orderId || !result.imageUrl || isRemovingBackground}
             >
-              <CreditCard className="w-4 h-4" />
-              Checkout - €9.99
+              <Wand2 className="w-4 h-4" />
+              {isRemovingBackground ? 'Removing background…' : 'Remove background'}
             </Button>
-          </form>
+          </div>
 
           <Button
             variant="outline"
             size="lg"
             className="flex-1 sm:flex-none"
-            onClick={() => handleDownload(result.imageUrl)}
-            disabled={!result.imageUrl}
+            onClick={() => handleDownload(displayImageUrl)}
+            disabled={!displayImageUrl}
           >
             <Download className="w-4 h-4" />
             Download

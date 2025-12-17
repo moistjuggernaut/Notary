@@ -1,5 +1,5 @@
 // client.ts
-import { API_ENDPOINTS, ValidationRequest, ValidationResponse, QuickCheckRequest, QuickCheckResponse } from '@/types/api';
+import { API_ENDPOINTS, ValidationRequest, ValidationResponse, QuickCheckRequest, QuickCheckResponse, RemoveBackgroundRequest, RemoveBackgroundResponse } from '@/types/api';
 
 // 1. Define a variable for the API base URL using Vite's process.env
 //    VITE_ prefix is crucial. The '??' operator provides a fallback for local development.
@@ -76,6 +76,19 @@ export async function validatePhoto(orderId: string): Promise<ValidationResponse
         });
     } catch (error) {
         console.error('Photo validation error:', error);
+        throw error;
+    }
+}
+
+export async function removeBackground(orderId: string): Promise<RemoveBackgroundResponse> {
+    try {
+        const request: RemoveBackgroundRequest = { orderId };
+        return await fetchApi<RemoveBackgroundResponse>(API_ENDPOINTS.photo.removeBackground, {
+            method: 'POST',
+            body: JSON.stringify(request),
+        });
+    } catch (error) {
+        console.error('Remove background error:', error);
         throw error;
     }
 }

@@ -63,7 +63,7 @@ export async function uploadImageToGCP(orderId: string, base64Image: string, fil
     
     await file.save(imageBuffer, {
       metadata: {
-        contentType: 'image/jpeg', // Default to JPEG, could be made dynamic
+        contentType: 'image/png',
       },
     });
     
@@ -106,3 +106,12 @@ export async function getSignedUrlForImage(orderId: string, filename: string): P
 export async function getSignedUrlForImageFromLocal(orderId: string, filename: string): Promise<string> {
   return `http://localhost:4443/storage/v1/b/${bucketName}/o/${orderId}/${filename}?alt=media`;
 }
+
+export async function downloadImageFromGCP(orderId: string, filename: string): Promise<Buffer> {
+  const bucket = storage.bucket(bucketName);
+  const file = bucket.file(`${orderId}/${filename}`);
+  const [contents] = await file.download();
+  return contents;
+}
+
+

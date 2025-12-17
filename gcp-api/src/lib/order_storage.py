@@ -34,7 +34,7 @@ class OrderStorage:
             storage_client = get_storage_client()
 
             # Store validated (processed) image
-            validated_blob_name = f"{order_id}/validated.jpg"
+            validated_blob_name = f"{order_id}/validated.png"
             storage_client.save_image(validated_bgr, validated_blob_name)
 
             # Return storage information
@@ -55,4 +55,4 @@ class OrderStorage:
         Get the original image for an order.
         """
         storage_client = get_storage_client()
-        return storage_client.get_image(f"{order_id}/original.jpg")
+        return storage_client.get_image(f"{order_id}/original.png")

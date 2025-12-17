@@ -13,7 +13,7 @@ export const handleDownload = async (imageUrl?: string) => {
     const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
-    a.download = 'validated_passport_photo.jpg';
+    a.download = 'validated_passport_photo.png';
     a.style.display = 'none';
 
     document.body.appendChild(a);

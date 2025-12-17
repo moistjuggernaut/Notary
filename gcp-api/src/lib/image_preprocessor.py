@@ -1,13 +1,12 @@
 """
 Image preprocessing module for passport photo validation.
-Handles cropping, resizing, and background removal.
+Handles cropping and resizing.
 """
 
 import cv2
 import numpy as np
 import logging
 from google.cloud import vision
-from rembg import remove, new_session
 from lib.app_config import config
 from types import SimpleNamespace
 
@@ -18,7 +17,6 @@ class ImagePreprocessor:
     
     def __init__(self):
         self.config = config.icao
-        self.rembg_session = new_session("u2net_human_seg")
 
     def _get_face_details_for_crop(self, face_annotation: vision.FaceAnnotation):
         full_poly = face_annotation.bounding_poly
@@ -82,17 +80,10 @@ class ImagePreprocessor:
         
         return shifted_landmarks * [scale_x, scale_y]
 
-    def _remove_background(self, image_bgr: np.ndarray) -> np.ndarray:
-        output_rgba = remove(image_bgr, session=self.rembg_session, alpha_matting=True)
-        white_background = np.ones_like(image_bgr) * 255
-        alpha = output_rgba[:, :, 3:4] / 255.0
-        
-        return (output_rgba[:, :, :3] * alpha + white_background * (1 - alpha)).astype(np.uint8)
-
     def process_image(self, original_image_bgr, face_annotation: vision.FaceAnnotation):
         """
         Processes the image for validation.
-        Pipeline: Extract details → Crop → Remove background → Resize → Transform landmarks
+        Pipeline: Extract details → Crop → Resize → Transform landmarks
         """
         face_details, error = self._get_face_details_for_crop(face_annotation)
         if error:
@@ -116,11 +107,6 @@ class ImagePreprocessor:
         final_shape = (self.config.final_output_width_px, self.config.final_output_height_px)
         log.info(f"Resizing image...")
         cropped_bgr = cv2.resize(cropped_bgr, final_shape, interpolation=cv2.INTER_AREA)
-
-        try:
-            cropped_bgr = self._remove_background(cropped_bgr)
-        except Exception as e:
-            log.warning(f"Background removal failed: {e}")
 
         processed_bgr = cropped_bgr
 

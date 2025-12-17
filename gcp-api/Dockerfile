@@ -36,10 +36,6 @@ COPY --from=builder /opt/venv /opt/venv
 
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Prepare directory for rembg model and copy it into the image
-RUN mkdir -p /root/.u2net
-COPY models/u2net_human_seg.onnx /root/.u2net/u2net_human_seg.onnx
-
 COPY src ./
 
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--timeout", "120", "--max-requests", "1000", "app:app"]

@@ -3,7 +3,7 @@ import { logger } from 'hono/logger'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { getStripe, getWebhookSecret } from './lib/.stripe.js'
-import { getSignedUrlForImage, uploadImageToGCP } from './lib/.gcp-storage.js'
+import { downloadImageFromGCP, getSignedUrlForImage, uploadImageToGCP } from './lib/.gcp-storage.js'
 import { triggerGCPRun } from './lib/.gcp-run.js'
 import { handleStripeWebhookEvent } from './lib/fulfillment.js'
 import { authMiddleware } from './lib/auth-middleware.js'
@@ -30,6 +30,10 @@ const QuickCheckSchema = z.object({
 })
 
 const ValidationSchema = z.object({
+  orderId: z.string().uuid()
+})
+
+const RemoveBackgroundSchema = z.object({
   orderId: z.string().uuid()
 })
 
@@ -61,7 +65,7 @@ app.post('/api/photo/quick-check', zValidator('json', QuickCheckSchema), async (
     const order = await orderService.createOrder()
 
     // 1. Upload image to GCP storage
-    const uploadResult = await uploadImageToGCP(order.id, image, 'original.jpg')
+    const uploadResult = await uploadImageToGCP(order.id, image, 'original.png')
 
     await orderService.updateOrderStatus(order.id, 'original_uploaded')
     
@@ -127,7 +131,7 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
 
     await orderService.updateOrderStatus(order.id, 'validation_completed')
 
-    const imageUrl = await getSignedUrlForImage(order.id, 'validated.jpg')
+    const imageUrl = await getSignedUrlForImage(order.id, 'validated.png')
     
     // 3. Return results to frontend - forward GCP response with added metadata
     return c.json({
@@ -140,6 +144,89 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
     return c.json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'Validation failed' 
+    }, 500)
+  }
+})
+
+app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSchema), async (c) => {
+  try {
+    const { orderId } = c.req.valid('json')
+
+    const photoroomApiKey = process.env.PHOTOROOM_API_KEY
+    if (!photoroomApiKey) {
+      return c.json({
+        success: false,
+        error: 'PHOTOROOM_API_KEY is not configured'
+      }, 500)
+    }
+
+    let response: Response
+    
+    if (process.env.USE_LOCAL_STORAGE === 'true') {
+      // Local: download image and send as file (Photoroom can't access localhost)
+      const imageBuffer = await downloadImageFromGCP(orderId, 'validated.png')
+      const formData = new FormData()
+      formData.append('image_file', new Blob([new Uint8Array(imageBuffer)], { type: 'image/png' }), 'validated.png')
+      
+      response = await fetch('https://sdk.photoroom.com/v1/segment', {
+        method: 'POST',
+        headers: {
+          'Accept': 'image/png, application/json',
+          'x-api-key': photoroomApiKey,
+        },
+        body: formData
+      })
+    } else {
+      // Production: pass signed URL (efficient, no intermediate download)
+      const imageUrl = await getSignedUrlForImage(orderId, 'validated.png')
+      
+      response = await fetch('https://sdk.photoroom.com/v1/segment', {
+        method: 'POST',
+        headers: {
+          'Accept': 'image/png, application/json',
+          'Content-Type': 'application/json',
+          'x-api-key': photoroomApiKey,
+        },
+        body: JSON.stringify({ image_url: imageUrl })
+      })
+    }
+
+    if (!response.ok) {
+      let errorMessage = `Photoroom request failed: ${response.status} ${response.statusText}`
+      try {
+        const json = await response.json()
+        if (json?.error?.message) errorMessage = json.error.message
+        if (json?.message) errorMessage = json.message
+      } catch { /* ignore */ }
+
+      return c.json({ success: false, error: errorMessage }, 502)
+    }
+
+    const contentType = response.headers.get('content-type') ?? ''
+    if (!contentType.includes('image/png')) {
+      let errorMessage = 'Photoroom did not return a PNG image'
+      try {
+        const json = await response.json()
+        if (json?.error?.message) errorMessage = json.error.message
+        if (json?.message) errorMessage = json.message
+      } catch { /* ignore */ }
+
+      return c.json({ success: false, error: errorMessage }, 502)
+    }
+
+    const pngBase64 = Buffer.from(await response.arrayBuffer()).toString('base64')
+    const result = await uploadImageToGCP(orderId, pngBase64, 'validated_bg_removed.png')
+
+    return c.json({
+      success: true,
+      orderId,
+      imageUrl: result.imageUrl,
+    })
+  } catch (error) {
+    console.error('Remove background error:', error)
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Background removal failed'
     }, 500)
   }
 })
@@ -248,7 +335,7 @@ app.get('/api/admin/orders', authMiddleware, async (c) => {
     const ordersWithImages = await Promise.all(
       orders.map(async (order) => {
         try {
-          const imageUrl = await getSignedUrlForImage(order.id, 'validated.jpg')
+          const imageUrl = await getSignedUrlForImage(order.id, 'validated.png')
           return { ...order, imageUrl }
         } catch (error) {
           console.error(`Failed to get image URL for order ${order.id}:`, error)

@@ -2,7 +2,6 @@ Flask
 gunicorn==22.0.0
 numpy
 opencv-python-headless
-rembg
 onnxruntime
 pydantic~=2.8
 pydantic-settings

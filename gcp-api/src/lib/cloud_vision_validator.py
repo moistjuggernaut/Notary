@@ -106,9 +106,9 @@ class CloudVisionValidator:
         }
         
     def _encode_image(self, image_bgr: np.ndarray) -> bytes:
-        success, buffer = cv2.imencode('.jpg', image_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        success, buffer = cv2.imencode('.png', image_bgr)
         if not success:
-            raise ValueError("Failed to encode image as JPEG")
+            raise ValueError("Failed to encode image as PNG")
         return buffer.tobytes()
 
     def _validate_dimensions(self, face_data: SimpleNamespace, image_bgr: np.ndarray) -> Optional[ValidationReason]:

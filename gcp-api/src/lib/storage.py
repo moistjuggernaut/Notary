@@ -37,7 +37,7 @@ class GCSStorageClient(BaseStorageClient):
 
     def save_image(self, image: Union[np.ndarray, bytes], blob_name: str) -> str:
         blob = self.bucket.blob(blob_name)
-        blob.upload_from_string(self._encode_image(image), content_type="image/jpeg")
+        blob.upload_from_string(self._encode_image(image), content_type="image/png")
         return f"gs://{self.bucket_name}/{blob_name}"
 
     def get_signed_url(self, blob_name: str, expiration: int) -> str:
@@ -53,7 +53,7 @@ class GCSStorageClient(BaseStorageClient):
         return self._decode_image(image_bytes)
 
     def _encode_image(self, image_bgr: np.ndarray) -> bytes:
-        success, buf = cv2.imencode(".jpg", image_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        success, buf = cv2.imencode(".png", image_bgr)
         if not success:
             raise ValueError("Failed to encode image")
         return buf.tobytes()
@@ -87,7 +87,7 @@ class EmulatorStorageClient(BaseStorageClient):
 
     def save_image(self, image: Union[np.ndarray, bytes], blob_name: str) -> str:
         blob = self.bucket.blob(blob_name)
-        blob.upload_from_string(self._encode_image(image), content_type="image/jpeg")
+        blob.upload_from_string(self._encode_image(image), content_type="image/png")
         return f"gs://{self.bucket_name}/{blob_name}"
 
     def get_signed_url(self, blob_name: str, expiration: int) -> str:
@@ -102,7 +102,7 @@ class EmulatorStorageClient(BaseStorageClient):
         return self._decode_image(image_bytes)
 
     def _encode_image(self, image_bgr: np.ndarray) -> bytes:
-        success, buf = cv2.imencode(".jpg", image_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        success, buf = cv2.imencode(".png", image_bgr)
         if not success:
             raise ValueError("Failed to encode image")
         return buf.tobytes()

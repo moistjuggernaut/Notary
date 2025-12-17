@@ -7,7 +7,6 @@ import logging
 from flask import Flask, request, jsonify
 
 from compliance_checker import ComplianceChecker
-from lib.print_processor import PrintProcessor
 from lib.quick_checker import QuickChecker
 from lib.app_config import config
 from lib.order_storage import OrderStorage
@@ -16,12 +15,10 @@ from lib.order_storage import OrderStorage
 logging.basicConfig(level=logging.INFO)
 quick_checker = None
 compliance_checker = None
-print_processor = None
 
 try:
     quick_checker = QuickChecker()
     compliance_checker = ComplianceChecker()
-    print_processor = PrintProcessor()
 except Exception as e:
     logging.critical(f"FATAL: Initialization failed: {e}", exc_info=True)
 
@@ -30,13 +27,13 @@ app = Flask(__name__)
 @app.before_request
 def check_services():
     """Checks if services are initialized."""
-    if quick_checker is None or compliance_checker is None or print_processor is None:
+    if quick_checker is None or compliance_checker is None:
         return jsonify({"error": "Service unavailable"}), 503
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint."""
-    healthy = all(service is not None for service in (quick_checker, compliance_checker, print_processor))
+    healthy = all(service is not None for service in (quick_checker, compliance_checker))
     return jsonify({
         "status": "healthy" if healthy else "unhealthy",
         "version": "1.3.0"
@@ -75,8 +72,7 @@ def validate_photo():
         
         if result.get("success", False):
             try:
-                print_canvas, _ = print_processor.create_print_layout(validated_bgr)
-                OrderStorage.store_validated_order(order_id, print_canvas)
+                OrderStorage.store_validated_order(order_id, validated_bgr)
             except Exception as e:
                 logging.error(f"Storage error: {e}")
                 return jsonify({"success": False, "error": "Storage failed"}), 500 
