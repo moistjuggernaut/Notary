@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle, Download, CreditCard, Upload, Wand2 } from "lucide-react";
+import { CheckCircle, Download, CreditCard, Upload, Wand2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepActions } from "@/components/ui/step-actions";
 import { InfoCard } from "@/components/ui/info-card";
@@ -15,13 +15,24 @@ interface SuccessStepProps {
 export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
   const [displayImageUrl, setDisplayImageUrl] = useState<string | undefined>(result.imageUrl);
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
+  const [isBackgroundRemoved, setIsBackgroundRemoved] = useState(false);
+  const [cachedBgRemovedUrl, setCachedBgRemovedUrl] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     setDisplayImageUrl(result.imageUrl);
+    setIsBackgroundRemoved(false);
+    setCachedBgRemovedUrl(undefined);
   }, [result.imageUrl]);
 
   const handleRemoveBackground = async () => {
     if (!result.orderId) return;
+
+    // Use cached version if available
+    if (cachedBgRemovedUrl) {
+      setDisplayImageUrl(cachedBgRemovedUrl);
+      setIsBackgroundRemoved(true);
+      return;
+    }
 
     setIsRemovingBackground(true);
     try {
@@ -30,11 +41,18 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
         throw new Error(response.error || 'Background removal failed');
       }
       setDisplayImageUrl(response.imageUrl);
+      setCachedBgRemovedUrl(response.imageUrl);
+      setIsBackgroundRemoved(true);
     } catch (error) {
       console.error('Background removal failed:', error);
     } finally {
       setIsRemovingBackground(false);
     }
+  };
+
+  const handleResetBackground = () => {
+    setDisplayImageUrl(result.imageUrl);
+    setIsBackgroundRemoved(false);
   };
 
   return (
@@ -89,23 +107,38 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
               size="lg"
               className="w-full"
               onClick={handleRemoveBackground}
-              disabled={!result?.orderId || !result.imageUrl || isRemovingBackground}
+              disabled={!result?.orderId || !result.imageUrl || isRemovingBackground || isBackgroundRemoved}
             >
               <Wand2 className="w-4 h-4" />
-              {isRemovingBackground ? 'Removing background…' : 'Remove background'}
+              {isRemovingBackground ? 'Removing…' : 'Remove background'}
             </Button>
           </div>
 
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1 sm:flex-none"
-            onClick={() => handleDownload(displayImageUrl)}
-            disabled={!displayImageUrl}
-          >
-            <Download className="w-4 h-4" />
-            Download
-          </Button>
+          <div className="flex-1 sm:flex-none space-y-3 sm:min-w-[200px]">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => handleDownload(displayImageUrl)}
+              disabled={!displayImageUrl}
+            >
+              <Download className="w-4 h-4" />
+              Download
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={handleResetBackground}
+              disabled={!isBackgroundRemoved}
+              style={{ visibility: isBackgroundRemoved ? 'visible' : 'hidden' }}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset
+            </Button>
+          </div>
         </StepActions>
 
         <div className="pt-4 border-t border-gray-200">

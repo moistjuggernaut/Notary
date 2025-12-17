@@ -16,7 +16,8 @@ export interface DocumentResponse {
 
 // Photo validation types for the serverless API
 export interface ValidationRequest {
-    orderId: string; // UUID from quick check response
+    image: string; // base64 encoded image
+    filename: string;
 }
 
 export interface ValidationResponse {
@@ -41,24 +42,9 @@ export const API_ENDPOINTS = {
     },
     photo: {
         validate: '/photo/validate',
-        quickCheck: '/photo/quick-check',
         removeBackground: '/photo/remove-background',
     },
 } as const;
-
-// --- Quick Check ---
-export interface QuickCheckRequest {
-    image: string; // base64 encoded image
-    filename?: string;
-}
-
-export interface QuickCheckResponse {
-    success: boolean;
-    faceCount: number;
-    message: string;
-    imageUrl?: string;
-    orderId?: string;
-}
 
 // --- Remove Background ---
 export interface RemoveBackgroundRequest {

@@ -14,8 +14,6 @@ interface PhotoUploaderProps {
   onRemoveFile: () => void;
   onValidatePhoto: () => void;
   isValidating: boolean;
-  isValidationAllowed: boolean;
-  quickCheckError: string | null;
   validationResult?: ValidationResult | null;
   currentStep: number;
   onReset: () => void;
@@ -34,8 +32,6 @@ export default function PhotoUploader({
   onRemoveFile,
   onValidatePhoto,
   isValidating,
-  isValidationAllowed,
-  quickCheckError,
   validationResult,
   currentStep,
   onReset,
@@ -93,8 +89,6 @@ export default function PhotoUploader({
             onRemoveFile={onRemoveFile}
             onValidate={onValidatePhoto}
             isValidating={isValidating}
-            isValidationAllowed={isValidationAllowed}
-            quickCheckError={quickCheckError}
           />
         )}
 

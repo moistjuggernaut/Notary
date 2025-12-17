@@ -1,17 +1,14 @@
 // client.ts
-import { API_ENDPOINTS, ValidationRequest, ValidationResponse, QuickCheckRequest, QuickCheckResponse, RemoveBackgroundRequest, RemoveBackgroundResponse } from '@/types/api';
+import { API_ENDPOINTS, ValidationRequest, ValidationResponse, RemoveBackgroundRequest, RemoveBackgroundResponse } from '@/types/api';
 
-// 1. Define a variable for the API base URL using Vite's process.env
-//    VITE_ prefix is crucial. The '??' operator provides a fallback for local development.
 const API_BASE_URL = '/api';
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    // 2. Use the dynamic API_BASE_URL
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json', // Good practice to include
+            'Accept': 'application/json',
             ...options?.headers,
         },
     });
@@ -44,30 +41,13 @@ function fileToBase64(file: File): Promise<string> {
     });
 }
 
-// Quick check function
-export async function quickCheckPhoto(file: File): Promise<QuickCheckResponse> {
+// Photo validation function - uploads and validates in one step
+export async function validatePhoto(file: File): Promise<ValidationResponse> {
     try {
         const base64Image = await fileToBase64(file);
-        const request: QuickCheckRequest = {
+        const request: ValidationRequest = {
             image: base64Image,
             filename: file.name
-        };
-
-        return await fetchApi<QuickCheckResponse>(API_ENDPOINTS.photo.quickCheck, {
-            method: 'POST',
-            body: JSON.stringify(request),
-        });
-    } catch (error) {
-        console.error('Quick check failed:', error);
-        throw error;
-    }
-}
-
-// Photo validation function using orderId from quick check
-export async function validatePhoto(orderId: string): Promise<ValidationResponse> {
-    try {
-        const request: ValidationRequest = {
-            orderId: orderId
         };
 
         return await fetchApi<ValidationResponse>(API_ENDPOINTS.photo.validate, {

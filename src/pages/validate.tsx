@@ -18,12 +18,9 @@ export default function Validate() {
     selectedFile,
     validationResult,
     isValidating,
-    isQuickChecking,
-    quickCheckError,
     handleFileSelect,
     handleRemoveFile,
     handleValidatePhoto,
-    isValidationAllowed,
     currentStep,
     handleReset
   } = usePhotoValidation();
@@ -40,9 +37,7 @@ export default function Validate() {
             onFileSelect={handleFileSelect}
             onRemoveFile={handleRemoveFile}
             onValidatePhoto={handleValidatePhoto}
-            isValidating={isValidating || isQuickChecking}
-            isValidationAllowed={isValidationAllowed}
-            quickCheckError={quickCheckError}
+            isValidating={isValidating}
             validationResult={validationResult}
             currentStep={currentStep}
             onReset={handleReset}

@@ -24,13 +24,9 @@ const stripe = getStripe()
 await createDatabaseConnection();
 
 // Validation schemas
-const QuickCheckSchema = z.object({
+const ValidationSchema = z.object({
   image: z.string().min(1, 'Image is required'),
   filename: z.string().min(1, 'Filename is required')
-})
-
-const ValidationSchema = z.object({
-  orderId: z.string().uuid()
 })
 
 const RemoveBackgroundSchema = z.object({
@@ -57,61 +53,14 @@ app.get('/api/health', async (c) => {
 })
 
 // Photo routes
-app.post('/api/photo/quick-check', zValidator('json', QuickCheckSchema), async (c) => {
+app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) => {
   try {
     const { image } = c.req.valid('json')
 
-
+    // 1. Create order and upload image
     const order = await orderService.createOrder()
-
-    // 1. Upload image to GCP storage
-    const uploadResult = await uploadImageToGCP(order.id, image, 'original.png')
-
+    await uploadImageToGCP(order.id, image, 'original.png')
     await orderService.updateOrderStatus(order.id, 'original_uploaded')
-    
-    // 2. Trigger GCP Run for quick check
-    const gcpResponse = await triggerGCPRun({
-      eventType: 'quick-check',
-      orderId: order.id,
-    })
-    
-    if (!gcpResponse.success) {
-      await orderService.updateOrderStatus(order.id, 'quick_check_failed')
-      return c.json({ 
-        success: false, 
-        error: gcpResponse.error || 'GCP processing failed' 
-      }, 500)
-    }
-    
-    await orderService.updateOrderStatus(order.id, 'quick_check_completed')
-
-    // 3. Return results to frontend
-    return c.json({
-      success: true,
-      faceCount: gcpResponse.data.face_count,
-      message: gcpResponse.data.message,
-      imageUrl: uploadResult.imageUrl,
-      orderId: uploadResult.orderId,
-    })
-  } catch (error) {
-    console.error('Quick check error:', error)
-    return c.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Quick check failed' 
-    }, 500)
-  }
-})
-
-app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) => {
-  try {
-    // 1. Get orderId from request
-    const { orderId } = c.req.valid('json')
-
-    const order = await orderService.getOrderById(orderId)
-
-    if (!order) {
-      return c.json({ error: 'Order not found' }, 404)
-    }
 
     await orderService.updateOrderStatus(order.id, 'validation_started')
 

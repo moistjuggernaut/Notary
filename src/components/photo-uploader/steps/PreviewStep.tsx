@@ -1,7 +1,6 @@
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FilePreview from "../FilePreview";
-import ErrorDisplay from "../ErrorDisplay";
 import { StepActions } from "@/components/ui/step-actions";
 
 interface PreviewStepProps {
@@ -9,8 +8,6 @@ interface PreviewStepProps {
   onRemoveFile: () => void;
   onValidate: () => void;
   isValidating: boolean;
-  isValidationAllowed: boolean;
-  quickCheckError: string | null;
 }
 
 export default function PreviewStep({
@@ -18,27 +15,23 @@ export default function PreviewStep({
   onRemoveFile,
   onValidate,
   isValidating,
-  isValidationAllowed,
-  quickCheckError,
 }: PreviewStepProps) {
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-12">
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-900 mb-3">Preview & Quick Check</h3>
+        <h3 className="text-xl font-semibold text-gray-900 mb-3">Preview Photo</h3>
         <p className="text-sm text-gray-600 leading-relaxed">
-          Your photo has been uploaded. Review it and proceed with validation.
+          Review your photo and proceed with validation.
         </p>
       </div>
 
       <div className="space-y-6">
         <FilePreview file={file} onRemove={onRemoveFile} />
 
-        {quickCheckError && <ErrorDisplay error={quickCheckError} />}
-
         <StepActions>
           <Button
             onClick={onValidate}
-            disabled={!isValidationAllowed || isValidating}
+            disabled={isValidating}
             size="lg"
             className="flex-1"
           >
