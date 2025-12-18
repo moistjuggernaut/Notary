@@ -4,7 +4,8 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { getStripe, getWebhookSecret } from './lib/.stripe.js'
 import { downloadImageFromGCP, getSignedUrlForImage, uploadImageToGCP } from './lib/.gcp-storage.js'
-import { triggerGCPRun } from './lib/.gcp-run.js'
+import { validatePhoto } from './lib/photo-validator.js'
+import { base64ToBuffer, bufferToBase64 } from './lib/image-preprocessor.js'
 import { handleStripeWebhookEvent } from './lib/fulfillment.js'
 import { authMiddleware } from './lib/auth-middleware.js'
 import { approveOrder, rejectOrder } from './lib/admin-actions.js'
@@ -35,20 +36,10 @@ const RemoveBackgroundSchema = z.object({
 
 // Health routes
 app.get('/api/health', async (c) => {
-  const gcpResponse = await triggerGCPRun({
-    eventType: 'health',
-  })
-
-  if (!gcpResponse.success) {
-    return c.json({
-      success: false,
-      error: gcpResponse.error || 'GCP processing failed'
-    }, 500)
-  }
-
   return c.json({
     success: true,
-    data: gcpResponse.data,
+    status: 'healthy',
+    version: '2.0.0',
   })
 })
 
@@ -57,42 +48,49 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
   try {
     const { image } = c.req.valid('json')
 
-    // 1. Create order and upload image
+    // 1. Create order and upload original image
     const order = await orderService.createOrder()
     await uploadImageToGCP(order.id, image, 'original.png')
     await orderService.updateOrderStatus(order.id, 'original_uploaded')
-
     await orderService.updateOrderStatus(order.id, 'validation_started')
 
-    // 2. Trigger GCP Run for full validation
-    const gcpResponse = await triggerGCPRun({
-      eventType: 'validate-photo',
-      orderId: order.id,
-    })
-    
-    if (!gcpResponse.success) {
+    // 2. Run photo validation directly (Cloud Vision API + preprocessing)
+    const imageBuffer = base64ToBuffer(image)
+    const validationResult = await validatePhoto(imageBuffer)
+
+    if (!validationResult.success) {
       await orderService.updateOrderStatus(order.id, 'validation_failed')
-      return c.json({ 
-        success: false, 
-        error: gcpResponse.error || 'GCP processing failed' 
-      }, 500)
+      return c.json({
+        success: false,
+        status: validationResult.status,
+        reason_code: validationResult.reason_code,
+        details: validationResult.details,
+        orderId: order.id,
+      }, 422)
+    }
+
+    // 3. Upload validated (processed) image
+    if (validationResult.processedImage) {
+      const processedBase64 = bufferToBase64(validationResult.processedImage)
+      await uploadImageToGCP(order.id, processedBase64, 'validated.png')
     }
 
     await orderService.updateOrderStatus(order.id, 'validation_completed')
-
     const imageUrl = await getSignedUrlForImage(order.id, 'validated.png')
-    
-    // 3. Return results to frontend - forward GCP response with added metadata
+
+    // 4. Return results to frontend
     return c.json({
-      ...gcpResponse.data,
+      success: true,
+      status: validationResult.status,
+      reason_code: validationResult.reason_code,
       orderId: order.id,
       imageUrl: imageUrl,
     })
   } catch (error) {
     console.error('Validation error:', error)
-    return c.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Validation failed' 
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Validation failed'
     }, 500)
   }
 })

@@ -63,7 +63,7 @@ export async function uploadImageToGCP(orderId: string, base64Image: string, fil
     
     await file.save(imageBuffer, {
       metadata: {
-        contentType: 'image/png',
+        contentType: 'image/jpeg',
       },
     });
     

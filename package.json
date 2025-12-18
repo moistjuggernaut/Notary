@@ -8,11 +8,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "deploy": "vercel --prod",
-    "gcp:build": "docker build -t baby-picture-validator-api ./gcp-api",
-    "gcp:test": "docker build -t baby-picture-validator-test -f gcp-api/Dockerfile.test ./gcp-api && docker run --rm baby-picture-validator-test",
-    "gcp:logs": "gcloud logs tail --service=baby-picture-validator-api",
     "stripe:listen": "stripe listen --forward-to localhost:3000/api/stripe/webhook",
-    "test:architecture": "node scripts/test-new-architecture.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -27,13 +23,12 @@
     "dev:down": "docker-compose down",
     "dev:logs": "docker-compose logs -f",
     "dev:status": "docker-compose ps",
-    "dev:full": "docker-compose up -d && echo 'Starting Stripe webhook listener...' && npm run stripe:listen",
-    "gcp:dev:up": "docker-compose up -d",
-    "gcp:dev:down": "docker-compose down",
-    "gcp:dev:logs": "docker-compose logs -f api gcs-emulator"
+    "dev:full": "docker-compose up -d && echo 'Starting Stripe webhook listener...' && npm run stripe:listen"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.10.0",
+    "@google-cloud/vision": "^4.3.2",
+    "sharp": "^0.33.5",
     "@hono/vite-dev-server": "^0.20.1",
     "@hono/zod-validator": "^0.7.2",
     "@hookform/resolvers": "^5.0.1",
