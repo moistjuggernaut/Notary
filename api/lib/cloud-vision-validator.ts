@@ -88,10 +88,7 @@ function validateEyesVisible(face: IFaceAnnotation): ValidationReasonType | null
   const leftBottom = landmarks.get(LandmarkType.LEFT_EYE_BOTTOM_BOUNDARY)
   const rightTop = landmarks.get(LandmarkType.RIGHT_EYE_TOP_BOUNDARY)
   const rightBottom = landmarks.get(LandmarkType.RIGHT_EYE_BOTTOM_BOUNDARY)
-  console.log('leftTop', leftTop)
-  console.log('leftBottom', leftBottom)
-  console.log('rightTop', rightTop)
-  console.log('rightBottom', rightBottom)
+
 
   // Check if we have boundary landmarks for at least one eye
   if (!(leftTop && leftBottom) && !(rightTop && rightBottom)) {

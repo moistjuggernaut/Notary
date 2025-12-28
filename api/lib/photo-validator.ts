@@ -18,6 +18,7 @@ import {
   extractFaceDetails,
 } from './cloud-vision-validator.js'
 import { processImage, base64ToBuffer } from './image-preprocessor.js'
+import sharp from 'sharp';
 
 /**
  * Main entry point for photo validation.
@@ -39,9 +40,12 @@ export async function validatePhoto(imageBuffer: Buffer): Promise<ValidationResp
   }
 
   try {
-    // 1. Initial Validation with Cloud Vision API
+    const normalizedBuffer = await sharp(imageBuffer)
+    .rotate() // Standardizes orientation based on EXIF
+    .toBuffer();  
+      // 1. Initial Validation with Cloud Vision API
     console.log('Starting initial validation...')
-    const initialResult = await validateInitial(imageBuffer)
+    const initialResult = await validateInitial(normalizedBuffer)
 
     if (!initialResult.success) {
       console.log(`Initial validation failed: ${initialResult.reason}`)
@@ -82,7 +86,7 @@ export async function validatePhoto(imageBuffer: Buffer): Promise<ValidationResp
 
     // 2. Image Preprocessing (crop and resize)
     console.log('Processing image...')
-    const processingResult = await processImage(imageBuffer, extractResult.faceDetails)
+    const processingResult = await processImage(normalizedBuffer, extractResult.faceDetails)
 
     if (!processingResult.success || !processingResult.processedImage || !processingResult.faceData) {
       console.log(`Image preprocessing failed: ${processingResult.error}`)
@@ -151,4 +155,5 @@ export async function validatePhotoBase64(base64Image: string): Promise<Validati
   const imageBuffer = base64ToBuffer(base64Image)
   return validatePhoto(imageBuffer)
 }
+
 
