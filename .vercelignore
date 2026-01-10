@@ -1,0 +1,32 @@
+# Exclude GCP deployment files
+gcp-api/
+Dockerfile
+.gcloudignore
+
+# Exclude Python virtual environments
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Exclude test files and directories
+*/tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Exclude development files
+.env
+.env.local
+.env.*.local
+
+# Exclude system files
+.DS_Store
+Thumbs.db
+
+# Exclude editor files
+.vscode/*
+!.vscode/extensions.json
+.idea 
