@@ -6,7 +6,6 @@
 import { ImageAnnotatorClient, protos } from '@google-cloud/vision'
 import { getVercelOidcToken } from '@vercel/functions/oidc'
 import { ExternalAccountClient } from 'google-auth-library'
-import sharp from 'sharp'
 import {
   ICAOConfig,
   ValidationThresholds,
@@ -98,7 +97,6 @@ function validateEyesVisible(face: IFaceAnnotation): ValidationReasonType | null
   // Check left eye opening
   if (leftTop && leftBottom && leftTop.position?.y && leftBottom.position?.y) {
     const leftOpening = Math.abs(leftTop.position.y - leftBottom.position.y)
-    console.log('Left eye opening:', leftOpening, 'px (threshold:', ValidationThresholds.minEyeOpeningPixels, ')')
     if (leftOpening < ValidationThresholds.minEyeOpeningPixels) {
       return ValidationReason.EYES_CL
     }
@@ -107,7 +105,6 @@ function validateEyesVisible(face: IFaceAnnotation): ValidationReasonType | null
   // Check right eye opening
   if (rightTop && rightBottom && rightTop.position?.y && rightBottom.position?.y) {
     const rightOpening = Math.abs(rightTop.position.y - rightBottom.position.y)
-    console.log('Right eye opening:', rightOpening, 'px (threshold:', ValidationThresholds.minEyeOpeningPixels, ')')
     if (rightOpening < ValidationThresholds.minEyeOpeningPixels) {
       return ValidationReason.EYES_CL
     }
@@ -288,7 +285,6 @@ export async function validateInitial(imageBuffer: Buffer): Promise<InitialValid
     }
 
     const faceAnnotations = result.faceAnnotations || []
-    console.log('faceAnnotations', faceAnnotations)
 
     if (faceAnnotations.length === 0) {
       return {

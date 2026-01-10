@@ -9,7 +9,6 @@ import {
   ValidationReasonDescriptions,
   ICAOConfig,
   type ValidationResponse,
-  type ValidationReasonType,
 } from './validation-constants.js'
 import {
   validateInitial,
