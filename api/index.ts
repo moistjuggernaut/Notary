@@ -135,8 +135,8 @@ app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSche
         },
         body: JSON.stringify({ image_url: imageUrl })
       })
-      console.log('photoroom response:', response);
     }
+    console.log('photoroom response:', response);
 
     if (!response.ok) {
       let errorMessage = `Photoroom request failed: ${response.status} ${response.statusText}`
