@@ -1,7 +1,6 @@
 /**
  * Image preprocessing module for passport photo validation.
- * Handles cropping and resizing using Sharp.
- * Ported from gcp-api/src/lib/image_preprocessor.py
+ * Handles cropping and resizing using Sharp for ICAO-compliant output.
  */
 
 import sharp from 'sharp'
@@ -194,5 +193,3 @@ export function base64ToBuffer(base64Image: string): Buffer {
 export function bufferToBase64(buffer: Buffer): string {
   return buffer.toString('base64')
 }
-
-

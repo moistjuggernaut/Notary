@@ -1,7 +1,6 @@
 /**
  * Main photo validation orchestrator.
  * Combines Cloud Vision validation with image preprocessing.
- * Ported from gcp-api/src/compliance_checker.py
  */
 
 import {
@@ -17,8 +16,8 @@ import {
   validateFinalGeometry,
   extractFaceDetails,
 } from './cloud-vision-validator.js'
-import { processImage, base64ToBuffer } from './image-preprocessor.js'
-import sharp from 'sharp';
+import { processImage } from './image-preprocessor.js'
+import sharp from 'sharp'
 
 /**
  * Main entry point for photo validation.
@@ -40,10 +39,12 @@ export async function validatePhoto(imageBuffer: Buffer): Promise<ValidationResp
   }
 
   try {
+    // Normalize EXIF orientation
     const normalizedBuffer = await sharp(imageBuffer)
-    .rotate() // Standardizes orientation based on EXIF
-    .toBuffer();  
-      // 1. Initial Validation with Cloud Vision API
+      .rotate()
+      .toBuffer()
+
+    // 1. Initial Validation with Cloud Vision API
     console.log('Starting initial validation...')
     const initialResult = await validateInitial(normalizedBuffer)
 
@@ -152,8 +153,7 @@ export async function validatePhoto(imageBuffer: Buffer): Promise<ValidationResp
  * @returns ValidationResponse with success status and processed image if valid
  */
 export async function validatePhotoBase64(base64Image: string): Promise<ValidationResponse> {
-  const imageBuffer = base64ToBuffer(base64Image)
+  const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '')
+  const imageBuffer = Buffer.from(base64Data, 'base64')
   return validatePhoto(imageBuffer)
 }
-
-

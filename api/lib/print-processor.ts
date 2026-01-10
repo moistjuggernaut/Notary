@@ -1,7 +1,6 @@
 /**
  * Print processor module for passport photo printing.
  * Arranges processed photos for printing on standard 10×15 cm paper.
- * Ported from gcp-api/src/lib/print_processor.py
  */
 
 import sharp from 'sharp'
@@ -186,5 +185,3 @@ export async function createPrintLayout(photoBuffer: Buffer): Promise<PrintLayou
     }
   }
 }
-
-

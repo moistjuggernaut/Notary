@@ -60,6 +60,7 @@ htmlcov/
 .cache/
 
 .photo-validator-dev-key.json
-gcp-api/models/
 .gcloud-credentials.json
-gcp-api/models/u2net_human_seg.onnx
+
+# Debug output files
+cloud-vision-response-*.json

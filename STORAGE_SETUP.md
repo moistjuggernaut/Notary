@@ -8,18 +8,48 @@ This guide explains how to set up Google Cloud Storage for storing validated pas
 2. **GCP CLI**: Install and authenticate with `gcloud`
 3. **Storage Admin Role**: Your service account needs storage permissions
 
-## Local Development Authentication
+## Production Setup (Vercel)
 
-For local development, you can connect to a real Google Cloud Storage bucket in a different GCP project. This is done using a Service Account
+For production, the application uses Workload Identity Federation to authenticate with GCP without service account keys.
 
-### **1. Create a Service Account**
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for full production setup instructions.
+
+## Local Development
+
+For local development, you have two options:
+
+### Option 1: Use the GCS Emulator (Recommended)
+
+The `docker-compose.yml` includes a fake GCS server for local development:
 
 ```bash
-# Set your target project ID
-export TARGET_PROJECT_ID="your-target-project-id"
+# Start the emulator
+npm run gcs:dev:up
+
+# Check status
+npm run gcs:dev:status
+
+# View logs
+npm run gcs:dev:logs
+```
+
+Set in your `.env.local`:
+```bash
+USE_LOCAL_STORAGE=true
+GCP_STORAGE_BUCKET=local-bucket
+```
+
+### Option 2: Use Real GCS with Service Account
+
+If you need to test against real GCS:
+
+#### 1. Create a Service Account
+
+```bash
+export TARGET_PROJECT_ID="your-project-id"
 gcloud config set project $TARGET_PROJECT_ID
 
-# Create a service account for local development
+# Create service account
 gcloud iam service-accounts create photo-validator-dev \
     --display-name="Photo Validator Local Development"
 
@@ -29,84 +59,75 @@ gcloud projects add-iam-policy-binding $TARGET_PROJECT_ID \
     --role="roles/storage.objectAdmin"
 
 # Create and download the key
-gcloud iam service-accounts keys create ~/photo-validator-dev-key.json \
+gcloud iam service-accounts keys create .gcloud-credentials.json \
     --iam-account=photo-validator-dev@$TARGET_PROJECT_ID.iam.gserviceaccount.com
 ```
 
-### **2. Create a Storage Bucket**
+#### 2. Set Environment Variables
 
 ```bash
-# Create a bucket for development
-export DEV_BUCKET_NAME="photo-validator-dev-$(date +%s)"
-gcloud storage buckets create "gs://${DEV_BUCKET_NAME}" \
-    --location=europe-west1 \
-    --uniform-bucket-level-access \
-    --public-access-prevention
+export GOOGLE_APPLICATION_CREDENTIALS=".gcloud-credentials.json"
+# Or add to .env.local (without USE_LOCAL_STORAGE=true)
 ```
 
-### **3. Run with Service Account**
+## Storage Structure
+
+Images are organized by order ID:
+
+```
+bucket/
+├── <order-id>/
+│   ├── original.png           # Uploaded image
+│   ├── validated.png          # Processed/cropped image
+│   └── validated_bg_removed.png  # Background removed (optional)
+```
+
+## Signed URLs
+
+The application uses signed URLs for secure access:
+
+- **Upload**: Signed URLs are generated after upload
+- **Expiration**: 15 minutes (configurable in `.gcp-storage.ts`)
+- **Purpose**: Allow Familink and Photoroom to access images temporarily
+
+## Lifecycle Management
+
+For production, set up automatic deletion of old images:
 
 ```bash
-# Update the script with your actual values
-npm run gcp:run:with-service-account
-```
-
-Or manually:
-
-```bash
-docker run -p 8080:8080 \
-  -e GCP_API_URL='http://localhost:8080' \
-  -e GCS_BUCKET_NAME="${DEV_BUCKET_NAME}" \
-  -e GCP_PROJECT_ID="${TARGET_PROJECT_ID}" \
-  -e GOOGLE_APPLICATION_CREDENTIALS='/app/service-account-key.json' \
-  -v ~/photo-validator-dev-key.json:/app/service-account-key.json:ro \
-  --rm baby-picture-validator-api
-```
-
-### **Environment Variables for Local Development**
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GCS_BUCKET_NAME` | Your storage bucket name | `photo-validator-dev-1234567890` |
-| `GCP_PROJECT_ID` | Your GCP project ID | `my-dev-project-123` |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key | `/app/service-account-key.json` |
-
-## Security Considerations
-
-### 1. Bucket Access Control
-
-By default, the bucket is private.
-
-### 2. Signed URLs
-
-For secure access without making the bucket public, use signed URLs:
-
-```python
-# Generate a signed URL for temporary access
-signed_url = storage_client.get_signed_url(blob_name, expiration=3600)
-```
-
-### 3. Lifecycle Management
-
-Set up automatic deletion of old images:
-
-```bash
-# Create lifecycle policy
 cat > lifecycle.json << EOF
 {
   "rule": [
     {
       "action": {"type": "Delete"},
       "condition": {
-        "age": 30,
-        "matchesPrefix": ["original-photos/", "validated-photos/"]
+        "age": 30
       }
     }
   ]
 }
 EOF
 
-# Apply lifecycle policy
 gcloud storage buckets update gs://$BUCKET_NAME \
     --lifecycle-file=lifecycle.json
+```
+
+## CORS Configuration
+
+For development and production, configure CORS:
+
+```json
+[
+  {
+    "origin": ["https://your-app.vercel.app", "http://localhost:3000"],
+    "method": ["GET", "PUT", "POST"],
+    "responseHeader": ["Content-Type", "Content-Length"],
+    "maxAgeSeconds": 3600
+  }
+]
+```
+
+Apply with:
+```bash
+gcloud storage buckets update gs://$BUCKET_NAME --cors-file=cors.json
 ```

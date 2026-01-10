@@ -1,130 +1,201 @@
 # Deployment Guide
 
-This guide covers deploying the Photo Validator application using the hybrid Vercel + GCP architecture.
+This guide covers deploying the Photo Validator application using Vercel for both frontend and backend.
 
 ## Architecture Overview
 
 The application consists of:
 - **Frontend**: React app deployed on Vercel
-- **Vercel API**: Hono.js API that orchestrates image processing
-- **GCP Cloud Run**: Python Flask service for ML processing
-- **GCP Storage**: Temporary image storage
+- **Backend API**: Hono.js API deployed on Vercel Serverless Functions
+- **Database**: Supabase PostgreSQL
+- **Storage**: Google Cloud Storage
+- **Vision AI**: Google Cloud Vision API
 
 ## Prerequisites
 
 1. **Vercel Account**: For frontend and API deployment
-2. **Google Cloud Platform Account**: For Cloud Run and Storage
-3. **Stripe Account**: For payment processing
-4. **gcloud CLI**: [Installation Guide](https://cloud.google.com/sdk/docs/install)
-5. **`u2net_human_seg.onnx` model file**: Download the model from [a known source] and place it in `gcp-api/models/`.
+2. **Google Cloud Platform Account**: For Cloud Vision API and Cloud Storage
+3. **Supabase Account**: For PostgreSQL database
+4. **Stripe Account**: For payment processing
+5. **Familink Account**: For print fulfillment
 
-## Step 1: GCP Deployment (Cloud Run)
+## Step 1: GCP Setup
 
-The GCP infrastructure (Cloud Run, Storage, IAM) is managed by the `scripts/deploy-gcp.sh` script. This script automates the setup and deployment process.
+### 1.1 Create a GCP Project
 
-### 1.1 Configure the STAGE
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project or select an existing one
+3. Note your Project ID and Project Number
 
-Before running the script, you must set the `STAGE` environment variable to either `dev` or `prod`. This determines the GCP project, service names, and other resources.
-
-```bash
-export STAGE=dev # or 'prod'
-```
-
-### 1.2 Run the Deployment Script
-
-From the project root, execute the script:
+### 1.2 Enable Required APIs
 
 ```bash
-./scripts/deploy-gcp.sh
+gcloud services enable vision.googleapis.com
+gcloud services enable storage.googleapis.com
+gcloud services enable iamcredentials.googleapis.com
 ```
 
-The script will:
-1.  **Set the GCP Project**: Configures `gcloud` to use the correct project (`babypicturevalidator-dev` or `babypicturevalidator-prod`).
-2.  **Enable GCP APIs**: Enables Cloud Build, Cloud Run, Artifact Registry, and Storage APIs.
-3.  **Create Artifact Registry**: Sets up a Docker image repository.
-4.  **Create Storage Bucket**: Creates a GCS bucket for order pictures with correct CORS settings.
-5.  **Build & Submit Docker Image**: Builds the `gcp-api` service using Cloud Build and pushes it to the Artifact Registry.
-6.  **Configure IAM**: Creates a dedicated service account with the necessary permissions for Cloud Storage and Cloud Vision.
-7.  **Deploy to Cloud Run**: Deploys the service with production-ready settings for memory, CPU, and concurrency.
+### 1.3 Create a Storage Bucket
 
-After the script finishes, it will output the **Backend Service URL**. You will need this for the Vercel configuration.
+```bash
+export BUCKET_NAME="your-bucket-name"
+gcloud storage buckets create "gs://${BUCKET_NAME}" \
+    --location=europe-west1 \
+    --uniform-bucket-level-access
+```
 
-## Step 2: Vercel Setup
+### 1.4 Set up Workload Identity Federation for Vercel
 
-### 2.1 Deploy to Vercel
+This allows Vercel functions to authenticate with GCP without service account keys.
 
-#### 2.1.1 Deploy to Vercel (automatic)
+```bash
+# Create a Workload Identity Pool
+gcloud iam workload-identity-pools create vercel \
+    --location="global" \
+    --display-name="Vercel"
 
-By pusing to specific branches, the frontend and Vercel API are deployed to specific Vercel environments.
+# Create a Provider for the pool
+gcloud iam workload-identity-pools providers create-oidc vercel \
+    --location="global" \
+    --workload-identity-pool="vercel" \
+    --issuer-uri="https://oidc.vercel.com" \
+    --attribute-mapping="google.subject=assertion.sub"
 
-- main -> production
-- any -> preview
+# Create a service account for Vercel
+gcloud iam service-accounts create vercel \
+    --display-name="Vercel Service Account"
 
-We use a specific preview branch as our last step before merging into main.
-This version is deployed to Vercel just like 'any' branch, but can be accessed through this link:
+# Grant necessary permissions
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member="serviceAccount:vercel@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/storage.objectAdmin"
 
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member="serviceAccount:vercel@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/visionai.user"
+
+# Allow the Workload Identity Pool to impersonate the service account
+gcloud iam service-accounts add-iam-policy-binding \
+    vercel@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+    --member="principalSet://iam.googleapis.com/projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/vercel/*" \
+    --role="roles/iam.workloadIdentityUser"
+```
+
+## Step 2: Supabase Setup
+
+1. Create a new project at [Supabase](https://supabase.com)
+2. Get the connection string from Settings → Database → Connection string (URI)
+3. Note the connection URL for environment variables
+
+## Step 3: Vercel Deployment
+
+### 3.1 Deploy to Vercel
+
+#### Automatic Deployment (Recommended)
+
+Push to specific branches for automatic deployment:
+- `main` → Production
+- Any other branch → Preview
+
+Preview branch access:
+```
 https://passport-validator-git-preview-robert-kucheras-projects.vercel.app
+```
 
-#### 2.1.2 Deploy to Vercel (manual)
+#### Manual Deployment
 
 ```bash
 # Install Vercel CLI
 npm i -g vercel
 
-# Deploy
+# Deploy to production
 vercel --prod
 ```
 
-### 2.2 Configure Environment Variables
+### 3.2 Configure Environment Variables
 
-In your Vercel project settings, add the following environment variables. Use the **Backend Service URL** from the previous step for `GCP_API_URL`.
+In your Vercel project settings, add the following environment variables:
 
-| Variable Name         | Description                                                                 | Example (dev)                                                               |
-| --------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `GCP_API_URL`         | The URL of the deployed Cloud Run service.                                  | `https://baby-picture-validator-api-dev-....run.app`                        |
-| `GCP_STORAGE_BUCKET`  | The name of the storage bucket for saving the pictures.                     | `baby-picture-validator-api-dev-order-pictures`.                            |
-| `GCP_PROJECT_ID`      | The project id chosen in Google Cloud Console                               | `babypicturevalidator-dev`                                                  |
-| `GCP_PROJECT_NUMBER`  | The public URL of your Vercel deployment.                                   | `xxxxxxxxxxxx`                                                              |
-| `GCP_SERVICE_ACCOUNT_EMAIL` | The service account email used by the Vercel API to access services.  | `vercel@babypicturevalidator-dev.iam.gserviceaccount.com`                   |
-| `GCP_WORKLOAD_IDENTITY_POOL_ID` | Identity pool ID.                                                 | `vercel`                                                                    |
-| `GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID` | Identity pool provider ID.                               | `vercel`                                                                    |
-| `ADMIN_TOKEN`         | A token for accessing the admin pages.                                      | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`                                      |
-| `APP_PUBLIC_BASE_URL` | The public URL of your Vercel deployment.                                   | `https://passport-validator-git-preview-robert-kucheras-projects.vercel.app`|
-| `STRIPE_SECRET_KEY`   | Your Stripe secret key.                                                     | `sk_test_...`                                                               |
-| `STRIPE_PRICE_ID`     | The Stripe Price ID for your product.                                       | `price_...`                                                                 |
-| `STRIPE_WEBHOOK_SECRET` | The secret for verifying Stripe webhooks.                                 | `whsec_...`                                                                 |
-| `SUPABASE_URL`        | The supabase connection url.                                                | `postgresql://postgres.xx:xx@xx.supabase.com:5432/postgres`                 |
-| `FAMILINK_API_KEY`    | The familink API key.                                                       | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`                                  |
+| Variable Name | Description | Example |
+|---------------|-------------|---------|
+| `GCP_PROJECT_ID` | Your GCP project ID | `your-project-id` |
+| `GCP_PROJECT_NUMBER` | Your GCP project number | `123456789012` |
+| `GCP_SERVICE_ACCOUNT_EMAIL` | Service account email | `vercel@your-project.iam.gserviceaccount.com` |
+| `GCP_WORKLOAD_IDENTITY_POOL_ID` | Workload Identity Pool ID | `vercel` |
+| `GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID` | Provider ID | `vercel` |
+| `GCP_STORAGE_BUCKET` | Storage bucket name | `your-bucket-name` |
+| `SUPABASE_URL` | Supabase connection URL | `postgresql://postgres:...` |
+| `STRIPE_SECRET_KEY` | Stripe secret key | `sk_live_...` |
+| `STRIPE_PRICE_ID` | Stripe price ID | `price_...` |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | `whsec_...` |
+| `APP_PUBLIC_BASE_URL` | Your app's public URL | `https://your-app.vercel.app` |
+| `ADMIN_TOKEN` | Admin authentication token | `your-secure-token` |
+| `FAMILINK_API_KEY` | Familink API key | `your-familink-key` |
+| `PHOTOROOM_API_KEY` | Photoroom API key (optional) | `your-photoroom-key` |
 
-## Step 3: Stripe Setup
+## Step 4: Stripe Setup
 
-### 3.1 Create Stripe Products
+### 4.1 Create Stripe Products
 
-1. Go to Stripe Dashboard > Products
+1. Go to Stripe Dashboard → Products
 2. Create a product for photo validation
 3. Note the Price ID
 
-### 3.2 Configure Webhooks
+### 4.2 Configure Webhooks
 
-1. Go to Stripe Dashboard > Webhooks
+1. Go to Stripe Dashboard → Webhooks
 2. Add endpoint: `https://your-app.vercel.app/api/stripe/webhook`
-3. Select events: `checkout.session.completed`
+3. Select events:
+   - `checkout.session.completed`
+   - `checkout.session.async_payment_succeeded`
 4. Note the webhook secret
 
-## Step 4: Testing
+## Step 5: Testing
 
-### 4.1 Test GCP Cloud Run
-
-Use the health check endpoint from the deployment output to verify the service is running.
+### 5.1 Test API Health
 
 ```bash
-# Test health endpoint
-curl https://baby-picture-validator-api-[...].run.app/health
+curl https://your-app.vercel.app/api/health
 ```
 
-### 4.2 Test Vercel API
+Expected response:
+```json
+{
+  "success": true,
+  "status": "healthy",
+  "version": "2.0.0"
+}
+```
 
+### 5.2 Test Stripe Webhooks
+
+Use Stripe CLI for local testing:
 ```bash
-# Test health endpoint
-curl https://your-app.vercel.app/api/health
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Cloud Vision API errors**: Ensure the service account has `roles/visionai.user` permission
+2. **Storage access denied**: Check bucket permissions and CORS configuration
+3. **Database connection errors**: Verify Supabase connection string includes SSL mode
+
+### CORS Configuration for Storage Bucket
+
+```json
+[
+  {
+    "origin": ["https://your-app.vercel.app"],
+    "method": ["GET", "PUT", "POST"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]
+```
+
+Apply with:
+```bash
+gcloud storage buckets update gs://your-bucket --cors-file=cors.json
 ```

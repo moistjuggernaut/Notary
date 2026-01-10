@@ -135,27 +135,5 @@ export class OrderService {
   }
 }
 
-// Export singleton instance with lazy initialization
-let _orderService: OrderService | null = null;
-
-export function getOrderService(): OrderService {
-  if (!_orderService) {
-    _orderService = new OrderService();
-  }
-  return _orderService;
-}
-
-// For backward compatibility, export the lazy getter
-export const orderService = {
-  get createOrder() { return getOrderService().createOrder.bind(getOrderService()); },
-  get getOrderById() { return getOrderService().getOrderById.bind(getOrderService()); },
-  get getOrderByStripeSessionId() { return getOrderService().getOrderByStripeSessionId.bind(getOrderService()); },
-  get getOrderByStripePaymentIntentId() { return getOrderService().getOrderByStripePaymentIntentId.bind(getOrderService()); },
-  get updateOrderStatus() { return getOrderService().updateOrderStatus.bind(getOrderService()); },
-  get updateOrderFamilinkId() { return getOrderService().updateOrderFamilinkId.bind(getOrderService()); },
-  get updateOrderStripeSessionId() { return getOrderService().updateOrderStripeSessionId.bind(getOrderService()); },
-  get updateOrderStripePaymentIntentId() { return getOrderService().updateOrderStripePaymentIntentId.bind(getOrderService()); },
-  get getOrdersByStatus() { return getOrderService().getOrdersByStatus.bind(getOrderService()); },
-  get getAllOrders() { return getOrderService().getAllOrders.bind(getOrderService()); },
-  get deleteOrder() { return getOrderService().deleteOrder.bind(getOrderService()); },
-};
+// Export singleton instance
+export const orderService = new OrderService();

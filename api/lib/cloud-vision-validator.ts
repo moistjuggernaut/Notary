@@ -1,6 +1,6 @@
 /**
  * Google Cloud Vision API-based photo validation module.
- * Ported from gcp-api/src/lib/cloud_vision_validator.py
+ * Handles face detection, pose analysis, and ICAO compliance checks.
  */
 
 import { ImageAnnotatorClient, protos } from '@google-cloud/vision'
@@ -278,17 +278,6 @@ export async function validateInitial(imageBuffer: Buffer): Promise<InitialValid
         { type: 'IMAGE_PROPERTIES' },
       ],
     })
-
-    // Output raw Cloud Vision API response to JSON file for debugging
-    try {
-      const fs = await import('fs')
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const filename = `cloud-vision-response-${timestamp}.json`
-      await fs.promises.writeFile(filename, JSON.stringify(result, null, 2))
-      console.log(`Raw Cloud Vision API response saved to: ${filename}`)
-    } catch (error) {
-      console.warn('Failed to save Cloud Vision API response:', error)
-    }
 
     if (result.error?.message) {
       return {

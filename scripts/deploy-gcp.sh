@@ -1,36 +1,38 @@
 #!/bin/bash
-# GCP Deployment Script for Baby Picture Validator API
-# This script builds and deploys the Flask API to GCP Cloud Run.
+# GCP Infrastructure Setup Script for Photo Validator
+# This script sets up the GCP resources needed for the Vercel-deployed application.
 # It should be run from the root of the project.
 
 # Make sure to set the STAGE to one of the following: dev, prod
+# export STAGE=dev
 
 set -e
+
 # --- Configuration ---
 PROJECT_ID="babypicturevalidator-${STAGE}"
 SERVICE_NAME="baby-picture-validator-api-${STAGE}"
 REGION="europe-west1"
-ARTIFACT_REGISTRY_REPO="${SERVICE_NAME}-repo"
-IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${SERVICE_NAME}"
-GCP_API_DIR="gcp-api"
 
 # Order image storage configuration
 STORAGE_BUCKET_NAME="${SERVICE_NAME}-order-pictures"
 STORAGE_LOCATION="europe-west1"
 
-echo "🚀 Starting GCP deployment for service: ${SERVICE_NAME} in ${REGION}"
+# Workload Identity Pool configuration (for Vercel OIDC)
+WORKLOAD_IDENTITY_POOL="vercel"
+WORKLOAD_IDENTITY_PROVIDER="vercel"
+
+echo "🚀 Setting up GCP infrastructure for: ${SERVICE_NAME}"
 
 # --- Pre-flight Checks ---
-# Check if gcloud CLI is installed
 if ! command -v gcloud &> /dev/null; then
-    echo "❌ Error: Google Cloud CLI ('gcloud') not found. Please follow installation instructions in DEPLOYMENT.md."
+    echo "❌ Error: Google Cloud CLI ('gcloud') not found. Please install it first."
     exit 1
 fi
 
-# Check if we are in the correct directory
-if [ ! -d "$GCP_API_DIR" ]; then
-    echo "❌ Error: Cannot find the '${GCP_API_DIR}' directory."
-    echo "This script must be run from the project root."
+if [ -z "$STAGE" ]; then
+    echo "❌ Error: STAGE environment variable is not set."
+    echo "Please set it to 'dev' or 'prod' before running this script:"
+    echo "  export STAGE=dev"
     exit 1
 fi
 
@@ -39,29 +41,21 @@ echo "📦 Setting GCP project to ${PROJECT_ID}..."
 gcloud config set project $PROJECT_ID
 
 echo "🔧 Enabling required GCP services..."
-gcloud services enable cloudbuild.googleapis.com run.googleapis.com artifactregistry.googleapis.com storage.googleapis.com storage-component.googleapis.com vision.googleapis.com
+gcloud services enable \
+    storage.googleapis.com \
+    storage-component.googleapis.com \
+    vision.googleapis.com \
+    iamcredentials.googleapis.com \
+    sts.googleapis.com
 
-echo "🖼️  Creating Artifact Registry repository (if it doesn't exist)..."
-if gcloud artifacts repositories describe "${ARTIFACT_REGISTRY_REPO}" --location="${REGION}" >/dev/null 2>&1; then
-    echo "✅ Repository '${ARTIFACT_REGISTRY_REPO}' already exists"
-else
-    echo "🖼️  Creating Artifact Registry repository..."
-    gcloud artifacts repositories create "${ARTIFACT_REGISTRY_REPO}" \
-        --repository-format=docker \
-        --location="${REGION}" \
-        --description="Docker repository for ${SERVICE_NAME}"
-    echo "✅ Repository '${ARTIFACT_REGISTRY_REPO}' created successfully"
-fi
-
-# --- Google Cloud Storage Setup (Orders) ---
-echo "🗄️  Setting up Google Cloud Storage for order assets..."
+# --- Google Cloud Storage Setup ---
+echo "🗄️  Setting up Google Cloud Storage..."
 
 # Create storage bucket (if it doesn't exist)
-echo "📦 Creating storage bucket (if it doesn't exist): ${STORAGE_BUCKET_NAME}"
+echo "📦 Creating storage bucket: ${STORAGE_BUCKET_NAME}"
 if gcloud storage buckets describe "gs://${STORAGE_BUCKET_NAME}" >/dev/null 2>&1; then
     echo "✅ Bucket '${STORAGE_BUCKET_NAME}' already exists"
 else
-    echo "🪣 Creating storage bucket..."
     gcloud storage buckets create "gs://${STORAGE_BUCKET_NAME}" \
         --location="${STORAGE_LOCATION}" \
         --uniform-bucket-level-access \
@@ -70,120 +64,93 @@ else
     echo "✅ Bucket '${STORAGE_BUCKET_NAME}' created successfully"
 fi
 
-# Configure CORS for the bucket to allow frontend access
-echo "🌐 Configuring CORS settings for frontend access..."
+# Configure CORS for the bucket
+echo "🌐 Configuring CORS settings..."
 gcloud storage buckets update "gs://${STORAGE_BUCKET_NAME}" \
     --cors-file="scripts/bucket-cors-${STAGE}.json"
 
-# --- Build Docker Image ---
-echo "🏗️ Building Docker image with Cloud Build..."
-# We submit the gcp-api directory to Cloud Build
-gcloud builds submit "$GCP_API_DIR" --tag "$IMAGE_NAME"
+# --- Workload Identity Federation Setup (for Vercel) ---
+echo "🔐 Setting up Workload Identity Federation for Vercel..."
 
-# --- Configure IAM Permissions ---
-echo "🔐 Configuring IAM permissions for storage access..."
-
-# Create a dedicated service account for this specific service
-SERVICE_ACCOUNT_NAME="validator-cloud-run-sa-${STAGE}"
-SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-
-echo "👤 Creating dedicated service account (if it doesn't exist): ${SERVICE_ACCOUNT_NAME}"
-if gcloud iam service-accounts describe "${SERVICE_ACCOUNT_EMAIL}" >/dev/null 2>&1; then
-    echo "✅ Service account '${SERVICE_ACCOUNT_NAME}' already exists"
+# Create Workload Identity Pool
+echo "🏊 Creating Workload Identity Pool: ${WORKLOAD_IDENTITY_POOL}"
+if gcloud iam workload-identity-pools describe "${WORKLOAD_IDENTITY_POOL}" \
+    --location="global" >/dev/null 2>&1; then
+    echo "✅ Workload Identity Pool '${WORKLOAD_IDENTITY_POOL}' already exists"
 else
-    gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
-        --display-name="Service account for ${SERVICE_NAME}" \
-        --description="Dedicated service account for ${SERVICE_NAME} with minimal storage permissions"
-    echo "✅ Service account '${SERVICE_ACCOUNT_NAME}' created successfully"
-    echo "⏳ Waiting for service account propagation..."
-    sleep 10
+    gcloud iam workload-identity-pools create "${WORKLOAD_IDENTITY_POOL}" \
+        --location="global" \
+        --display-name="Vercel OIDC Pool"
+    echo "✅ Workload Identity Pool '${WORKLOAD_IDENTITY_POOL}' created"
 fi
 
-# Grant minimal storage permissions - only for the specific bucket
-echo "🔑 Granting minimal storage permissions for bucket: ${STORAGE_BUCKET_NAME}"
-# roles/storage.objectViewer
-if gcloud storage buckets get-iam-policy "gs://${STORAGE_BUCKET_NAME}" --format=json | grep -q "\"roles/storage.objectViewer\"" && \
-   gcloud storage buckets get-iam-policy "gs://${STORAGE_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
-    echo "✅ Viewer binding already exists for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
+# Create Workload Identity Provider
+echo "🔗 Creating Workload Identity Provider: ${WORKLOAD_IDENTITY_PROVIDER}"
+if gcloud iam workload-identity-pools providers describe "${WORKLOAD_IDENTITY_PROVIDER}" \
+    --location="global" \
+    --workload-identity-pool="${WORKLOAD_IDENTITY_POOL}" >/dev/null 2>&1; then
+    echo "✅ Provider '${WORKLOAD_IDENTITY_PROVIDER}' already exists"
 else
-    gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET_NAME}" \
-        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-        --role="roles/storage.objectViewer"
-    echo "✅ Added viewer binding for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
+    gcloud iam workload-identity-pools providers create-oidc "${WORKLOAD_IDENTITY_PROVIDER}" \
+        --location="global" \
+        --workload-identity-pool="${WORKLOAD_IDENTITY_POOL}" \
+        --issuer-uri="https://oidc.vercel.com" \
+        --attribute-mapping="google.subject=assertion.sub"
+    echo "✅ Provider '${WORKLOAD_IDENTITY_PROVIDER}' created"
 fi
 
-# roles/storage.objectCreator
-if gcloud storage buckets get-iam-policy "gs://${STORAGE_BUCKET_NAME}" --format=json | grep -q "\"roles/storage.objectCreator\"" && \
-   gcloud storage buckets get-iam-policy "gs://${STORAGE_BUCKET_NAME}" --format=json | grep -q "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"; then
-    echo "✅ Creator binding already exists for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
+# --- Service Account Setup ---
+echo "👤 Setting up service account for Vercel..."
+VERCEL_SA_NAME="vercel"
+VERCEL_SA_EMAIL="${VERCEL_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+
+if gcloud iam service-accounts describe "${VERCEL_SA_EMAIL}" >/dev/null 2>&1; then
+    echo "✅ Service account '${VERCEL_SA_NAME}' already exists"
 else
-    gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET_NAME}" \
-        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-        --role="roles/storage.objectCreator"
-    echo "✅ Added creator binding for ${SERVICE_ACCOUNT_EMAIL} on bucket ${STORAGE_BUCKET_NAME}"
+    gcloud iam service-accounts create "${VERCEL_SA_NAME}" \
+        --display-name="Vercel Service Account" \
+        --description="Service account for Vercel serverless functions"
+    echo "✅ Service account '${VERCEL_SA_NAME}' created"
+    sleep 10  # Wait for propagation
 fi
 
-# Grant roles/iam.serviceAccountTokenCreator (if not already bound)
-if gcloud projects get-iam-policy "${PROJECT_ID}" \
-    --flatten="bindings[].members" \
-    --filter="bindings.role=roles/iam.serviceAccountTokenCreator AND bindings.members=serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-    --format="value(bindings.role)" | grep -q "roles/iam.serviceAccountTokenCreator"; then
-    echo "✅ Project binding roles/iam.serviceAccountTokenCreator already exists for ${SERVICE_ACCOUNT_EMAIL}"
-else
-    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-        --role="roles/iam.serviceAccountTokenCreator"
-    echo "✅ Added project binding roles/iam.serviceAccountTokenCreator for ${SERVICE_ACCOUNT_EMAIL}"
-fi
+# Grant storage permissions
+echo "🔑 Granting storage permissions..."
+gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET_NAME}" \
+    --member="serviceAccount:${VERCEL_SA_EMAIL}" \
+    --role="roles/storage.objectAdmin" \
+    --condition=None 2>/dev/null || true
 
-# Grant Cloud Vision API User role
-echo "🔑 Granting AI Platform User role for Vision API access..."
-AI_PLATFORM_USER_ROLE="roles/aiplatform.user"
-if gcloud projects get-iam-policy "${PROJECT_ID}" \
-    --flatten="bindings[].members" \
-    --filter="bindings.role=${AI_PLATFORM_USER_ROLE} AND bindings.members=serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-    --format="value(bindings.role)" | grep -q "${AI_PLATFORM_USER_ROLE}"; then
-    echo "✅ Project binding ${AI_PLATFORM_USER_ROLE} already exists for ${SERVICE_ACCOUNT_EMAIL}"
-else
-    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-        --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-        --role="${AI_PLATFORM_USER_ROLE}"
-    echo "✅ Added project binding ${AI_PLATFORM_USER_ROLE} for ${SERVICE_ACCOUNT_EMAIL}"
-fi
+# Grant Vision API permissions
+echo "🔑 Granting Vision API permissions..."
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="serviceAccount:${VERCEL_SA_EMAIL}" \
+    --role="roles/visionai.user" 2>/dev/null || true
 
-# --- Deploy to Cloud Run ---
-echo "🚀 Deploying to Cloud Run in ${REGION}..."
+# Grant token creator (for signed URLs)
+echo "🔑 Granting token creator permissions..."
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="serviceAccount:${VERCEL_SA_EMAIL}" \
+    --role="roles/iam.serviceAccountTokenCreator" 2>/dev/null || true
 
-# Deploy the service first
-gcloud run deploy "$SERVICE_NAME" \
-    --image "$IMAGE_NAME" \
-    --platform managed \
-    --region "$REGION" \
-    --allow-unauthenticated \
-    --memory 8Gi \
-    --cpu 4 \
-    --timeout 300s \
-    --concurrency 80 \
-    --max-instances 10 \
-    --service-account="${SERVICE_ACCOUNT_EMAIL}" \
-    --set-env-vars "GCS_BUCKET_NAME=${STORAGE_BUCKET_NAME},U2NET_HOME=/root/.u2net"
+# Allow Workload Identity Pool to impersonate service account
+PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+echo "🔗 Linking Workload Identity Pool to service account..."
+gcloud iam service-accounts add-iam-policy-binding "${VERCEL_SA_EMAIL}" \
+    --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WORKLOAD_IDENTITY_POOL}/*" \
+    --role="roles/iam.workloadIdentityUser" 2>/dev/null || true
 
 # --- Final Output ---
-SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --platform managed --region="$REGION" --format="value(status.url)")
-
 echo ""
-echo "✅ Deployment successful!"
+echo "✅ GCP infrastructure setup complete!"
 echo ""
-echo "✅ Backend Service URL: ${SERVICE_URL}"
-echo "✅ Storage Bucket: gs://${STORAGE_BUCKET_NAME}"
+echo "📋 Vercel Environment Variables:"
+echo "   GCP_PROJECT_ID=${PROJECT_ID}"
+echo "   GCP_PROJECT_NUMBER=${PROJECT_NUMBER}"
+echo "   GCP_SERVICE_ACCOUNT_EMAIL=${VERCEL_SA_EMAIL}"
+echo "   GCP_WORKLOAD_IDENTITY_POOL_ID=${WORKLOAD_IDENTITY_POOL}"
+echo "   GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=${WORKLOAD_IDENTITY_PROVIDER}"
+echo "   GCP_STORAGE_BUCKET=${STORAGE_BUCKET_NAME}"
 echo ""
-echo "💡 Next steps:"
-echo "   1. Copy the Service URL above."
-echo "   2. Set it as an environment variable in your Vercel project:"
-echo "      vercel env add GCP_API_URL ${SERVICE_URL} --prod"
-echo "   3. Redeploy your Vercel frontend:"
-echo "      npm run deploy"
-echo ""
-echo "🧪 You can test the health endpoint with:"
-echo "   curl ${SERVICE_URL}/health"
+echo "💡 Add these to your Vercel project settings."
 echo ""

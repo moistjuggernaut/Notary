@@ -1,6 +1,5 @@
 /**
  * ICAO passport photo validation constants and configuration.
- * Ported from gcp-api/src/lib/app_config.py and gcp-api/src/lib/constants.py
  */
 
 // ICAO Configuration for passport photo dimensions

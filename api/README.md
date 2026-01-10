@@ -1,93 +1,139 @@
 # Vercel API Endpoints
 
-The API is built using **Hono.js**, a lightweight and fast web framework that handles routing, CORS, and middleware automatically.
+The API is built using **Hono.js**, a lightweight and fast web framework that handles routing, validation, and middleware automatically.
 
 ## Endpoints
 
-### Core API Endpoints
+### Health Check
 
-- **`/api/health`** - Health check endpoint
-- **`/api/photo/quick_check`** - Fast face detection validation
-- **`/api/photo/validate`** - Full ICAO compliance validation
+- **`GET /api/health`** - Health check endpoint
 
-### Stripe Payment Endpoints
+### Photo Validation
 
-- **`/api/stripe/create_checkout_session`** - Create Stripe checkout sessions
-- **`/api/stripe/webhook`** - Handle Stripe webhook events
+- **`POST /api/photo/validate`** - Full ICAO compliance validation
+  - Body: `{ "image": "<base64>", "filename": "<string>" }`
+  - Returns validation result with processed image URL
+
+- **`POST /api/photo/remove-background`** - Remove background from validated photo
+  - Body: `{ "orderId": "<uuid>" }`
+  - Returns processed image URL
+
+### Stripe Payment
+
+- **`POST /api/stripe/create-checkout-session`** - Create Stripe checkout session
+  - Query: `?orderId=<uuid>`
+  - Redirects to Stripe checkout
+
+- **`POST /api/stripe/webhook`** - Handle Stripe webhook events
+  - Handles: `checkout.session.completed`, `checkout.session.async_payment_succeeded`
+
+### Admin Routes (Protected)
+
+All admin routes require `Authorization: Bearer <ADMIN_TOKEN>` header.
+
+- **`GET /api/admin/orders`** - List orders pending review
+- **`POST /api/admin/orders/:orderId/approve`** - Approve order and send to printer
+- **`POST /api/admin/orders/:orderId/reject`** - Reject order and initiate refund
+  - Body: `{ "reason": "<string>" }`
+- **`GET /api/admin/familink/:orderId`** - Get Familink order status
 
 ## Modular Structure
 
-The API is organized into modular components for better maintainability:
-
 ```
-/api/
-├── index.ts               # Main Hono.js app with routing
-├── lib/
-│   └── .gcp-run.ts        # Helper functions to trigger the photo validation container
-│   └── .gcp-storage.ts    # Helper functions to store and retrieve image for Cloud Storage
-│   └── .stripe.ts         # Stripe configuration utilities
-└── README.md              # Documentation
+api/
+├── index.ts                      # Main Hono.js app with routing
+└── lib/
+    ├── cloud-vision-validator.ts # Google Cloud Vision API integration
+    ├── image-preprocessor.ts     # Image cropping and resizing with Sharp
+    ├── photo-validator.ts        # Main validation orchestrator
+    ├── print-processor.ts        # Print layout generation
+    ├── validation-constants.ts   # ICAO configuration and thresholds
+    ├── database.ts               # PostgreSQL connection (Drizzle ORM)
+    ├── schema.ts                 # Database schema definitions
+    ├── order-service.ts          # Order CRUD operations
+    ├── fulfillment.ts            # Stripe webhook handling
+    ├── admin-actions.ts          # Order approval/rejection logic
+    ├── stripe-refunds.ts         # Refund processing
+    ├── familink.ts               # Print fulfillment integration
+    ├── auth-middleware.ts        # Admin route authentication
+    ├── .gcp-storage.ts           # GCP Storage utilities
+    ├── .stripe.ts                # Stripe configuration
+    └── .familink.ts              # Familink configuration
 ```
 
-## Stripe Configuration
+## Photo Validation Pipeline
 
-### Required Environment Variables
+The validation runs directly in the Vercel serverless function:
 
-Set these environment variables in your Vercel project:
+1. **Cloud Vision API Analysis**
+   - Face detection with landmark extraction
+   - Blur, pose, and expression analysis
+   - Glasses/headwear detection
+
+2. **Image Preprocessing**
+   - EXIF orientation normalization
+   - ICAO-compliant cropping (35x45mm)
+   - High-quality resizing (600 DPI)
+
+3. **Geometry Validation**
+   - Aspect ratio verification
+   - Head height ratio check
+   - Centering validation
+
+## Environment Variables
+
+### Required
 
 ```bash
-# Stripe Configuration
-STRIPE_SECRET_KEY=sk_test_...          # Your Stripe secret key
-STRIPE_PRICE_ID=price_...              # Your Stripe price ID for the service
-STRIPE_WEBHOOK_SECRET=whsec_...        # Your Stripe webhook endpoint secret
-APP_PUBLIC_BASE_URL=https://...        # Your app's public URL
+# GCP Configuration
+GCP_PROJECT_ID=your-project-id
+GCP_PROJECT_NUMBER=123456789012
+GCP_SERVICE_ACCOUNT_EMAIL=vercel@project.iam.gserviceaccount.com
+GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
+GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
+GCP_STORAGE_BUCKET=your-bucket-name
+
+# Database
+SUPABASE_URL=postgresql://...
+
+# Stripe
+STRIPE_SECRET_KEY=sk_...
+STRIPE_PRICE_ID=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# App Configuration
+APP_PUBLIC_BASE_URL=https://your-app.vercel.app
+ADMIN_TOKEN=your-secure-token
+
+# Print Fulfillment
+FAMILINK_API_KEY=your-familink-key
+
+# Optional
+PHOTOROOM_API_KEY=your-photoroom-key  # For background removal
 ```
 
-### Setting up Stripe
+### Local Development
 
-1. **Create a Stripe Account**: Sign up at [stripe.com](https://stripe.com)
+```bash
+# Use local emulators
+USE_LOCAL_STORAGE=true
 
-2. **Get API Keys**: 
-   - Go to Stripe Dashboard → Developers → API keys
-   - Copy your Secret key (starts with `sk_test_` for test mode)
-
-3. **Create a Product and Price**:
-   - Go to Stripe Dashboard → Products
-   - Create a new product for your photo validation service
-   - Add a price (one-time payment)
-   - Copy the Price ID (starts with `price_`)
-
-4. **Set up Webhooks**:
-   - Go to Stripe Dashboard → Developers → Webhooks
-   - Add endpoint: `https://your-domain.vercel.app/api/stripe/webhook`
-   - Select events: `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`
-   - Copy the webhook signing secret (starts with `whsec_`)
-
-5. **Configure Environment Variables**:
-   - In Vercel Dashboard → Your Project → Settings → Environment Variables
-   - Add all required variables listed above
-
-### Testing Stripe Integration
-
-1. **Test Checkout**: Use test card numbers from Stripe's testing documentation
-2. **Test Webhooks**: Use Stripe CLI to forward webhooks to localhost during development
-3. **Monitor Logs**: Check Vercel function logs for webhook events
-
-### Webhook Events Handled
-
-- `checkout.session.completed` - Payment completed successfully
-- `checkout.session.async_payment_succeeded` - Delayed payment succeeded
-- `checkout.session.async_payment_failed` - Delayed payment failed
-- `payment_intent.succeeded` - Payment intent succeeded
-- `payment_intent.payment_failed` - Payment intent failed
+# Local database connection
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=photo_validator
+```
 
 ## Development
 
 ### Local Testing
 
 1. Install dependencies: `npm install`
-2. Set up environment variables in `.env.local`, they can be pulled using `vercel env pull`
-3. Use Vercel CLI to test locally: `vercel dev`
+2. Set up environment variables in `.env.local` (pull with `vercel env pull`)
+3. Start infrastructure: `npm run dev:up`
+4. Run development server: `vercel dev`
 
 ### Stripe CLI for Webhook Testing
 
