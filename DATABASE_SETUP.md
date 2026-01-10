@@ -98,23 +98,21 @@ Make sure:
 ## Usage in Code
 
 ```typescript
-import { createDatabaseConnection, orderService } from './api/lib/database';
+import { createDatabaseConnection } from './server/database';
+import { orderService } from './server/order-service';
 
 // Initialize database connection
 await createDatabaseConnection();
 
 // Use the order service
-const order = await orderService.createOrder({
-  paymentId: 'pi_1234567890',
-  status: 'pending'
-});
+const order = await orderService.createOrder();
 
 const foundOrder = await orderService.getOrderById(order.id);
 ```
 
 ## Migration Workflow
 
-1. Modify the schema in `api/lib/schema.ts`
+1. Modify the schema in `server/schema.ts`
 2. Run `npm run db:generate` to create migration files
 3. Review the generated SQL in the `drizzle/` folder
 4. Run `npm run db:migrate` to apply changes to database

@@ -41,25 +41,28 @@ All admin routes require `Authorization: Bearer <ADMIN_TOKEN>` header.
 
 ```
 api/
-├── index.ts                      # Main Hono.js app with routing
-└── lib/
-    ├── cloud-vision-validator.ts # Google Cloud Vision API integration
-    ├── image-preprocessor.ts     # Image cropping and resizing with Sharp
-    ├── photo-validator.ts        # Main validation orchestrator
-    ├── print-processor.ts        # Print layout generation
-    ├── validation-constants.ts   # ICAO configuration and thresholds
-    ├── database.ts               # PostgreSQL connection (Drizzle ORM)
-    ├── schema.ts                 # Database schema definitions
-    ├── order-service.ts          # Order CRUD operations
-    ├── fulfillment.ts            # Stripe webhook handling
-    ├── admin-actions.ts          # Order approval/rejection logic
-    ├── stripe-refunds.ts         # Refund processing
-    ├── familink.ts               # Print fulfillment integration
-    ├── auth-middleware.ts        # Admin route authentication
-    ├── .gcp-storage.ts           # GCP Storage utilities
-    ├── .stripe.ts                # Stripe configuration
-    └── .familink.ts              # Familink configuration
+└── index.ts                      # Main Hono.js app with routing (single serverless function)
+
+server/                           # Backend modules (bundled with the API)
+├── cloud-vision-validator.ts     # Google Cloud Vision API integration
+├── image-preprocessor.ts         # Image cropping and resizing with Sharp
+├── photo-validator.ts            # Main validation orchestrator
+├── print-processor.ts            # Print layout generation
+├── validation-constants.ts       # ICAO configuration and thresholds
+├── database.ts                   # PostgreSQL connection (Drizzle ORM)
+├── schema.ts                     # Database schema definitions
+├── order-service.ts              # Order CRUD operations
+├── fulfillment.ts                # Stripe webhook handling
+├── admin-actions.ts              # Order approval/rejection logic
+├── stripe-refunds.ts             # Refund processing
+├── familink.ts                   # Print fulfillment integration
+├── auth-middleware.ts            # Admin route authentication
+├── .gcp-storage.ts               # GCP Storage utilities
+├── .stripe.ts                    # Stripe configuration
+└── .familink.ts                  # Familink configuration
 ```
+
+> **Note**: The `server/` directory is outside of `api/` to avoid Vercel treating each file as a separate serverless function. Files in `server/` are bundled with `api/index.ts` via the `includeFiles` config in `vercel.json`.
 
 ## Photo Validation Pipeline
 

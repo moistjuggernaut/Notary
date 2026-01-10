@@ -6,7 +6,7 @@
   ],
   "functions": {
     "api/index.ts": {
-      "includeFiles": "api/lib/**"
+      "includeFiles": "server/**"
     }
   }
 }

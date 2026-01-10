@@ -131,21 +131,21 @@ photo-validator/
 │   ├── pages/                    # Application pages
 │   ├── hooks/                    # Custom React hooks
 │   └── lib/                      # Utility functions
-├── api/                          # Hono.js backend
-│   ├── index.ts                  # Main API application
-│   └── lib/                      # Backend utilities
-│       ├── cloud-vision-validator.ts  # Cloud Vision API integration
-│       ├── image-preprocessor.ts      # Image cropping and resizing
-│       ├── photo-validator.ts         # Main validation orchestrator
-│       ├── print-processor.ts         # Print layout generation
-│       ├── validation-constants.ts    # ICAO configuration
-│       ├── database.ts                # Database connection
-│       ├── schema.ts                  # Database schema
-│       ├── order-service.ts           # Order management
-│       ├── fulfillment.ts             # Payment fulfillment
-│       ├── admin-actions.ts           # Admin operations
-│       ├── stripe-refunds.ts          # Refund processing
-│       └── familink.ts                # Print fulfillment integration
+├── api/                          # Hono.js API entry point
+│   └── index.ts                  # Main API application (single serverless function)
+├── server/                       # Backend modules
+│   ├── cloud-vision-validator.ts # Cloud Vision API integration
+│   ├── image-preprocessor.ts     # Image cropping and resizing
+│   ├── photo-validator.ts        # Main validation orchestrator
+│   ├── print-processor.ts        # Print layout generation
+│   ├── validation-constants.ts   # ICAO configuration
+│   ├── database.ts               # Database connection
+│   ├── schema.ts                 # Database schema
+│   ├── order-service.ts          # Order management
+│   ├── fulfillment.ts            # Payment fulfillment
+│   ├── admin-actions.ts          # Admin operations
+│   ├── stripe-refunds.ts         # Refund processing
+│   └── familink.ts               # Print fulfillment integration
 ├── drizzle/                      # Database migrations
 ├── docker-compose.yml            # Local development setup
 └── vercel.json                   # Vercel configuration
