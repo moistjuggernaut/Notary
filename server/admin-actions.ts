@@ -44,12 +44,12 @@ export async function approveOrder(orderId: string): Promise<void> {
   }
 
   try {
-    // Prefer bg-removed output if it exists, otherwise fall back to validated.png
+    // Prefer bg-removed output if it exists, otherwise fall back to validated.webp
     let validatedPhotoUrl: string
     try {
       validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated_bg_removed.png')
     } catch {
-      validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated.png')
+      validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated.webp')
     }
 
     // Create Familink print order

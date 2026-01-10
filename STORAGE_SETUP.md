@@ -77,9 +77,9 @@ Images are organized by order ID:
 ```
 bucket/
 ├── <order-id>/
-│   ├── original.png           # Uploaded image
-│   ├── validated.png          # Processed/cropped image
-│   └── validated_bg_removed.png  # Background removed (optional)
+│   ├── original.webp          # Uploaded image (WebP lossless)
+│   ├── validated.webp         # Processed/cropped image (WebP q90)
+│   └── validated_bg_removed.png  # Background removed (PNG for transparency)
 ```
 
 ## Signed URLs

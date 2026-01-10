@@ -43,6 +43,20 @@ if (process.env.USE_LOCAL_STORAGE !== 'true') {
 
 const bucketName = process.env.GCP_STORAGE_BUCKET || 'local-bucket';
 
+/**
+ * Determines the correct content-type based on file extension
+ */
+function getContentType(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'webp': return 'image/webp'
+    case 'png': return 'image/png'
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg'
+    default: return 'application/octet-stream'
+  }
+}
+
 export interface UploadResult {
   orderId: string;
   imageUrl: string;
@@ -63,7 +77,7 @@ export async function uploadImageToGCP(orderId: string, base64Image: string, fil
     
     await file.save(imageBuffer, {
       metadata: {
-        contentType: 'image/png',
+        contentType: getContentType(filename),
       },
     });
     

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import sharp from 'sharp'
 import { getStripe, getWebhookSecret } from '../server/.stripe.js'
 import { downloadImageFromGCP, getSignedUrlForImage, uploadImageToGCP } from '../server/.gcp-storage.js'
 import { validatePhoto } from '../server/photo-validator.js'
@@ -48,14 +49,18 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
   try {
     const { image } = c.req.valid('json')
 
-    // 1. Create order and upload original image
+    // 1. Create order and upload original image (converted to WebP lossless for archival)
     const order = await orderService.createOrder()
-    await uploadImageToGCP(order.id, image, 'original.png')
+    const imageBuffer = base64ToBuffer(image)
+    const originalWebP = await sharp(imageBuffer)
+      .webp({ lossless: true })
+      .toBuffer()
+    const originalBase64 = bufferToBase64(originalWebP)
+    await uploadImageToGCP(order.id, originalBase64, 'original.webp')
     await orderService.updateOrderStatus(order.id, 'original_uploaded')
     await orderService.updateOrderStatus(order.id, 'validation_started')
 
     // 2. Run photo validation directly (Cloud Vision API + preprocessing)
-    const imageBuffer = base64ToBuffer(image)
     const validationResult = await validatePhoto(imageBuffer)
 
     if (!validationResult.success) {
@@ -72,11 +77,11 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
     // 3. Upload validated (processed) image
     if (validationResult.processedImage) {
       const processedBase64 = bufferToBase64(validationResult.processedImage)
-      await uploadImageToGCP(order.id, processedBase64, 'validated.png')
+      await uploadImageToGCP(order.id, processedBase64, 'validated.webp')
     }
 
     await orderService.updateOrderStatus(order.id, 'validation_completed')
-    const imageUrl = await getSignedUrlForImage(order.id, 'validated.png')
+    const imageUrl = await getSignedUrlForImage(order.id, 'validated.webp')
 
     // 4. Return results to frontend
     return c.json({
@@ -111,9 +116,9 @@ app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSche
     
     if (process.env.USE_LOCAL_STORAGE === 'true') {
       // Local: download image and send as file (Photoroom can't access localhost)
-      const imageBuffer = await downloadImageFromGCP(orderId, 'validated.png')
+      const imageBuffer = await downloadImageFromGCP(orderId, 'validated.webp')
       const formData = new FormData()
-      formData.append('image_file', new Blob([new Uint8Array(imageBuffer)], { type: 'image/png' }), 'validated.png')
+      formData.append('image_file', new Blob([new Uint8Array(imageBuffer)], { type: 'image/webp' }), 'validated.webp')
       
       response = await fetch('https://sdk.photoroom.com/v1/segment', {
         method: 'POST',
@@ -125,7 +130,7 @@ app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSche
       })
     } else {
       // Production: pass signed URL (efficient, no intermediate download)
-      const imageUrl = await getSignedUrlForImage(orderId, 'validated.png')
+      const imageUrl = await getSignedUrlForImage(orderId, 'validated.webp')
       console.log('image url:', imageUrl);
       response = await fetch('https://sdk.photoroom.com/v1/segment', {
         method: 'POST',
@@ -283,7 +288,7 @@ app.get('/api/admin/orders', authMiddleware, async (c) => {
     const ordersWithImages = await Promise.all(
       orders.map(async (order) => {
         try {
-          const imageUrl = await getSignedUrlForImage(order.id, 'validated.png')
+          const imageUrl = await getSignedUrlForImage(order.id, 'validated.webp')
           return { ...order, imageUrl }
         } catch (error) {
           console.error(`Failed to get image URL for order ${order.id}:`, error)

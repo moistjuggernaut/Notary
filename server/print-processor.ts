@@ -125,7 +125,7 @@ export async function createPrintLayout(photoBuffer: Buffer): Promise<PrintLayou
     // Ensure the photo is the correct size
     const resizedPhoto = await sharp(photoBuffer)
       .resize(PHOTO_WIDTH_PX, PHOTO_HEIGHT_PX, { fit: 'fill' })
-      .jpeg()
+      .jpeg({ quality: 95, chromaSubsampling: '4:4:4' })
       .toBuffer()
 
     // Build composite operations for placing photos in a 2x2 grid
@@ -164,7 +164,7 @@ export async function createPrintLayout(photoBuffer: Buffer): Promise<PrintLayou
       },
     })
       .composite(compositeOperations)
-      .jpeg()
+      .jpeg({ quality: 95, chromaSubsampling: '4:4:4' })
       .toBuffer()
 
     return {

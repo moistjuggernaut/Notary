@@ -1,6 +1,6 @@
 /**
  * Image preprocessing module for passport photo validation.
- * Handles cropping and resizing using Sharp for ICAO-compliant output.
+ * Handles cropping and resizing using Sharp for ICAO-compliant WebP output.
  */
 
 import sharp from 'sharp'
@@ -136,7 +136,7 @@ export async function processImage(
         fit: 'fill',
         kernel: 'lanczos3', // High-quality downsampling
       })
-      .jpeg()
+      .webp({ quality: 90, effort: 6 })
       .toBuffer()
 
     // Transform landmarks to new coordinates
