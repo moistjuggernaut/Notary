@@ -108,6 +108,8 @@ app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSche
     }
 
     let response: Response
+
+    console.log('google storage account:', process.env.GCP_SERVICE_ACCOUNT_EMAIL);
     
     if (process.env.USE_LOCAL_STORAGE === 'true') {
       // Local: download image and send as file (Photoroom can't access localhost)
