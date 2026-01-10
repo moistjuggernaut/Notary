@@ -126,6 +126,7 @@ app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSche
     } else {
       // Production: pass signed URL (efficient, no intermediate download)
       const imageUrl = await getSignedUrlForImage(orderId, 'validated.png')
+      console.log('image url:', imageUrl);
       response = await fetch('https://sdk.photoroom.com/v1/segment', {
         method: 'POST',
         headers: {
