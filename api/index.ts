@@ -131,6 +131,18 @@ app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSche
     } else {
       // Production: pass signed URL (efficient, no intermediate download)
       const imageUrl = await getSignedUrlForImage(orderId, 'validated.webp')
+      console.log('GCP SERVICE ACCOUNT EMAIL:', process.env.GCP_SERVICE_ACCOUNT_EMAIL);
+      console.log('GCP PROJECT ID:', process.env.GCP_PROJECT_ID);
+      console.log('GCP PROJECT NUMBER:', process.env.GCP_PROJECT_NUMBER);
+      console.log('GCP WORKLOAD IDENTITY POOL ID:', process.env.GCP_WORKLOAD_IDENTITY_POOL_ID);
+      console.log('GCP WORKLOAD IDENTITY POOL PROVIDER ID:', process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID);
+      console.log('GCP STORAGE BUCKET:', process.env.GCP_STORAGE_BUCKET);
+      console.log('GCP SERVICE ACCOUNT EMAIL:', process.env.GCP_SERVICE_ACCOUNT_EMAIL);
+      console.log('GCP PROJECT ID:', process.env.GCP_PROJECT_ID);
+      console.log('GCP PROJECT NUMBER:', process.env.GCP_PROJECT_NUMBER);
+      console.log('GCP WORKLOAD IDENTITY POOL ID:', process.env.GCP_WORKLOAD_IDENTITY_POOL_ID);
+      console.log('GCP WORKLOAD IDENTITY POOL PROVIDER ID:', process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID);
+      console.log('GCP STORAGE BUCKET:', process.env.GCP_STORAGE_BUCKET);
       console.log('image url:', imageUrl);
       response = await fetch('https://sdk.photoroom.com/v1/segment', {
         method: 'POST',
