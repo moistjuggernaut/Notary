@@ -112,52 +112,20 @@ app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSche
       }, 500)
     }
 
-    let response: Response
-    
-    if (process.env.USE_LOCAL_STORAGE === 'true') {
-      // Local: download image and send as file (Photoroom can't access localhost)
-      const imageBuffer = await downloadImageFromGCP(orderId, 'validated.webp')
-      const formData = new FormData()
-      formData.append('image_file', new Blob([new Uint8Array(imageBuffer)], { type: 'image/webp' }), 'validated.webp')
-      
-      response = await fetch('https://sdk.photoroom.com/v1/segment', {
-        method: 'POST',
-        headers: {
-          'Accept': 'image/png, application/json',
-          'x-api-key': photoroomApiKey,
-        },
-        body: formData
-      })
-    } else {
-      // Production: pass signed URL (efficient, no intermediate download)
-      const imageUrl = await getSignedUrlForImage(orderId, 'validated.webp')
-      console.log('GCP SERVICE ACCOUNT EMAIL:', process.env.GCP_SERVICE_ACCOUNT_EMAIL);
-      console.log('GCP PROJECT ID:', process.env.GCP_PROJECT_ID);
-      console.log('GCP PROJECT NUMBER:', process.env.GCP_PROJECT_NUMBER);
-      console.log('GCP WORKLOAD IDENTITY POOL ID:', process.env.GCP_WORKLOAD_IDENTITY_POOL_ID);
-      console.log('GCP WORKLOAD IDENTITY POOL PROVIDER ID:', process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID);
-      console.log('GCP STORAGE BUCKET:', process.env.GCP_STORAGE_BUCKET);
-      console.log('GCP SERVICE ACCOUNT EMAIL:', process.env.GCP_SERVICE_ACCOUNT_EMAIL);
-      console.log('GCP PROJECT ID:', process.env.GCP_PROJECT_ID);
-      console.log('GCP PROJECT NUMBER:', process.env.GCP_PROJECT_NUMBER);
-      console.log('GCP WORKLOAD IDENTITY POOL ID:', process.env.GCP_WORKLOAD_IDENTITY_POOL_ID);
-      console.log('GCP WORKLOAD IDENTITY POOL PROVIDER ID:', process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID);
-      console.log('GCP STORAGE BUCKET:', process.env.GCP_STORAGE_BUCKET);
-      console.log('image url:', imageUrl);
-      response = await fetch('https://sdk.photoroom.com/v1/segment', {
-        method: 'POST',
-        headers: {
-          'Accept': 'image/png, application/json',
-          'Content-Type': 'application/json',
-          'x-api-key': photoroomApiKey,
-        },
-        body: JSON.stringify({
-          image_url: imageUrl,
-          format: 'png'
-        })
-      })
-    }
-    console.log('photoroom response:', response);
+    // The Remove Background API doesn't accept URLs - must download and upload as file
+    // See: https://docs.photoroom.com/remove-background-api-basic-plan/can-i-use-the-url-of-an-image
+    const imageBuffer = await downloadImageFromGCP(orderId, 'validated.webp')
+    const formData = new FormData()
+    formData.append('image_file', new Blob([new Uint8Array(imageBuffer)], { type: 'image/webp' }), 'validated.webp')
+
+    const response = await fetch('https://sdk.photoroom.com/v1/segment', {
+      method: 'POST',
+      headers: {
+        'Accept': 'image/png, application/json',
+        'x-api-key': photoroomApiKey,
+      },
+      body: formData
+    })
 
     if (!response.ok) {
       let errorMessage = `Photoroom request failed: ${response.status} ${response.statusText}`
