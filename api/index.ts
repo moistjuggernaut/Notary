@@ -151,20 +151,33 @@ app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSche
           'Content-Type': 'application/json',
           'x-api-key': photoroomApiKey,
         },
-        body: JSON.stringify({ image_url: imageUrl })
+        body: JSON.stringify({
+          image_url: imageUrl,
+          format: 'png'
+        })
       })
     }
     console.log('photoroom response:', response);
 
     if (!response.ok) {
       let errorMessage = `Photoroom request failed: ${response.status} ${response.statusText}`
+      let errorDetails: unknown = null
       try {
-        const json = await response.json()
-        if (json?.error?.message) errorMessage = json.error.message
-        if (json?.message) errorMessage = json.message
-      } catch { /* ignore */ }
+        errorDetails = await response.json()
+        console.error('PhotoRoom error response:', JSON.stringify(errorDetails, null, 2))
+        if (typeof errorDetails === 'object' && errorDetails !== null) {
+          const details = errorDetails as Record<string, unknown>
+          if (details.error && typeof details.error === 'object') {
+            const error = details.error as Record<string, unknown>
+            if (error.message) errorMessage = String(error.message)
+          }
+          if (details.message) errorMessage = String(details.message)
+        }
+      } catch {
+        console.error('PhotoRoom returned non-JSON error response')
+      }
 
-      return c.json({ success: false, error: errorMessage }, 502)
+      return c.json({ success: false, error: errorMessage, details: errorDetails }, 502)
     }
 
     const contentType = response.headers.get('content-type') ?? ''
