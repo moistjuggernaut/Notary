@@ -90,7 +90,9 @@ export default function PhotoUploader({
           />
         )}
 
-        {currentStep === 3 && <ValidationStep />}
+        {currentStep === 3 && selectedFile && (
+          <ValidationStep file={selectedFile} />
+        )}
 
         {currentStep === 4 && validationResult && (
           <>

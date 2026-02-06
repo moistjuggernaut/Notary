@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
-import { CheckCircle, Download, CreditCard, Upload, Wand2, RotateCcw } from "lucide-react";
+import { CheckCircle, Download, CreditCard, Upload, Wand2, RotateCcw, Square, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoCard } from "@/components/ui/info-card";
 import { handleDownload } from "../utils";
 import type { ValidationResult } from "@/types/validation";
 import { removeBackground } from "@/api/client";
+
+const FINAL_CHECKS = [
+  "The photo looks like you",
+  "Background appears plain and uniform",
+  "Both eyes are clearly visible",
+  "Expression is neutral",
+] as const;
 
 interface SuccessStepProps {
   result: ValidationResult;
@@ -16,6 +23,11 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   const [isBackgroundRemoved, setIsBackgroundRemoved] = useState(false);
   const [cachedBgRemovedUrl, setCachedBgRemovedUrl] = useState<string | undefined>(undefined);
+  const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
+
+  const toggleCheck = (index: number) => {
+    setCheckedItems((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
 
   useEffect(() => {
     setDisplayImageUrl(result.imageUrl);
@@ -78,6 +90,40 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
           </div>
         </div>
       )}
+
+      {/* Final manual checks */}
+      <div className="mb-8 rounded-lg border border-blue-100 bg-blue-50/50 p-5">
+        <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
+          Final Checks
+        </h4>
+        <p className="text-sm text-gray-600 mb-4">
+          Please confirm these details before proceeding.
+        </p>
+        <ul className="space-y-2">
+          {FINAL_CHECKS.map((label, index) => (
+            <li key={label}>
+              <button
+                type="button"
+                className="flex items-start gap-2 w-full text-left group"
+                onClick={() => toggleCheck(index)}
+              >
+                {checkedItems[index] ? (
+                  <CheckSquare className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <Square className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0 group-hover:text-blue-500 transition-colors" />
+                )}
+                <span
+                  className={`text-sm ${
+                    checkedItems[index] ? "text-gray-900" : "text-gray-600"
+                  }`}
+                >
+                  {label}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
