@@ -139,9 +139,6 @@ export const FailLikelihoods = new Set([
   'VERY_LIKELY',
 ])
 
-// Face landmark types we use for validation
-// validation-constants.js
-
 export const LandmarkType = {
   UNKNOWN_LANDMARK: 'UNKNOWN_LANDMARK'  ,
   LEFT_EYE: 'LEFT_EYE',

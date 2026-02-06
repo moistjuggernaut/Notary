@@ -29,7 +29,5 @@ export const orders = pgTable('orders', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// Export types for TypeScript
 export type Order = typeof orders.$inferSelect;
-export type NewOrder = typeof orders.$inferInsert;
 export type OrderStatus = typeof orderStatusEnum.enumValues[number];

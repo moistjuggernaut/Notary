@@ -1,226 +1,217 @@
-# Photo Validator
+# Passport Photo Validator
 
-A comprehensive passport photo validation system using Google Cloud Vision API to ensure compliance with official ICAO photo requirements. The system provides full ICAO compliance validation for passport photos with automatic cropping and processing.
+Validates passport photos against ICAO international standards and EU biometric requirements using Google Cloud Vision API. Automatic cropping, processing, and print-ready output.
 
-## System Overview
+## Quick Start
 
-The Photo Validator is a modern, cloud-native application that validates passport photos against international standards. It combines a React frontend with a TypeScript serverless backend to deliver fast, accurate photo validation services.
+```bash
+npm install
 
-## System Components
+# Start infrastructure (Postgres, GCS emulator, Stripe webhooks)
+npm run dev:full
 
-### Frontend (React/TypeScript)
-- **Location**: `src/` directory
-- **Technology**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
-- **Features**: Photo upload, validation results display, payment integration
-- **Deployment**: Vercel Edge Network for global performance
-
-### Backend API (Hono.js/TypeScript)
-- **Location**: `api/` directory  
-- **Technology**: Hono.js, TypeScript, Zod validation, Sharp, Google Cloud Vision API
-- **Features**: Photo validation, image processing, payment processing, order management
-- **Deployment**: Vercel Serverless Functions
-
-### Database (PostgreSQL)
-- **Technology**: PostgreSQL with Drizzle ORM
-- **Features**: Order tracking, payment records, validation results
-- **Deployment**: Supabase (production) or Docker (development)
-
-## External Services
-
-### Google Cloud Platform
-- **Cloud Vision API**: Face detection, pose analysis, expression validation
-- **Cloud Storage**: Image storage for validated photos
-
-### Database
-- **Supabase**: Managed PostgreSQL database
-
-### Payment Processing
-- **Stripe**: Payment processing and webhook handling
-- **Features**: One-time payments, webhook validation, refund processing
-
-### Print Fulfillment
-- **Familink API**: Photo printing and delivery service
-- **Features**: Order printed photos, shipping to users, order tracking
-
-### Image Processing
-- **Photoroom API**: Background removal service
-
-### Development Tools
-- **Docker**: Local development environment (PostgreSQL, GCS emulator)
-- **Drizzle ORM**: Database schema management and migrations
-- **Vercel**: Frontend and API deployment platform
-
-## Architecture Diagram
-
-```mermaid
-graph TD
-    subgraph "Frontend"
-        A[React Frontend]
-    end
-    
-    subgraph "Vercel Platform"
-        B[Hono.js API]
-        C[Photo Validation]
-        D[Image Processing]
-    end
-    
-    subgraph "Google Cloud Platform"
-        E[Cloud Vision API]
-        F[Cloud Storage]
-    end
-    
-    subgraph "Database"
-        G[Supabase]
-    end
-    
-    subgraph "Payment"
-        H[Stripe]
-    end
-    
-    subgraph "Print Fulfillment"
-        I[Familink API]
-    end
-    
-    subgraph "Image Processing"
-        J[Photoroom API]
-    end
-    
-    A --> B
-    B --> C
-    B --> D
-    C --> E
-    D --> F
-    B --> G
-    B --> H
-    B --> I
-    B --> J
-    
-    style A fill:#61dafb,color:#000
-    style B fill:#000,color:#fff
-    style C fill:#34a853,color:#fff
-    style D fill:#34a853,color:#fff
-    style E fill:#4285f4,color:#fff
-    style F fill:#4285f4,color:#fff
-    style G fill:#3ecf8e,color:#fff
-    style H fill:#00d4aa,color:#fff
-    style I fill:#ff6b35,color:#fff
-    style J fill:#9b59b6,color:#fff
+# Start frontend + API
+vercel dev
 ```
 
-## Tech Stack
+## Architecture
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS | User interface and photo upload |
-| **Backend API** | Hono.js, TypeScript, Zod, Sharp | Request handling, validation, image processing |
-| **Vision AI** | Google Cloud Vision API | Face detection, ICAO compliance checking |
-| **Database** | PostgreSQL, Drizzle ORM | Data persistence and order management |
-| **Payments** | Stripe API | Payment processing and webhooks |
-| **Print Fulfillment** | Familink API | Photo printing and delivery service |
-| **Storage** | Google Cloud Storage | Image storage |
-| **Deployment** | Vercel | Serverless hosting |
+| Component | Technology |
+|-----------|------------|
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS |
+| API | Hono.js on Vercel Serverless Functions |
+| Vision AI | Google Cloud Vision API |
+| Database | PostgreSQL (Supabase prod, Docker dev) via Drizzle ORM |
+| Payments | Stripe |
+| Storage | Google Cloud Storage |
+| Print | Familink API |
+| Background Removal | Photoroom API |
 
 ## Project Structure
 
 ```
-photo-validator/
-├── src/                          # React frontend
-│   ├── components/               # UI components
-│   │   ├── photo-uploader/       # Photo upload interface
-│   │   └── ui/                   # Reusable UI components
-│   ├── pages/                    # Application pages
-│   ├── hooks/                    # Custom React hooks
-│   └── lib/                      # Utility functions
-├── api/                          # Hono.js API entry point
-│   └── index.ts                  # Main API application (single serverless function)
-├── server/                       # Backend modules
-│   ├── cloud-vision-validator.ts # Cloud Vision API integration
-│   ├── image-preprocessor.ts     # Image cropping and resizing
-│   ├── photo-validator.ts        # Main validation orchestrator
-│   ├── print-processor.ts        # Print layout generation
-│   ├── validation-constants.ts   # ICAO configuration
-│   ├── database.ts               # Database connection
-│   ├── schema.ts                 # Database schema
-│   ├── order-service.ts          # Order management
-│   ├── fulfillment.ts            # Payment fulfillment
-│   ├── admin-actions.ts          # Admin operations
-│   ├── stripe-refunds.ts         # Refund processing
-│   └── familink.ts               # Print fulfillment integration
-├── drizzle/                      # Database migrations
-├── docker-compose.yml            # Local development setup
-└── vercel.json                   # Vercel configuration
+src/                    React frontend
+  components/           UI components
+  pages/                Route pages
+  hooks/                Custom hooks
+  lib/                  Utilities
+api/
+  index.ts              Hono.js API (single serverless function)
+server/                 Backend modules (bundled with API)
+  cloud-vision-validator.ts
+  image-preprocessor.ts
+  photo-validator.ts
+  validation-constants.ts
+  database.ts
+  schema.ts
+  order-service.ts
+  fulfillment.ts
+  admin-actions.ts
+  stripe-refunds.ts
+  familink.ts
+  auth-middleware.ts
+drizzle/                Database migrations
 ```
 
-## Getting Started
+## API Endpoints
 
-### Prerequisites
-
-1. **Node.js 20+**: Required for running the application
-2. **Docker**: For local PostgreSQL and GCS emulator
-3. **GCP Credentials**: Service account key for Cloud Vision API access
-
-### Quick Start
-
-1. **Clone and Install**
-   ```bash
-   git clone <repository-url>
-   cd photo-validator
-   npm install
-   ```
-
-2. **Environment Setup**
-   ```bash
-   cp .env.example .env
-   # Configure your environment variables
-   ```
-
-   Download a service account key to have access to Cloud Vision API and store it as `.gcloud-credentials.json` in the root of the project. Never commit this file (it is in .gitignore).
-
-3. **Start Development**
-   ```bash
-   # Terminal 1: Start infrastructure services
-   npm run dev:full
-   
-   # Terminal 2: Start frontend and API
-   vercel dev
-   ```
-
-   **What `npm run dev:full` does:**
-   - Starts PostgreSQL database with Docker
-   - Runs Drizzle database migrations
-   - Starts Google Cloud Storage emulator
-   - Starts Stripe webhook listener
-   - Provides the infrastructure services needed for development
-
-   **What `vercel dev` does:**
-   - Starts the React frontend development server
-   - Starts the Hono.js API server
-   - Provides hot-reloading for both frontend and API changes
-   - Simulates the Vercel production environment locally
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Health check |
+| POST | `/api/photo/validate` | ICAO compliance validation |
+| POST | `/api/photo/remove-background` | Background removal |
+| POST | `/api/stripe/create-checkout-session` | Stripe checkout |
+| POST | `/api/stripe/webhook` | Stripe webhooks |
+| GET | `/api/admin/orders` | List pending orders (auth required) |
+| POST | `/api/admin/orders/:id/approve` | Approve order (auth required) |
+| POST | `/api/admin/orders/:id/reject` | Reject order (auth required) |
+| GET | `/api/admin/familink/:id` | Familink order status (auth required) |
 
 ## Validation Pipeline
 
-The photo validation process follows these steps:
+1. **Cloud Vision API** — face detection, blur, pose, expression, glasses/headwear
+2. **Image Preprocessing** — EXIF normalization, ICAO crop (35x45mm at 600 DPI)
+3. **Geometry Validation** — aspect ratio, head height ratio, centering
 
-1. **Initial Validation** (Cloud Vision API)
-   - Face detection
-   - Blur detection
-   - Pose validation (roll, pan, tilt angles)
-   - Expression validation (neutral check)
-   - Eye visibility check
-   - Glasses/headwear detection
+## Environment Variables
 
-2. **Image Preprocessing** (Sharp)
-   - Extract face details and landmarks
-   - Calculate ICAO-compliant crop coordinates
-   - Crop and resize to 35x45mm at 600 DPI
-   - Transform landmarks to final coordinates
+### Production (Vercel)
 
-3. **Final Geometry Validation**
-   - Aspect ratio check
-   - Head height ratio validation
-   - Head centering verification
+```bash
+# GCP
+GCP_PROJECT_ID=
+GCP_PROJECT_NUMBER=
+GCP_SERVICE_ACCOUNT_EMAIL=
+GCP_WORKLOAD_IDENTITY_POOL_ID=
+GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=
+GCP_STORAGE_BUCKET=
+
+# Database
+SUPABASE_URL=postgresql://...
+
+# Stripe
+STRIPE_SECRET_KEY=
+STRIPE_PRICE_ID=
+STRIPE_WEBHOOK_SECRET=
+
+# App
+APP_PUBLIC_BASE_URL=
+ADMIN_TOKEN=
+
+# Services
+FAMILINK_API_KEY=
+PHOTOROOM_API_KEY=          # optional
+```
+
+### Local Development
+
+```bash
+USE_LOCAL_STORAGE=true
+GCP_STORAGE_BUCKET=local-bucket
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=photo_validator
+```
+
+## Database
+
+Uses Drizzle ORM with PostgreSQL.
+
+```bash
+npm run db:generate     # Generate migrations from schema changes
+npm run db:migrate      # Apply migrations
+npm run db:studio       # Open Drizzle Studio
+npm run db:dev:up       # Start local Postgres container
+npm run db:dev:down     # Stop container
+```
+
+### Supabase (Production)
+
+1. Create project at [supabase.com](https://supabase.com)
+2. Get URI connection string from Settings > Database
+3. Set `SUPABASE_URL` in Vercel environment variables
+4. Run `npm run db:migrate`
+
+## Storage
+
+Images stored in GCS organized by order ID:
+
+```
+bucket/<order-id>/
+  original.webp
+  validated.webp
+  validated_bg_removed.png
+```
+
+### Local Development
+
+The GCS emulator runs via Docker:
+
+```bash
+npm run gcs:dev:up
+npm run gcs:dev:status
+```
+
+### Production
+
+Uses Workload Identity Federation for keyless auth from Vercel. See GCP setup below.
+
+## Deployment
+
+### Vercel
+
+- Push to `main` for production deployment
+- Push to any other branch for preview
+
+### GCP Setup
+
+```bash
+# Enable APIs
+gcloud services enable vision.googleapis.com storage.googleapis.com iamcredentials.googleapis.com
+
+# Create storage bucket
+gcloud storage buckets create "gs://BUCKET_NAME" --location=europe-west1 --uniform-bucket-level-access
+
+# Workload Identity Federation for Vercel
+gcloud iam workload-identity-pools create vercel --location=global
+gcloud iam workload-identity-pools providers create-oidc vercel \
+  --location=global --workload-identity-pool=vercel \
+  --issuer-uri="https://oidc.vercel.com" \
+  --attribute-mapping="google.subject=assertion.sub"
+
+# Service account with Vision + Storage access
+gcloud iam service-accounts create vercel --display-name="Vercel"
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:vercel@PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:vercel@PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/visionai.user"
+```
+
+### Stripe Webhooks
+
+```bash
+# Local testing
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+
+# Production: add endpoint https://your-app.vercel.app/api/stripe/webhook
+# Events: checkout.session.completed, checkout.session.async_payment_succeeded
+```
+
+## Scripts
+
+```bash
+npm run dev:full        # Start all infrastructure + Stripe listener
+npm run typecheck       # TypeScript check
+npm run test            # Run tests
+npm run lint            # Lint
+npm run format          # Format
+npm run deploy          # Deploy to Vercel production
+```
 
 ## License
 
-This is a private project. All rights reserved.
+Private. All rights reserved.

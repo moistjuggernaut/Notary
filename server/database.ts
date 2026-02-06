@@ -54,13 +54,6 @@ export async function createDatabaseConnection() {
   return db;
 }
 
-export function getDatabase(): Database {
-  if (!db) {
-    throw new Error('Database not initialized. Call createDatabaseConnection() first.');
-  }
-  return db;
-}
-
 export async function ensureDatabaseConnection(): Promise<Database> {
   try {
     if (!db) {
@@ -80,8 +73,3 @@ export async function ensureDatabaseConnection(): Promise<Database> {
   }
 }
 
-export async function closeDatabaseConnection() {
-  if (pool) {
-    await pool.end();
-  }
-}

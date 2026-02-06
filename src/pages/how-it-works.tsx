@@ -1,4 +1,5 @@
 import { PageLayout } from "@/components/layout";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { InfoCard } from "@/components/ui/info-card";
 import { Upload, Zap, Download } from "lucide-react";
 
@@ -24,12 +25,17 @@ const steps = [
 ] as const;
 
 export default function HowItWorks() {
+  usePageMeta(
+    "How Passport Photo Validation Works — AI-Powered ICAO Check",
+    "Learn how our AI-powered passport photo validator checks your photo against ICAO and EU biometric standards in three simple steps.",
+  );
+
   return (
     <PageLayout maxWidth="4xl">
       <div className="text-center mb-12">
-        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-          How Photo Validation Works
-        </h2>
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          How Passport Photo Validation Works
+        </h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
           Our AI-powered system validates passport photos against EU biometric standards 
           (Regulations 2252/2004 & 444/2009) with special allowances for children and infants.

@@ -45,7 +45,6 @@ export default function Admin() {
         })
       }
     } catch (error) {
-      console.error('Failed to load orders:', error)
       if (error instanceof Error && error.message === 'Authentication failed') {
         setIsAuth(false)
         toast({
@@ -79,13 +78,7 @@ export default function Admin() {
   }
 
   const handleApprove = async (orderId: string) => {
-    console.log('🟢 Approve clicked for order:', orderId)
-    setLoadingOrders(prev => {
-      const newSet = new Set(prev)
-      newSet.add(orderId)
-      console.log('🟢 Loading orders after add:', Array.from(newSet))
-      return newSet
-    })
+    setLoadingOrders(prev => new Set(prev).add(orderId))
     try {
       const response = await approveOrder(orderId)
       if (response.success) {
@@ -102,7 +95,6 @@ export default function Admin() {
         })
       }
     } catch (error) {
-      console.error('Failed to approve order:', error)
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to approve order',
@@ -110,22 +102,15 @@ export default function Admin() {
       })
     } finally {
       setLoadingOrders(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(orderId)
-        console.log('🟢 Loading orders after remove:', Array.from(newSet))
-        return newSet
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
       })
     }
   }
 
   const handleReject = async (orderId: string, reason: string) => {
-    console.log('🔴 Reject clicked for order:', orderId, 'reason:', reason)
-    setLoadingOrders(prev => {
-      const newSet = new Set(prev)
-      newSet.add(orderId)
-      console.log('🔴 Loading orders after add:', Array.from(newSet))
-      return newSet
-    })
+    setLoadingOrders(prev => new Set(prev).add(orderId))
     setOpenDropdown(null)
     try {
       const response = await rejectOrder(orderId, reason)
@@ -143,7 +128,6 @@ export default function Admin() {
         })
       }
     } catch (error) {
-      console.error('Failed to reject order:', error)
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to reject order',
@@ -151,22 +135,15 @@ export default function Admin() {
       })
     } finally {
       setLoadingOrders(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(orderId)
-        console.log('🔴 Loading orders after remove:', Array.from(newSet))
-        return newSet
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
       })
     }
   }
 
   const handleFamilinkContent = async (orderId: string) => {
-    console.log('🔵 Familink clicked for order:', orderId)
-    setLoadingOrders(prev => {
-      const newSet = new Set(prev)
-      newSet.add(orderId)
-      console.log('🔵 Loading orders after add:', Array.from(newSet))
-      return newSet
-    })
+    setLoadingOrders(prev => new Set(prev).add(orderId))
     try {
       const familinkData = await getFamilinkOrder(orderId)
       const jsonString = JSON.stringify(familinkData, null, 2)
@@ -183,7 +160,6 @@ export default function Admin() {
         duration: 10000, // Show for 10 seconds
       })
     } catch (error) {
-      console.error('Failed to fetch Familink data:', error)
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to fetch Familink data',
@@ -191,10 +167,9 @@ export default function Admin() {
       })
     } finally {
       setLoadingOrders(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(orderId)
-        console.log('🔵 Loading orders after remove:', Array.from(newSet))
-        return newSet
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
       })
     }
   }
@@ -319,12 +294,7 @@ export default function Admin() {
                       
                       <div className="relative flex-1">
                         <Button
-                          onClick={() => {
-                            console.log('🔽 Reject button clicked for order:', order.id, 'current openDropdown:', openDropdown)
-                            const newDropdown = openDropdown === order.id ? null : order.id
-                            console.log('🔽 Setting dropdown to:', newDropdown)
-                            setOpenDropdown(newDropdown)
-                          }}
+                          onClick={() => setOpenDropdown(openDropdown === order.id ? null : order.id)}
                           disabled={loadingOrders.has(order.id)}
                           variant="destructive"
                           className="w-full"

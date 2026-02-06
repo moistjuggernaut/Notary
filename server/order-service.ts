@@ -31,28 +31,6 @@ export class OrderService {
     return order || null;
   }
 
-  async getOrderByStripeSessionId(stripeSessionId: string): Promise<Order | null> {
-    const db = await this.getDb();
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.stripeSessionId, stripeSessionId))
-      .limit(1);
-    
-    return order || null;
-  }
-
-  async getOrderByStripePaymentIntentId(stripePaymentIntentId: string): Promise<Order | null> {
-    const db = await this.getDb();
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.stripePaymentIntentId, stripePaymentIntentId))
-      .limit(1);
-    
-    return order || null;
-  }
-
   async updateOrderFamilinkId(id: string, familinkId: string): Promise<Order | null> {
     const db = await this.getDb();
     const [order] = await db
@@ -117,23 +95,6 @@ export class OrderService {
       .where(eq(orders.status, status));
   }
 
-  async getAllOrders(): Promise<Order[]> {
-    const db = await this.getDb();
-    return await db
-      .select()
-      .from(orders)
-      .orderBy(orders.createdAt);
-  }
-
-  async deleteOrder(id: string): Promise<boolean> {
-    const db = await this.getDb();
-    const result = await db
-      .delete(orders)
-      .where(eq(orders.id, id));
-    
-    return (result.rowCount ?? 0) > 0;
-  }
 }
 
-// Export singleton instance
 export const orderService = new OrderService();

@@ -9,12 +9,7 @@ export default function Footer() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V4a2 2 0 011-1h2a2 2 0 011 1v2m-4 0a2 2 0 01-2 2h4a2 2 0 01-2-2m-6 4h.01M9 16h.01" />
               </svg>
             </div>
-            <span className="text-xl font-semibold text-gray-900">Photo ID Validator</span>
-          </div>
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-sm text-gray-500 mb-6">
-            <a href="#" className="hover:text-blue-600 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">Contact Support</a>
+            <span className="text-xl font-semibold text-gray-900">Passport Photo Validator</span>
           </div>
           <div className="pt-6 border-t border-gray-200">
             <p className="text-xs text-gray-500 max-w-3xl mx-auto">
@@ -28,4 +23,3 @@ export default function Footer() {
     </footer>
   );
 }
-

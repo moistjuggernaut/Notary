@@ -1,7 +1,6 @@
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import FilePreview from "../FilePreview";
-import { StepActions } from "@/components/ui/step-actions";
+import FilePreview from "../file-preview";
 
 interface PreviewStepProps {
   file: File;
@@ -28,7 +27,7 @@ export default function PreviewStep({
       <div className="space-y-6">
         <FilePreview file={file} onRemove={onRemoveFile} />
 
-        <StepActions>
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
             onClick={onValidate}
             disabled={isValidating}
@@ -57,7 +56,7 @@ export default function PreviewStep({
           >
             Use Different Photo
           </Button>
-        </StepActions>
+        </div>
       </div>
     </div>
   );

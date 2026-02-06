@@ -1,4 +1,4 @@
-import UploadArea from "../UploadArea";
+import UploadArea from "../upload-area";
 
 interface UploadStepProps {
   onFileSelect: (file: File) => void;

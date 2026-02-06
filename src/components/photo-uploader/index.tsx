@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { validateImageFile } from "@/lib/file-utils";
 import type { ValidationResult } from "@/types/validation";
-import Stepper from "../ui/Stepper";
+import Stepper from "../ui/stepper";
 import UploadStep from "./steps/UploadStep";
 import PreviewStep from "./steps/PreviewStep";
 import ValidationStep from "./steps/ValidationStep";
@@ -66,12 +66,10 @@ export default function PhotoUploader({
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        {/* Stepper */}
         <div className="px-4 sm:px-6 lg:px-8 py-8 border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
           <Stepper steps={STEPS} currentStep={currentStep} />
         </div>
 
-        {/* Step Content */}
         {currentStep === 1 && (
           <UploadStep
             onFileSelect={onFileSelect}

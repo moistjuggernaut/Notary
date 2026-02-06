@@ -144,15 +144,3 @@ export async function validatePhoto(imageBuffer: Buffer): Promise<ValidationResp
   }
 }
 
-/**
- * Validates a base64-encoded image.
- * Convenience wrapper around validatePhoto.
- *
- * @param base64Image - The image as a base64 string
- * @returns ValidationResponse with success status and processed image if valid
- */
-export async function validatePhotoBase64(base64Image: string): Promise<ValidationResponse> {
-  const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '')
-  const imageBuffer = Buffer.from(base64Data, 'base64')
-  return validatePhoto(imageBuffer)
-}

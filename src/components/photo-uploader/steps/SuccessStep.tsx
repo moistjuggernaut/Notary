@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, Download, CreditCard, Upload, Wand2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StepActions } from "@/components/ui/step-actions";
 import { InfoCard } from "@/components/ui/info-card";
 import { handleDownload } from "../utils";
 import type { ValidationResult } from "@/types/validation";
@@ -57,7 +56,6 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-12">
-      {/* Success Card */}
       <InfoCard variant="success" icon={CheckCircle} className="mb-8">
         <h3 className="text-lg sm:text-xl font-semibold">
           Photo Approved
@@ -67,7 +65,6 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
         </p>
       </InfoCard>
 
-      {/* Processed Image */}
       {displayImageUrl && (
         <div className="mb-8">
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
@@ -82,9 +79,8 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
         </div>
       )}
 
-      {/* Action Buttons */}
       <div className="space-y-4">
-        <StepActions>
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 space-y-3">
             <form
               action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`}
@@ -139,7 +135,7 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
               Reset
             </Button>
           </div>
-        </StepActions>
+        </div>
 
         <div className="pt-4 border-t border-gray-200">
           <Button

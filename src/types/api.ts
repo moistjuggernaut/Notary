@@ -1,20 +1,3 @@
-export interface Document {
-    id?: string;
-    title: string;
-    content: string;
-    created_at: string;
-    status: string;
-}
-
-export interface DocumentResponse {
-    id: string;
-    title: string;
-    content: string;
-    created_at: string;
-    status: string;
-}
-
-// Photo validation types for the serverless API
 export interface ValidationRequest {
     image: string; // base64 encoded image
     filename: string;
@@ -34,19 +17,6 @@ export interface ValidationResponse {
     error?: string; // Error message if validation failed or storage failed
 }
 
-export const API_ENDPOINTS = {
-    documents: {
-        list: '/documents',
-        create: '/documents',
-        get: (id: string) => `/documents/${id}`,
-    },
-    photo: {
-        validate: '/photo/validate',
-        removeBackground: '/photo/remove-background',
-    },
-} as const;
-
-// --- Remove Background ---
 export interface RemoveBackgroundRequest {
     orderId: string;
 }

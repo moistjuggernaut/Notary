@@ -1,8 +1,0 @@
-[
-    {
-      "origin": ["https://*-robert-kucheras-projects.vercel.app"],
-      "method": ["GET"],
-      "responseHeader": ["Content-Type"],
-      "maxAgeSeconds": 3600
-    }
-]

@@ -1,5 +1,4 @@
-// client.ts
-import { API_ENDPOINTS, ValidationRequest, ValidationResponse, RemoveBackgroundRequest, RemoveBackgroundResponse } from '@/types/api';
+import type { ValidationRequest, ValidationResponse, RemoveBackgroundRequest, RemoveBackgroundResponse } from '@/types/api';
 
 const API_BASE_URL = '/api';
 
@@ -17,7 +16,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
         let errorData;
         try {
             errorData = await response.json();
-        } catch (e) {
+        } catch {
             throw new Error(`API error: ${response.status} - ${response.statusText}`);
         }
         throw new Error(`API error (${response.status}): ${errorData.message || response.statusText}`);
@@ -26,52 +25,35 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     return response.json();
 }
 
-// Helper function to convert File to base64
 function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = () => {
-            const result = reader.result as string;
-            // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
-            const base64 = result.split(',')[1];
+            const base64 = (reader.result as string).split(',')[1];
             resolve(base64);
         };
         reader.onerror = reject;
     });
 }
 
-// Photo validation function - uploads and validates in one step
 export async function validatePhoto(file: File): Promise<ValidationResponse> {
-    try {
-        const base64Image = await fileToBase64(file);
-        const request: ValidationRequest = {
-            image: base64Image,
-            filename: file.name
-        };
+    const base64Image = await fileToBase64(file);
+    const request: ValidationRequest = {
+        image: base64Image,
+        filename: file.name,
+    };
 
-        return await fetchApi<ValidationResponse>(API_ENDPOINTS.photo.validate, {
-            method: 'POST',
-            body: JSON.stringify(request),
-        });
-    } catch (error) {
-        console.error('Photo validation error:', error);
-        throw error;
-    }
+    return fetchApi<ValidationResponse>('/photo/validate', {
+        method: 'POST',
+        body: JSON.stringify(request),
+    });
 }
 
 export async function removeBackground(orderId: string): Promise<RemoveBackgroundResponse> {
-    try {
-        const request: RemoveBackgroundRequest = { orderId };
-        return await fetchApi<RemoveBackgroundResponse>(API_ENDPOINTS.photo.removeBackground, {
-            method: 'POST',
-            body: JSON.stringify(request),
-        });
-    } catch (error) {
-        console.error('Remove background error:', error);
-        throw error;
-    }
+    const request: RemoveBackgroundRequest = { orderId };
+    return fetchApi<RemoveBackgroundResponse>('/photo/remove-background', {
+        method: 'POST',
+        body: JSON.stringify(request),
+    });
 }
-
-// Existing document functions...
-// ... rest of your existing API functions

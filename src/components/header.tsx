@@ -14,33 +14,36 @@ export default function Header() {
               </svg>
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900 truncate">EU Photo ID Validator</h1>
-              <p className="text-xs sm:text-sm text-gray-600 truncate">EU Passport Photo Verification</p>
+              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900 truncate block">
+                Passport Photo Validator
+              </span>
+              <span className="text-xs sm:text-sm text-gray-600 truncate block">
+                ICAO & EU Compliance Check
+              </span>
             </div>
           </Link>
-          
-          <nav className="hidden sm:flex items-center space-x-6">
-            <Link 
-              href="/requirements" 
+
+          <nav aria-label="Main navigation" className="hidden sm:flex items-center space-x-6">
+            <Link
+              href="/requirements"
               className={`font-medium text-sm transition-colors duration-200 ${
-                location === '/requirements' 
-                  ? 'text-blue-600' 
+                location === '/requirements'
+                  ? 'text-blue-600'
                   : 'text-gray-600 hover:text-blue-600'
               }`}
             >
               Requirements
             </Link>
-            <Link 
-              href="/how-it-works" 
+            <Link
+              href="/how-it-works"
               className={`font-medium text-sm transition-colors duration-200 ${
-                location === '/how-it-works' 
-                  ? 'text-blue-600' 
+                location === '/how-it-works'
+                  ? 'text-blue-600'
                   : 'text-gray-600 hover:text-blue-600'
               }`}
             >
               How It Works
             </Link>
-
           </nav>
         </div>
       </div>
