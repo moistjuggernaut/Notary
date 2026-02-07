@@ -22,15 +22,19 @@ export default function FilePreview({ file, onRemove }: FilePreviewProps) {
   return (
     <div className="space-y-4">
       {/* Image Preview */}
-      {preview && (
-        <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-          <img
-            src={preview}
-            alt="Preview"
-            className="w-full h-auto max-h-96 object-contain"
-          />
+      <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+        <div className="w-full aspect-[7/9]">
+          {preview ? (
+            <img
+              src={preview}
+              alt="Preview"
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="w-full h-full animate-pulse bg-gray-200" />
+          )}
         </div>
-      )}
+      </div>
 
       {/* File Info */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">

@@ -1,42 +1,65 @@
 import { useState, useEffect } from "react";
 
 interface PhotoWithSidebarProps {
-  file: File;
+  file?: File;
+  imageUrl?: string;
+  imageAlt?: string;
   overlay?: React.ReactNode;
+  highlight?: "approved";
   sidebar: React.ReactNode;
 }
 
 export default function PhotoWithSidebar({
   file,
+  imageUrl,
+  imageAlt = "Photo preview",
   overlay,
+  highlight,
   sidebar,
 }: PhotoWithSidebarProps) {
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(imageUrl ?? null);
+  const isApproved = highlight === "approved";
 
   useEffect(() => {
+    if (imageUrl) {
+      setPreview(imageUrl);
+      return;
+    }
+
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-  }, [file]);
+  }, [file, imageUrl]);
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
       {/* Left column: Image */}
       <div className="flex-1 min-w-0">
-        <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-          {preview ? (
-            <img
-              src={preview}
-              alt="Photo preview"
-              className="w-full h-auto max-h-96 object-contain"
-            />
-          ) : (
-            <div className="w-full h-64 flex items-center justify-center">
-              <div className="animate-pulse bg-gray-200 w-full h-full" />
-            </div>
-          )}
+        <div
+          className={`relative rounded-lg overflow-hidden bg-gray-100 ${
+            isApproved
+              ? "border-[3px] border-emerald-500/60 ring-2 ring-emerald-300/40 shadow-sm shadow-emerald-200/50"
+              : "border border-gray-200"
+          }`}
+        >
+          <div className="w-full aspect-[7/9]">
+            {preview ? (
+              <img
+                src={preview}
+                alt={imageAlt}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="w-full h-full animate-pulse bg-gray-200" />
+            )}
+          </div>
 
           {/* Optional overlay (e.g. spinner during validation) */}
           {overlay && (

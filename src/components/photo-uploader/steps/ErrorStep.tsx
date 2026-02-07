@@ -12,7 +12,7 @@ export default function ErrorStep({ result, onTryAgain }: ErrorStepProps) {
   const primaryCheck = result.checks && result.checks.length > 0 ? result.checks[0] : null;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-12">
+    <div className="px-4 sm:px-6 lg:px-8 py-12 min-h-[480px] sm:min-h-[520px] lg:min-h-[560px]">
       <InfoCard variant="error" icon={XCircle} className="mb-8">
         {primaryCheck && (
           <>

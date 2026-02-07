@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, Download, CreditCard, Upload, Wand2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { InfoCard } from "@/components/ui/info-card";
 import { ChecklistItem } from "@/components/ui/checklist-item";
+import PhotoWithSidebar from "../photo-with-sidebar";
 import { handleDownload } from "../utils";
 import type { ValidationResult } from "@/types/validation";
 import { removeBackground } from "@/api/client";
@@ -62,47 +62,32 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-12">
-      <InfoCard variant="success" icon={CheckCircle} className="mb-8">
-        <h3 className="text-lg sm:text-xl font-semibold">
-          Photo Approved
-        </h3>
-        <p className="mt-1 text-sm opacity-90">
-          Ready for passport application
-        </p>
-      </InfoCard>
-
-      {displayImageUrl && (
-        <div className="mb-8">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-            <div className="flex justify-center">
-              <img
-                src={displayImageUrl}
-                alt="Validated passport photo"
-                className="max-w-full max-h-96 rounded-lg shadow-sm border border-gray-200"
-              />
+    <div className="px-4 sm:px-6 lg:px-8 py-12 min-h-[480px] sm:min-h-[520px] lg:min-h-[560px]">
+      <div className="mb-8">
+        <PhotoWithSidebar
+          imageUrl={displayImageUrl}
+          imageAlt="Validated passport photo"
+          highlight="approved"
+          sidebar={
+            <div className="flex flex-col h-full">
+              <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
+                Final Checks
+              </h4>
+              <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                Please confirm these details before proceeding.
+              </p>
+              <ul className="space-y-2.5">
+                {FINAL_CHECKS.map((label) => (
+                  <li key={label}>
+                    <ChecklistItem icon={CheckCircle} variant="default" size="sm">
+                      {label}
+                    </ChecklistItem>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Final manual checks */}
-      <div className="mb-8 rounded-lg border border-blue-100 bg-blue-50/50 p-5">
-        <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
-          Final Checks
-        </h4>
-        <p className="text-sm text-gray-600 mb-4">
-          Please confirm these details before proceeding.
-        </p>
-        <ul className="space-y-2.5">
-          {FINAL_CHECKS.map((label) => (
-            <li key={label}>
-              <ChecklistItem icon={CheckCircle} variant="default" size="sm">
-                {label}
-              </ChecklistItem>
-            </li>
-          ))}
-        </ul>
+          }
+        />
       </div>
 
       <div className="space-y-4">
