@@ -1,47 +1,80 @@
-import { CheckCircle, LucideIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import { CheckCircle, type LucideIcon } from "lucide-react"
+import { cva, type VariantProps } from "class-variance-authority"
 
-interface ChecklistItemProps {
-  children: React.ReactNode;
-  icon?: LucideIcon;
-  iconClassName?: string;
-  variant?: "default" | "amber" | "emerald" | "blue" | "gray";
-  size?: "sm" | "default";
-}
+import { cn } from "@/lib/utils"
 
-const variantStyles = {
-  default: { icon: "text-emerald-600", text: "text-gray-700" },
-  amber: { icon: "text-amber-600", text: "text-amber-800" },
-  emerald: { icon: "text-emerald-600", text: "text-emerald-800" },
-  blue: { icon: "text-blue-600", text: "text-blue-800" },
-  gray: { icon: "text-gray-400", text: "text-gray-500" },
-};
+const checklistIconVariants = cva("mt-0.5 flex-shrink-0", {
+  variants: {
+    variant: {
+      default: "text-success",
+      amber: "text-warning",
+      emerald: "text-success",
+      blue: "text-info",
+      gray: "text-muted-foreground",
+    },
+    size: {
+      default: "w-5 h-5 mr-3",
+      sm: "w-4 h-4 mr-2",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+    size: "default",
+  },
+})
 
-const sizeStyles = {
-  default: { icon: "w-5 h-5", text: "text-sm sm:text-base", margin: "mr-3" },
-  sm: { icon: "w-4 h-4", text: "text-sm", margin: "mr-2" },
-};
+const checklistTextVariants = cva("", {
+  variants: {
+    variant: {
+      default: "text-foreground",
+      amber: "text-warning-foreground",
+      emerald: "text-foreground",
+      blue: "text-foreground",
+      gray: "text-muted-foreground",
+    },
+    size: {
+      default: "text-sm sm:text-base",
+      sm: "text-sm",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+    size: "default",
+  },
+})
 
-export function ChecklistItem({ 
-  children, 
-  icon: Icon = CheckCircle,
-  iconClassName,
-  variant = "default",
-  size = "default"
-}: ChecklistItemProps) {
-  return (
-    <div className="flex items-start">
-      <Icon className={cn(
-        sizeStyles[size].icon, 
-        variantStyles[variant].icon,
-        sizeStyles[size].margin,
-        "mt-0.5 flex-shrink-0",
-        iconClassName
-      )} />
-      <span className={cn(variantStyles[variant].text, sizeStyles[size].text)}>
-        {children}
-      </span>
-    </div>
-  );
-}
+type ChecklistItemProps = React.HTMLAttributes<HTMLDivElement> &
+  VariantProps<typeof checklistIconVariants> & {
+    icon?: LucideIcon
+    iconClassName?: string
+  }
 
+const ChecklistItem = React.forwardRef<HTMLDivElement, ChecklistItemProps>(
+  (
+    {
+      children,
+      icon: Icon = CheckCircle,
+      iconClassName,
+      variant,
+      size,
+      className,
+      ...props
+    },
+    ref
+  ) => {
+    return (
+      <div ref={ref} className={cn("flex items-start", className)} {...props}>
+        <Icon
+          className={cn(checklistIconVariants({ variant, size }), iconClassName)}
+        />
+        <span className={cn(checklistTextVariants({ variant, size }))}>
+          {children}
+        </span>
+      </div>
+    )
+  }
+)
+ChecklistItem.displayName = "ChecklistItem"
+
+export { ChecklistItem, checklistIconVariants, checklistTextVariants }

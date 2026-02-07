@@ -152,7 +152,7 @@ export default function Admin() {
         title: 'Familink Order Data',
         description: (
           <div className="max-w-md">
-            <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-32">
+            <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
               {jsonString}
             </pre>
           </div>
@@ -176,7 +176,7 @@ export default function Admin() {
 
   if (!isAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Admin Login</CardTitle>
@@ -190,7 +190,7 @@ export default function Admin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Admin Token"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                   required
                 />
               </div>
@@ -214,12 +214,12 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Order Review Dashboard</h1>
-            <p className="text-gray-600 mt-1">Review and approve paid orders</p>
+            <h1 className="text-3xl font-bold text-foreground">Order Review Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Review and approve paid orders</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={loadOrders} variant="outline" disabled={loadingOrdersList}>
@@ -233,12 +233,12 @@ export default function Admin() {
 
         {loadingOrdersList ? (
           <div className="text-center py-12">
-            <p className="text-gray-600">Loading orders...</p>
+            <p className="text-muted-foreground">Loading orders...</p>
           </div>
         ) : orders.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-gray-600">No paid orders awaiting review</p>
+              <p className="text-muted-foreground">No paid orders awaiting review</p>
             </CardContent>
           </Card>
         ) : (
@@ -246,7 +246,7 @@ export default function Admin() {
             {orders.map((order) => (
               <Card key={order.id} className="overflow-hidden">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-sm font-mono text-gray-600 truncate">
+                  <CardTitle className="text-sm font-mono text-muted-foreground truncate">
                     {order.id}
                   </CardTitle>
                   <CardDescription>
@@ -255,7 +255,7 @@ export default function Admin() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {order.imageUrl ? (
-                    <div className="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
+                    <div className="aspect-[3/4] bg-muted rounded-lg overflow-hidden">
                       <img
                         src={order.imageUrl}
                         alt="Order photo"
@@ -263,13 +263,13 @@ export default function Admin() {
                       />
                     </div>
                   ) : (
-                    <div className="aspect-[3/4] bg-gray-100 rounded-lg flex items-center justify-center">
-                      <p className="text-gray-500 text-sm">No image available</p>
+                    <div className="aspect-[3/4] bg-muted rounded-lg flex items-center justify-center">
+                      <p className="text-muted-foreground text-sm">No image available</p>
                     </div>
                   )}
 
                   {order.shipping && (
-                    <div className="text-sm text-gray-600 space-y-1">
+                    <div className="text-sm text-muted-foreground space-y-1">
                       <p className="font-semibold">
                         {order.shipping.first_name} {order.shipping.last_name}
                       </p>
@@ -287,7 +287,8 @@ export default function Admin() {
                       <Button
                         onClick={() => handleApprove(order.id)}
                         disabled={loadingOrders.has(order.id)}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        variant="success"
+                        className="flex-1"
                       >
                         {loadingOrders.has(order.id) ? 'Approving...' : 'Approve'}
                       </Button>
@@ -303,16 +304,18 @@ export default function Admin() {
                         </Button>
                         
                         {openDropdown === order.id && (
-                          <div className="absolute bottom-full mb-1 left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
+                          <div className="absolute bottom-full mb-1 left-0 right-0 bg-popover border border-border rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
                             {REJECTION_REASONS.map((reason) => (
-                              <button
+                              <Button
                                 key={reason}
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handleReject(order.id, reason)}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors"
+                                className="w-full justify-start rounded-none font-normal"
                                 disabled={loadingOrders.has(order.id)}
                               >
                                 {reason}
-                              </button>
+                              </Button>
                             ))}
                           </div>
                         )}

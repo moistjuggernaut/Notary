@@ -1,4 +1,5 @@
 import UploadArea from "../upload-area";
+import { STEP_CONTAINER_CLASS } from "./cta-classes";
 
 interface UploadStepProps {
   onFileSelect: (file: File) => void;
@@ -18,10 +19,10 @@ export default function UploadStep({
   openFileDialog,
 }: UploadStepProps) {
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-12 min-h-[480px] sm:min-h-[520px] lg:min-h-[560px]">
+    <div className={STEP_CONTAINER_CLASS}>
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-900 mb-3">Upload Your Photo</h3>
-        <p className="text-sm text-gray-600 leading-relaxed">
+        <h3 className="text-xl font-semibold text-foreground mb-3">Upload Your Photo</h3>
+        <p className="text-sm text-muted-foreground leading-relaxed">
           Select a high-quality photo for passport validation.
         </p>
       </div>

@@ -26,6 +26,10 @@
   --radius: 0.5rem;
   --success: 142 76% 36%;
   --success-foreground: 210 40% 98%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 38 92% 20%;
+  --info: 217 91% 60%;
+  --info-foreground: 210 40% 98%;
 }
 
 .dark {
@@ -50,6 +54,10 @@
   --ring: 217 91% 60%;
   --success: 142 76% 36%;
   --success-foreground: 213 31% 91%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 38 92% 90%;
+  --info: 217 91% 60%;
+  --info-foreground: 213 31% 91%;
 }
 
 @layer base {

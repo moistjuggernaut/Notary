@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useFilePreview, PASSPORT_PHOTO_ASPECT } from "@/hooks/use-file-preview";
 
 interface PhotoWithSidebarProps {
   file?: File;
@@ -17,39 +17,21 @@ export default function PhotoWithSidebar({
   highlight,
   sidebar,
 }: PhotoWithSidebarProps) {
-  const [preview, setPreview] = useState<string | null>(imageUrl ?? null);
+  const preview = useFilePreview(file, imageUrl);
   const isApproved = highlight === "approved";
-
-  useEffect(() => {
-    if (imageUrl) {
-      setPreview(imageUrl);
-      return;
-    }
-
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  }, [file, imageUrl]);
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
       {/* Left column: Image */}
       <div className="flex-1 min-w-0">
         <div
-          className={`relative rounded-lg overflow-hidden bg-gray-100 ${
+          className={`relative rounded-lg overflow-hidden bg-muted ${
             isApproved
-              ? "border-[3px] border-emerald-500/60 ring-2 ring-emerald-300/40 shadow-sm shadow-emerald-200/50"
-              : "border border-gray-200"
+              ? "border-[3px] border-success/60 ring-2 ring-success/30 shadow-sm shadow-success/20"
+              : "border border-border"
           }`}
         >
-          <div className="w-full aspect-[7/9]">
+          <div className={`w-full ${PASSPORT_PHOTO_ASPECT}`}>
             {preview ? (
               <img
                 src={preview}
@@ -57,7 +39,7 @@ export default function PhotoWithSidebar({
                 className="w-full h-full object-contain"
               />
             ) : (
-              <div className="w-full h-full animate-pulse bg-gray-200" />
+              <div className="w-full h-full animate-pulse bg-muted" />
             )}
           </div>
 

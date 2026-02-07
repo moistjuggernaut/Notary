@@ -11,12 +11,12 @@ import {
 export default function EURequirements() {
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <div className="px-4 sm:px-6 lg:px-8 pb-6 pt-6 space-y-8">
           {/* Dynamic Requirement Sections */}
           {requirementsSections.map((section) => (
             <div key={section.id}>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{section.title}</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">{section.title}</h3>
               <div className="space-y-3">
                 {section.items.map((item, index) => (
                   <ChecklistItem key={index}>{item}</ChecklistItem>
@@ -53,7 +53,7 @@ export default function EURequirements() {
                 href={regulationLinks.eu2252.url} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="underline hover:text-blue-600"
+                className="underline hover:text-primary"
               >
                 {regulationLinks.eu2252.label}
               </a>
@@ -62,7 +62,7 @@ export default function EURequirements() {
                 href={regulationLinks.eu444.url} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="underline hover:text-blue-600"
+                className="underline hover:text-primary"
               >
                 {regulationLinks.eu444.label}
               </a>
@@ -71,7 +71,7 @@ export default function EURequirements() {
                 href={regulationLinks.icao9303.url} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="underline hover:text-blue-600"
+                className="underline hover:text-primary"
               >
                 {regulationLinks.icao9303.label}
               </a>{" "}

@@ -1,6 +1,11 @@
 import { XCircle, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoCard } from "@/components/ui/info-card";
+import {
+  STEP_CONTAINER_CLASS,
+  CTA_ROW_CLASS,
+  CTA_PRIMARY_BUTTON_CLASS,
+} from "./cta-classes";
 import type { ValidationResult } from "@/types/validation";
 
 interface ErrorStepProps {
@@ -12,7 +17,7 @@ export default function ErrorStep({ result, onTryAgain }: ErrorStepProps) {
   const primaryCheck = result.checks && result.checks.length > 0 ? result.checks[0] : null;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-12 min-h-[480px] sm:min-h-[520px] lg:min-h-[560px]">
+    <div className={STEP_CONTAINER_CLASS}>
       <InfoCard variant="error" icon={XCircle} className="mb-8">
         {primaryCheck && (
           <>
@@ -26,7 +31,7 @@ export default function ErrorStep({ result, onTryAgain }: ErrorStepProps) {
         )}
 
         {result.checks && result.checks.length > 1 && (
-          <div className="mt-4 space-y-2 pt-4 border-t border-red-200">
+          <div className="mt-4 space-y-2 pt-4 border-t border-destructive/20">
             {result.checks.slice(1).map((check, index) => (
               <div key={index}>
                 <p className="text-sm font-medium">{check.name}</p>
@@ -50,8 +55,8 @@ export default function ErrorStep({ result, onTryAgain }: ErrorStepProps) {
         </InfoCard>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Button onClick={onTryAgain} size="lg" className="w-full">
+      <div className={CTA_ROW_CLASS}>
+        <Button onClick={onTryAgain} size="lg" className={CTA_PRIMARY_BUTTON_CLASS}>
           <Upload className="w-4 h-4" />
           Try Different Photo
         </Button>

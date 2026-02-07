@@ -16,7 +16,7 @@ export default function Requirements() {
       <div className="mb-8">
         <Link
           href="/"
-          className="inline-flex items-center text-blue-600 hover:text-blue-700 transition-colors"
+          className="inline-flex items-center text-primary hover:text-primary/80 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Validator
@@ -24,10 +24,10 @@ export default function Requirements() {
       </div>
 
       <div className="text-center mb-12 sm:mb-16">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4 sm:mb-6">
           EU Passport Photo Requirements
         </h1>
-        <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+        <p className="text-lg sm:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
           Complete guide to European Union passport photo requirements based on EU Regulations
           2252/2004 & 444/2009 and ICAO Doc 9303 biometric standards.
         </p>
@@ -35,11 +35,11 @@ export default function Requirements() {
 
       <EURequirements />
 
-      <div className="mt-12 bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-        <h3 className="text-lg font-semibold text-green-900 mb-2">
+      <div className="mt-12 bg-success/10 border border-success/30 rounded-lg p-6 text-center">
+        <h3 className="text-lg font-semibold text-foreground mb-2">
           Ready to Validate Your Photo?
         </h3>
-        <p className="text-green-800 mb-4">
+        <p className="text-muted-foreground mb-4">
           Upload your photo to check compliance with ICAO and EU biometric passport standards.
         </p>
         <Button asChild>

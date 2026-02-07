@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatFileSize } from "@/lib/file-utils";
+import { useFilePreview, PASSPORT_PHOTO_ASPECT } from "@/hooks/use-file-preview";
 
 interface FilePreviewProps {
   file: File;
@@ -9,21 +9,13 @@ interface FilePreviewProps {
 }
 
 export default function FilePreview({ file, onRemove }: FilePreviewProps) {
-  const [preview, setPreview] = useState<string | null>(null);
-
-  useEffect(() => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  }, [file]);
+  const preview = useFilePreview(file);
 
   return (
     <div className="space-y-4">
       {/* Image Preview */}
-      <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-        <div className="w-full aspect-[7/9]">
+      <div className="relative rounded-lg overflow-hidden border border-border bg-muted">
+        <div className={`w-full ${PASSPORT_PHOTO_ASPECT}`}>
           {preview ? (
             <img
               src={preview}
@@ -31,22 +23,22 @@ export default function FilePreview({ file, onRemove }: FilePreviewProps) {
               className="w-full h-full object-contain"
             />
           ) : (
-            <div className="w-full h-full animate-pulse bg-gray-200" />
+            <div className="w-full h-full animate-pulse bg-muted" />
           )}
         </div>
       </div>
 
       {/* File Info */}
-      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+      <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-gray-900 truncate">{file.name}</p>
-          <p className="text-sm text-gray-500">{formatFileSize(file.size)}</p>
+          <p className="font-medium text-foreground truncate">{file.name}</p>
+          <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={onRemove}
-          className="text-gray-400 hover:text-red-500 ml-4 flex-shrink-0"
+          className="text-muted-foreground hover:text-destructive ml-4 flex-shrink-0"
           aria-label="Remove file"
         >
           <X className="w-5 h-5" />

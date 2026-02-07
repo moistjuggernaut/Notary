@@ -65,8 +65,8 @@ export default function PhotoUploader({
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 lg:px-8 py-8 border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 lg:px-8 py-8 border-b border-border/50 bg-gradient-to-b from-muted to-card">
           <Stepper steps={STEPS} currentStep={currentStep} />
         </div>
 

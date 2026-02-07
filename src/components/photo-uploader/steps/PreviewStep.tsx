@@ -1,7 +1,16 @@
 import { Upload, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { ChecklistItem } from "@/components/ui/checklist-item";
 import PhotoWithSidebar from "../photo-with-sidebar";
+import {
+  STEP_CONTAINER_CLASS,
+  CTA_PRIMARY_BUTTON_CLASS,
+  CTA_PRIMARY_COLUMN_CLASS,
+  CTA_ROW_CLASS,
+  CTA_SECONDARY_BUTTON_CLASS,
+  CTA_SECONDARY_COLUMN_CLASS,
+} from "./cta-classes";
 
 interface PreviewStepProps {
   file: File;
@@ -26,12 +35,12 @@ export default function PreviewStep({
   isValidating,
 }: PreviewStepProps) {
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-12 min-h-[480px] sm:min-h-[520px] lg:min-h-[560px]">
+    <div className={STEP_CONTAINER_CLASS}>
       <PhotoWithSidebar
         file={file}
         sidebar={
           <div className="flex flex-col h-full">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            <h3 className="text-xl font-semibold text-foreground mb-4">
               Review Your Photo
             </h3>
             <ul className="space-y-2.5">
@@ -47,35 +56,40 @@ export default function PreviewStep({
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-3 mt-6">
-        <Button
-          onClick={onValidate}
-          disabled={isValidating}
-          size="lg"
-          className="flex-1"
-        >
-          {isValidating ? (
-            <>
-              <div className="animate-spin rounded-full w-4 h-4 border-b-2 border-white" />
-              Validating...
-            </>
-          ) : (
-            <>
-              <Upload className="w-4 h-4" />
-              Run EU Validation
-            </>
-          )}
-        </Button>
+      <div className={`${CTA_ROW_CLASS} mt-6`}>
+        <div className={CTA_PRIMARY_COLUMN_CLASS}>
+          <Button
+            onClick={onValidate}
+            disabled={isValidating}
+            variant="primary"
+            size="lg"
+            className={CTA_PRIMARY_BUTTON_CLASS}
+          >
+            {isValidating ? (
+              <>
+                <Spinner variant="light" size="default" />
+                Validating...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                Run EU Validation
+              </>
+            )}
+          </Button>
+        </div>
 
-        <Button
-          variant="outline"
-          onClick={onRemoveFile}
-          size="lg"
-          className="sm:w-auto"
-          disabled={isValidating}
-        >
-          Use Different Photo
-        </Button>
+        <div className={CTA_SECONDARY_COLUMN_CLASS}>
+          <Button
+            variant="outline"
+            onClick={onRemoveFile}
+            size="lg"
+            className={CTA_SECONDARY_BUTTON_CLASS}
+            disabled={isValidating}
+          >
+            Use Different Photo
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -22,10 +22,10 @@ export default function Home() {
   return (
     <PageLayout>
       <section className="py-6 sm:py-8 text-center">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-2 sm:mb-3">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-2 sm:mb-3">
           Passport Photo Validator
         </h1>
-        <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-6">
+        <p className="text-lg sm:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed mb-6">
           Ensure your passport photo meets ICAO international standards and European Union biometric requirements.
           Valid for all EU member states under Regulations 2252/2004 & 444/2009.
         </p>
@@ -41,11 +41,11 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-4">
           {steps.map((step) => (
             <div key={step.title} className="flex flex-col items-center text-center">
-              <div className="w-full aspect-square bg-gray-200 rounded-lg flex items-center justify-center border border-gray-300 mb-4 overflow-hidden">
+              <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center border border-border mb-4 overflow-hidden">
                 <img src={step.image} alt={step.title} className="w-full h-full object-cover" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.title}</h3>
-              <p className="text-sm text-gray-600">{step.description}</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">{step.title}</h3>
+              <p className="text-sm text-muted-foreground">{step.description}</p>
             </div>
           ))}
         </div>

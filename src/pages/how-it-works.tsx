@@ -33,10 +33,10 @@ export default function HowItWorks() {
   return (
     <PageLayout maxWidth="4xl">
       <div className="text-center mb-12">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
           How Passport Photo Validation Works
         </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
           Our AI-powered system validates passport photos against EU biometric standards 
           (Regulations 2252/2004 & 444/2009) with special allowances for children and infants.
         </p>
@@ -45,13 +45,13 @@ export default function HowItWorks() {
       <div className="grid gap-8 md:grid-cols-3 mb-16">
         {steps.map((step) => (
           <div key={step.id} className="text-center">
-            <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mx-auto mb-6">
-              <step.icon className="w-8 h-8 text-white" />
+            <div className="flex items-center justify-center w-16 h-16 bg-primary rounded-full mx-auto mb-6">
+              <step.icon className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            <h3 className="text-xl font-semibold text-foreground mb-4">
               {step.id}. {step.title}
             </h3>
-            <p className="text-gray-600 leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed">
               {step.description}
             </p>
           </div>

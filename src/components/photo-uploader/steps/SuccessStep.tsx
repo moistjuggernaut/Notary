@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { ChecklistItem } from "@/components/ui/checklist-item";
 import PhotoWithSidebar from "../photo-with-sidebar";
 import { handleDownload } from "../utils";
+import {
+  STEP_CONTAINER_CLASS,
+  CTA_PRIMARY_BUTTON_CLASS,
+  CTA_PRIMARY_COLUMN_CLASS,
+  CTA_ROW_CLASS,
+  CTA_SECONDARY_BUTTON_CLASS,
+  CTA_SECONDARY_COLUMN_CLASS,
+} from "./cta-classes";
 import type { ValidationResult } from "@/types/validation";
 import { removeBackground } from "@/api/client";
 
@@ -62,7 +70,7 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-12 min-h-[480px] sm:min-h-[520px] lg:min-h-[560px]">
+    <div className={STEP_CONTAINER_CLASS}>
       <div className="mb-8">
         <PhotoWithSidebar
           imageUrl={displayImageUrl}
@@ -70,10 +78,10 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
           highlight="approved"
           sidebar={
             <div className="flex flex-col h-full">
-              <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
+              <h4 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-3">
                 Final Checks
               </h4>
-              <p className="text-sm text-gray-600 leading-relaxed mb-4">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                 Please confirm these details before proceeding.
               </p>
               <ul className="space-y-2.5">
@@ -91,16 +99,18 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
       </div>
 
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 space-y-3">
+        <div className={CTA_ROW_CLASS}>
+          <div className={CTA_PRIMARY_COLUMN_CLASS}>
             <form
+              className="w-full"
               action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`}
               method="POST"
             >
               <Button
                 type="submit"
+                variant="primary"
                 size="lg"
-                className="w-full"
+                className={CTA_PRIMARY_BUTTON_CLASS}
                 disabled={!result?.orderId}
               >
                 <CreditCard className="w-4 h-4" />
@@ -112,7 +122,7 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
               type="button"
               variant="secondary"
               size="lg"
-              className="w-full"
+              className={CTA_PRIMARY_BUTTON_CLASS}
               onClick={handleRemoveBackground}
               disabled={!result?.orderId || !result.imageUrl || isRemovingBackground || isBackgroundRemoved}
             >
@@ -121,11 +131,11 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
             </Button>
           </div>
 
-          <div className="flex-1 sm:flex-none space-y-3 sm:min-w-[200px]">
+          <div className={CTA_SECONDARY_COLUMN_CLASS}>
             <Button
               variant="outline"
               size="lg"
-              className="w-full"
+              className={CTA_SECONDARY_BUTTON_CLASS}
               onClick={() => handleDownload(displayImageUrl)}
               disabled={!displayImageUrl}
             >
@@ -137,10 +147,9 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
               type="button"
               variant="outline"
               size="lg"
-              className="w-full"
+              className={`${CTA_SECONDARY_BUTTON_CLASS} ${isBackgroundRemoved ? 'visible' : 'invisible'}`}
               onClick={handleResetBackground}
               disabled={!isBackgroundRemoved}
-              style={{ visibility: isBackgroundRemoved ? 'visible' : 'hidden' }}
             >
               <RotateCcw className="w-4 h-4" />
               Reset
@@ -148,10 +157,11 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
           </div>
         </div>
 
-        <div className="pt-4 border-t border-gray-200">
+        <div className="pt-4 border-t border-border">
           <Button
             variant="ghost"
-            className="w-full text-gray-600 hover:text-gray-900"
+            size="lg"
+            className="w-full text-muted-foreground hover:text-foreground"
             onClick={onUploadNew}
           >
             <Upload className="w-4 h-4" />
