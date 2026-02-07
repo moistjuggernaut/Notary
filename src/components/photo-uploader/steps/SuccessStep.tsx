@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { CheckCircle, Download, CreditCard, Upload, Wand2, RotateCcw, Square, CheckSquare } from "lucide-react";
+import { CheckCircle, Download, CreditCard, Upload, Wand2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoCard } from "@/components/ui/info-card";
+import { ChecklistItem } from "@/components/ui/checklist-item";
 import { handleDownload } from "../utils";
 import type { ValidationResult } from "@/types/validation";
 import { removeBackground } from "@/api/client";
@@ -23,12 +24,6 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   const [isBackgroundRemoved, setIsBackgroundRemoved] = useState(false);
   const [cachedBgRemovedUrl, setCachedBgRemovedUrl] = useState<string | undefined>(undefined);
-  const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
-
-  const toggleCheck = (index: number) => {
-    setCheckedItems((prev) => ({ ...prev, [index]: !prev[index] }));
-  };
-
   useEffect(() => {
     setDisplayImageUrl(result.imageUrl);
     setIsBackgroundRemoved(false);
@@ -99,27 +94,12 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
         <p className="text-sm text-gray-600 mb-4">
           Please confirm these details before proceeding.
         </p>
-        <ul className="space-y-2">
-          {FINAL_CHECKS.map((label, index) => (
+        <ul className="space-y-2.5">
+          {FINAL_CHECKS.map((label) => (
             <li key={label}>
-              <button
-                type="button"
-                className="flex items-start gap-2 w-full text-left group"
-                onClick={() => toggleCheck(index)}
-              >
-                {checkedItems[index] ? (
-                  <CheckSquare className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <Square className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0 group-hover:text-blue-500 transition-colors" />
-                )}
-                <span
-                  className={`text-sm ${
-                    checkedItems[index] ? "text-gray-900" : "text-gray-600"
-                  }`}
-                >
-                  {label}
-                </span>
-              </button>
+              <ChecklistItem icon={CheckCircle} variant="default" size="sm">
+                {label}
+              </ChecklistItem>
             </li>
           ))}
         </ul>
