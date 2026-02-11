@@ -102,7 +102,7 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
         <div className={CTA_ROW_CLASS}>
           <div className={CTA_PRIMARY_COLUMN_CLASS}>
             <form
-              className="w-full"
+              className="w-full contents"
               action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`}
               method="POST"
             >
