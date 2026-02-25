@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ValidationResult } from "@/types/validation";
 import { validatePhoto } from "@/api/client";
 import { convertApiResponseToValidationResult } from "@/lib/validation-utils";
+import { errorMessages } from "@/lib/constants";
 
 export function usePhotoValidation() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -39,16 +40,13 @@ export function usePhotoValidation() {
       const result = convertApiResponseToValidationResult(apiResponse);
       setValidationResult(result);
       setCurrentStep(4);
-    } catch (error) {
+    } catch {
+      const errInfo = errorMessages.INTERNAL_SERVER_ERROR;
       setValidationResult({
         status: 'error',
-        summary: 'Validation failed due to a technical error. Please try again.',
-        checks: [{
-          name: 'API Error',
-          description: error instanceof Error ? error.message : 'Unknown error occurred',
-          status: 'fail',
-        }],
-        recommendations: ['Please try again or contact support if the problem persists.'],
+        summary: errInfo.summary,
+        checks: [{ name: 'Unexpected Error', description: errInfo.description, status: 'fail' }],
+        recommendations: errInfo.recommendations,
       });
       setCurrentStep(4);
     } finally {

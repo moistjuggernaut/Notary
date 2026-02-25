@@ -45,11 +45,11 @@ export const errorMessages: Record<string, { summary: string; description: strin
     ]
   },
   INTERNAL_SERVER_ERROR: {
-    summary: 'A technical error occurred during validation. Please try again.',
-    description: 'Internal server error occurred',
+    summary: 'Something went wrong on our end.',
+    description: 'We ran into an unexpected error while validating your photo',
     recommendations: [
-      'Please try validating your photo again',
-      'If the problem persists, contact support'
+      "This is on us, not your photo — we're already working on it",
+      'Try again later and it should clear right up'
     ]
   }
 };

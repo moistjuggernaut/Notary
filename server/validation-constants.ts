@@ -175,6 +175,8 @@ export const LandmarkType = {
   CHIN_GNATHION: 'CHIN_GNATHION',
   CHIN_LEFT_GONION: 'CHIN_LEFT_GONION',
   CHIN_RIGHT_GONION: 'CHIN_RIGHT_GONION',
+  LEFT_CHEEK_CENTER: 'LEFT_CHEEK_CENTER',
+  RIGHT_CHEEK_CENTER: 'RIGHT_CHEEK_CENTER',
 } as const;
 
 // Types for face data used in preprocessing

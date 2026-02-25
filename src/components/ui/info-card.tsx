@@ -21,7 +21,7 @@ const infoCardVariants = cva("rounded-lg p-4 sm:p-6 border-l-4", {
 const infoCardTitleVariants = cva("text-lg font-semibold mb-3", {
   variants: {
     variant: {
-      info: "text-info-foreground",
+      info: "text-foreground",
       success: "text-foreground",
       warning: "text-warning-foreground",
       error: "text-foreground",

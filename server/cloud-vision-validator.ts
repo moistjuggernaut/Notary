@@ -134,6 +134,9 @@ function validateGlassesGlare(
   return ValidationReason.GLS_GLARE
 }
 
+// Validate cheek centers
+
+
 // Validate head pose
 function validateHeadPose(face: IFaceAnnotation): ValidationReasonType | null {
   const rollAngle = face.rollAngle ?? 0

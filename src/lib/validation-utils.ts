@@ -18,8 +18,8 @@ export const convertApiResponseToValidationResult = (apiResponse: ValidationResp
     summary: 'Photo validation encountered an issue.',
     description: details?.validator_reason_description || `Validation failed with code: ${reason_code}`,
     recommendations: [
-      'Please review the photo requirements and try again',
-      'Contact support if the issue persists'
+      'Review the photo requirements and try again',
+      'If the issue keeps happening, try a different photo'
     ]
   };
 
