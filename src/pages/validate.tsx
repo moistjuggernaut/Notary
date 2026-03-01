@@ -6,12 +6,19 @@ import { Button } from "@/components/ui/button";
 import { InfoCard } from "@/components/ui/info-card";
 import { Link } from "wouter";
 import { FileText, HelpCircle } from "lucide-react";
+import type { DocType } from "@/lib/country-config";
 
 export default function Validate() {
   usePageMeta(
     "Validate Your Passport Photo — Free Online ICAO Checker",
     "Upload your passport photo for instant AI-powered validation against ICAO and EU biometric standards. Get results in seconds.",
   );
+
+  const params = new URLSearchParams(window.location.search)
+  const country = params.get('country') ?? undefined
+  const rawDocType = params.get('docType')
+  const docType: DocType | undefined =
+    rawDocType === 'passport' || rawDocType === 'drivers_license' ? rawDocType : undefined
 
   const {
     selectedFile,
@@ -22,7 +29,7 @@ export default function Validate() {
     handleValidatePhoto,
     currentStep,
     handleReset,
-  } = usePhotoValidation();
+  } = usePhotoValidation({ country, docType });
 
   return (
     <PageLayout>

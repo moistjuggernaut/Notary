@@ -1,6 +1,8 @@
 export interface ValidationRequest {
     image: string; // base64 encoded image
     filename: string;
+    country?: string; // ISO 3166-1 alpha-2 country code
+    docType?: 'passport' | 'drivers_license';
 }
 
 export interface ValidationResponse {

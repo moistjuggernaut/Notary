@@ -37,11 +37,17 @@ function fileToBase64(file: File): Promise<string> {
     });
 }
 
-export async function validatePhoto(file: File): Promise<ValidationResponse> {
+export async function validatePhoto(
+    file: File,
+    country?: string,
+    docType?: 'passport' | 'drivers_license'
+): Promise<ValidationResponse> {
     const base64Image = await fileToBase64(file);
     const request: ValidationRequest = {
         image: base64Image,
         filename: file.name,
+        ...(country && { country }),
+        ...(docType && { docType }),
     };
 
     return fetchApi<ValidationResponse>('/photo/validate', {

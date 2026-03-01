@@ -2,6 +2,40 @@
  * ICAO passport photo validation constants and configuration.
  */
 
+export type DocumentType = 'passport' | 'drivers_license'
+
+type Dims = { widthMm: number; heightMm: number }
+
+export const COUNTRY_DIMENSIONS: Record<string, { passport: Dims; drivers_license: Dims }> = {
+  AT: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  BE: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  BG: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  HR: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 30, heightMm: 35 } },
+  CY: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  CZ: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  DK: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  EE: { passport: { widthMm: 40, heightMm: 50 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  FI: { passport: { widthMm: 36, heightMm: 47 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  FR: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  DE: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  GR: { passport: { widthMm: 40, heightMm: 60 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  HU: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  IE: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  IT: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  LV: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  LT: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  LU: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  MT: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  NL: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  PL: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  PT: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  RO: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  SK: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  SI: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+  ES: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 32, heightMm: 26 } },
+  SE: { passport: { widthMm: 35, heightMm: 45 }, drivers_license: { widthMm: 35, heightMm: 45 } },
+}
+
 // ICAO Configuration for passport photo dimensions
 export const ICAOConfig = {
   // Target Photo Dimensions (mm) and DPI for high-resolution output

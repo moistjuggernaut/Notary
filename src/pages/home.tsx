@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { PageLayout } from "@/components/layout";
 import { usePageMeta } from "@/hooks/use-page-meta";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { FileText, HelpCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CountrySelectModal } from "@/components/CountrySelectModal";
+import type { DocType } from "@/lib/country-config";
 import selfieImg from "@/assets/selfie.png";
 import validationImg from "@/assets/validation.png";
 import shippingImg from "@/assets/shipping.png";
@@ -14,6 +17,14 @@ const steps = [
 ];
 
 export default function Home() {
+  const [, navigate] = useLocation()
+  const [modalOpen, setModalOpen] = useState(false)
+
+  function handleConfirm(country: string, docType: DocType) {
+    setModalOpen(false)
+    navigate(`/validate?country=${country}&docType=${docType}`)
+  }
+
   usePageMeta(
     "Passport Photo Validator — Check ICAO & EU Standards Online",
     "Free online passport photo validator. Upload your photo and instantly check it meets ICAO international standards and EU biometric requirements. Works for adults, children, and infants.",
@@ -29,12 +40,15 @@ export default function Home() {
           Ensure your passport photo meets ICAO international standards and European Union biometric requirements.
           Valid for all EU member states under Regulations 2252/2004 & 444/2009.
         </p>
-        <Button asChild size="lg" className="text-lg px-8 py-6">
-          <Link href="/validate">
-            Start Validating
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Link>
+        <Button size="lg" className="text-lg px-8 py-6" onClick={() => setModalOpen(true)}>
+          Start Validating
+          <ArrowRight className="w-5 h-5 ml-2" />
         </Button>
+        <CountrySelectModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onConfirm={handleConfirm}
+        />
       </section>
 
       <section className="py-4 sm:py-6">

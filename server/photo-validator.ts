@@ -26,9 +26,15 @@ import sharp from 'sharp'
  * 3. Final geometry validation
  *
  * @param imageBuffer - The image as a Buffer
+ * @param widthMm - Target photo width in mm (defaults to ICAOConfig value)
+ * @param heightMm - Target photo height in mm (defaults to ICAOConfig value)
  * @returns ValidationResponse with success status and processed image if valid
  */
-export async function validatePhoto(imageBuffer: Buffer): Promise<ValidationResponse> {
+export async function validatePhoto(
+  imageBuffer: Buffer,
+  widthMm?: number,
+  heightMm?: number
+): Promise<ValidationResponse> {
   if (!imageBuffer || imageBuffer.length === 0) {
     return {
       success: false,
@@ -102,9 +108,13 @@ export async function validatePhoto(imageBuffer: Buffer): Promise<ValidationResp
 
     // 3. Final Geometry Validation
     console.log('Validating final geometry...')
+    const targetWidthMm = widthMm ?? ICAOConfig.targetPhotoWidthMm
+    const targetHeightMm = heightMm ?? ICAOConfig.targetPhotoHeightMm
+    const targetWidthPx = Math.floor((targetWidthMm / 25.4) * ICAOConfig.targetDpi)
+    const targetHeightPx = Math.floor((targetHeightMm / 25.4) * ICAOConfig.targetDpi)
     const geometryResult = validateFinalGeometry(
-      ICAOConfig.finalOutputWidthPx,
-      ICAOConfig.finalOutputHeightPx,
+      targetWidthPx,
+      targetHeightPx,
       processingResult.faceData
     )
 

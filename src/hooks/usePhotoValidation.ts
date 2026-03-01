@@ -4,7 +4,12 @@ import { validatePhoto } from "@/api/client";
 import { convertApiResponseToValidationResult } from "@/lib/validation-utils";
 import { errorMessages } from "@/lib/constants";
 
-export function usePhotoValidation() {
+type UsePhotoValidationOptions = {
+  country?: string
+  docType?: 'passport' | 'drivers_license'
+}
+
+export function usePhotoValidation({ country, docType }: UsePhotoValidationOptions = {}) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -36,7 +41,7 @@ export function usePhotoValidation() {
     setCurrentStep(3);
 
     try {
-      const apiResponse = await validatePhoto(selectedFile);
+      const apiResponse = await validatePhoto(selectedFile, country, docType);
       const result = convertApiResponseToValidationResult(apiResponse);
       setValidationResult(result);
       setCurrentStep(4);

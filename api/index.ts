@@ -6,6 +6,7 @@ import sharp from 'sharp'
 import { getStripe, getWebhookSecret } from '../server/.stripe.js'
 import { downloadImageFromGCP, getSignedUrlForImage, uploadImageToGCP } from '../server/.gcp-storage.js'
 import { validatePhoto } from '../server/photo-validator.js'
+import { COUNTRY_DIMENSIONS } from '../server/validation-constants.js'
 import { base64ToBuffer, bufferToBase64 } from '../server/image-preprocessor.js'
 import { handleStripeWebhookEvent } from '../server/fulfillment.js'
 import { authMiddleware } from '../server/auth-middleware.js'
@@ -28,7 +29,9 @@ await createDatabaseConnection();
 // Validation schemas
 const ValidationSchema = z.object({
   image: z.string().min(1, 'Image is required'),
-  filename: z.string().min(1, 'Filename is required')
+  filename: z.string().min(1, 'Filename is required'),
+  country: z.string().length(2).optional(),
+  docType: z.enum(['passport', 'drivers_license']).optional(),
 })
 
 const RemoveBackgroundSchema = z.object({
@@ -47,7 +50,7 @@ app.get('/api/health', async (c) => {
 // Photo routes
 app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) => {
   try {
-    const { image } = c.req.valid('json')
+    const { image, country, docType } = c.req.valid('json')
 
     // 1. Create order and upload original image (converted to WebP lossless for archival)
     const order = await orderService.createOrder()
@@ -60,8 +63,20 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
     await orderService.updateOrderStatus(order.id, 'original_uploaded')
     await orderService.updateOrderStatus(order.id, 'validation_started')
 
+    // Resolve country-specific dimensions (fall back to ICAO defaults when not provided)
+    let widthMm: number | undefined
+    let heightMm: number | undefined
+    if (country) {
+      const countryDims = COUNTRY_DIMENSIONS[country.toUpperCase()]
+      if (countryDims) {
+        const docKey = docType ?? 'passport'
+        widthMm = countryDims[docKey].widthMm
+        heightMm = countryDims[docKey].heightMm
+      }
+    }
+
     // 2. Run photo validation directly (Cloud Vision API + preprocessing)
-    const validationResult = await validatePhoto(imageBuffer)
+    const validationResult = await validatePhoto(imageBuffer, widthMm, heightMm)
 
     if (!validationResult.success) {
       await orderService.updateOrderStatus(order.id, 'validation_failed')
