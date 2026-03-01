@@ -3,6 +3,7 @@
  * Handles face detection, pose analysis, and ICAO compliance checks.
  */
 
+import sharp from 'sharp'
 import { ImageAnnotatorClient, protos } from '@google-cloud/vision'
 import { getVercelOidcToken } from '@vercel/functions/oidc'
 import { ExternalAccountClient } from 'google-auth-library'
@@ -134,8 +135,52 @@ function validateGlassesGlare(
   return ValidationReason.GLS_GLARE
 }
 
-// Validate cheek centers
+// Validate cheek lighting uniformity
+async function validateLightingUniformity(
+  imageBuffer: Buffer,
+  face: IFaceAnnotation
+): Promise<ValidationReasonType | null> {
+  const landmarks = getLandmarksByType(face)
+  const leftCheek = landmarks.get(LandmarkType.LEFT_CHEEK_CENTER)
+  const rightCheek = landmarks.get(LandmarkType.RIGHT_CHEEK_CENTER)
 
+  if (!leftCheek?.position || !rightCheek?.position) return null
+
+  // Decode once to grayscale raw pixels — avoids multiple sharp pipeline executions
+  const { data, info } = await sharp(imageBuffer).grayscale().raw().toBuffer({ resolveWithObject: true })
+  const { width, height } = info
+  const radius = Math.max(
+    ValidationThresholds.lightingSampleMinRadius,
+    Math.floor(height * ValidationThresholds.lightingSampleRadiusRatio)
+  )
+
+  const sampleBrightness = (cx: number, cy: number): number | null => {
+    const x0 = Math.max(0, Math.floor(cx) - radius)
+    const y0 = Math.max(0, Math.floor(cy) - radius)
+    const x1 = Math.min(width, Math.floor(cx) + radius)
+    const y1 = Math.min(height, Math.floor(cy) + radius)
+    let sum = 0, count = 0
+    for (let row = y0; row < y1; row++) {
+      for (let col = x0; col < x1; col++) {
+        sum += data[row * width + col]
+        count++
+      }
+    }
+    return count > 0 ? sum / count : null
+  }
+
+  const leftBrightness = sampleBrightness(leftCheek.position.x!, leftCheek.position.y!)
+  const rightBrightness = sampleBrightness(rightCheek.position.x!, rightCheek.position.y!)
+
+  if (leftBrightness === null || rightBrightness === null) return null
+
+  const maxBrightness = Math.max(leftBrightness, rightBrightness)
+  if (maxBrightness === 0) return null
+
+  return Math.abs(leftBrightness - rightBrightness) / maxBrightness > ValidationThresholds.lightingUniformity
+    ? ValidationReason.LIGHT
+    : null
+}
 
 // Validate head pose
 function validateHeadPose(face: IFaceAnnotation): ValidationReasonType | null {
@@ -314,6 +359,15 @@ export async function validateInitial(imageBuffer: Buffer): Promise<InitialValid
         details: checkResult.reason
           ? ValidationReasonDescriptions[checkResult.reason]
           : undefined,
+      }
+    }
+
+    const lightingReason = await validateLightingUniformity(imageBuffer, face)
+    if (lightingReason) {
+      return {
+        success: false,
+        reason: lightingReason,
+        details: ValidationReasonDescriptions[lightingReason],
       }
     }
 
