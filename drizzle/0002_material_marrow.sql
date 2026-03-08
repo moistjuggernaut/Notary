@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "background_removed" boolean DEFAULT false NOT NULL;
