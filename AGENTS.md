@@ -31,7 +31,7 @@ npm run format          # Format code
 git status              # Check current state
 git diff                # Review changes before commit
 ```
-## Things Claude Should NOT Do
+## Things you Should NOT Do
 
 - Don't use `any` type in TypeScript without explicit approval
 - Don't skip error handling

@@ -23,11 +23,12 @@ const FINAL_CHECKS = [
 ] as const;
 
 interface SuccessStepProps {
+  documentLabel: string;
   result: ValidationResult;
   onUploadNew: () => void;
 }
 
-export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
+export default function SuccessStep({ documentLabel, result, onUploadNew }: SuccessStepProps) {
   const [displayImageUrl, setDisplayImageUrl] = useState<string | undefined>(result.imageUrl);
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   const [isBackgroundRemoved, setIsBackgroundRemoved] = useState(false);
@@ -74,7 +75,7 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
       <div className="mb-8">
         <PhotoWithSidebar
           imageUrl={displayImageUrl}
-          imageAlt="Validated passport photo"
+          imageAlt={`Validated ${documentLabel} photo`}
           highlight="approved"
           sidebar={
             <div className="flex flex-col h-full">
@@ -99,6 +100,11 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
       </div>
 
       <div className="space-y-4">
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Your photo passed the main checks. You can remove the background if needed, download the result,
+          or order printed photos for your {documentLabel} renewal.
+        </p>
+
         <div className={CTA_ROW_CLASS}>
           <div className={CTA_PRIMARY_COLUMN_CLASS}>
             <form
@@ -114,7 +120,7 @@ export default function SuccessStep({ result, onUploadNew }: SuccessStepProps) {
                 disabled={!result?.orderId}
               >
                 <CreditCard className="w-4 h-4" />
-                Checkout - €9.99
+                Order Printed Photos - €9.99
               </Button>
             </form>
 

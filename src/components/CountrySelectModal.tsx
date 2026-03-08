@@ -68,7 +68,7 @@ export function CountrySelectModal({ open, onClose, onConfirm }: Props) {
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>Select Issuing Country &amp; Document</DialogTitle>
           <DialogDescription>
-            Choose the country whose photo requirements apply to your document.
+            Choose the country and document for your passport or driver's license renewal photo.
           </DialogDescription>
         </DialogHeader>
 
@@ -79,7 +79,7 @@ export function CountrySelectModal({ open, onClose, onConfirm }: Props) {
 
             {searching ? (
               <Command className="border rounded-lg shadow-none">
-                <CommandInput placeholder="Search EU country…" autoFocus />
+                <CommandInput placeholder="Search country…" autoFocus />
                 <CommandList className="max-h-52">
                   <CommandEmpty>No country found.</CommandEmpty>
                   <CommandGroup>
@@ -128,8 +128,7 @@ export function CountrySelectModal({ open, onClose, onConfirm }: Props) {
             )}
           </div>
 
-          {/* Doc type cards — only shown when country has differing dimensions */}
-          {selectedCountry?.requiresChoice && (
+          {selectedCountry && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Document type</label>
               <div className="grid grid-cols-2 gap-3">
@@ -148,6 +147,9 @@ export function CountrySelectModal({ open, onClose, onConfirm }: Props) {
                   onSelect={() => setSelectedDocType('drivers_license')}
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                We will apply the selected country's photo size and validation rules for this document.
+              </p>
             </div>
           )}
 

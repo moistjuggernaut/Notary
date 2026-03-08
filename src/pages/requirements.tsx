@@ -6,10 +6,11 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Requirements() {
-  usePageMeta(
-    "EU Passport Photo Requirements — ICAO Biometric Standards Guide",
-    "Complete guide to EU passport photo requirements. Learn about ICAO Doc 9303 biometric standards, photo dimensions, lighting, background, and expression rules.",
-  );
+  usePageMeta({
+    title: "Renewal Photo Requirements | Passport & Driver's License Guide",
+    description: "Review the main rules we check for passport and driver's license renewal photos, including dimensions, background, lighting, and expression.",
+    canonicalPath: "/requirements",
+  });
 
   return (
     <PageLayout>
@@ -25,11 +26,11 @@ export default function Requirements() {
 
       <div className="text-center mb-12 sm:mb-16">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4 sm:mb-6">
-          EU Passport Photo Requirements
+          Renewal Photo Requirements
         </h1>
         <p className="text-lg sm:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-          Complete guide to European Union passport photo requirements based on EU Regulations
-          2252/2004 & 444/2009 and ICAO Doc 9303 biometric standards.
+          Use this guide to understand the main rules we check for passport renewals and driver's license renewals.
+          We also crop your photo to the required dimensions for the selected country and document type.
         </p>
       </div>
 
@@ -40,10 +41,10 @@ export default function Requirements() {
           Ready to Validate Your Photo?
         </h3>
         <p className="text-muted-foreground mb-4">
-          Upload your photo to check compliance with ICAO and EU biometric passport standards.
+          Upload your photo to check the requirements, crop it to size, and prepare it for download or ordering.
         </p>
         <Button asChild>
-          <Link href="/validate">Start Photo Validation</Link>
+          <Link href="/validate">Check Your Photo</Link>
         </Button>
       </div>
     </PageLayout>

@@ -1,9 +1,17 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
+  usePageMeta({
+    title: "Page not found | Passport Photo Validator",
+    description: "The page you are looking for does not exist.",
+    canonicalPath: "/404",
+    robots: "noindex,nofollow",
+  });
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-muted">
       <Card className="w-full max-w-md mx-4">

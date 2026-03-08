@@ -77,4 +77,4 @@ const ChecklistItem = React.forwardRef<HTMLDivElement, ChecklistItemProps>(
 )
 ChecklistItem.displayName = "ChecklistItem"
 
-export { ChecklistItem, checklistIconVariants, checklistTextVariants }
+export { ChecklistItem }

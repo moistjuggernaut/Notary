@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'wouter'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { usePageMeta } from '@/hooks/use-page-meta'
 import { useToast } from '@/hooks/use-toast'
 import { 
   fetchOrders, 
@@ -16,6 +17,13 @@ import type { Order } from '@/types/api'
 import { REJECTION_REASONS } from '@/types/api'
 
 export default function Admin() {
+  usePageMeta({
+    title: 'Admin | Passport Photo Validator',
+    description: 'Administrative review area.',
+    canonicalPath: '/admin',
+    robots: 'noindex,nofollow',
+  })
+
   const [, setLocation] = useLocation()
   const { toast } = useToast()
   const [isAuth, setIsAuth] = useState(isAuthenticated())
@@ -25,13 +33,7 @@ export default function Admin() {
   const [loadingOrders, setLoadingOrders] = useState<Set<string>>(new Set())
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (isAuth) {
-      loadOrders()
-    }
-  }, [isAuth])
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     setLoadingOrdersList(true)
     try {
       const response = await fetchOrders()
@@ -62,7 +64,13 @@ export default function Admin() {
     } finally {
       setLoadingOrdersList(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    if (isAuth) {
+      void loadOrders()
+    }
+  }, [isAuth, loadOrders])
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()

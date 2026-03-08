@@ -1,8 +1,16 @@
 import { PageLayout } from "@/components/layout";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { XCircle, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
 export default function CheckoutCancel() {
+  usePageMeta({
+    title: "Order canceled | Passport Photo Validator",
+    description: "Your order was canceled and can be resumed later.",
+    canonicalPath: "/checkout/cancel",
+    robots: "noindex,nofollow",
+  });
+
   return (
     <PageLayout maxWidth="4xl" showFooter={false}>
       <div className="bg-card border border-destructive/30 rounded-lg p-6 sm:p-8">

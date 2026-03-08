@@ -9,7 +9,7 @@ const VALIDATION_CHECKS: string[] = [
   "Analyzing expression",
   "Verifying background",
   "Assessing image quality",
-  "Confirming ICAO compliance",
+  "Checking required dimensions",
 ];
 
 interface ValidationStepProps {
@@ -27,7 +27,7 @@ export default function ValidationStep({ file }: ValidationStepProps) {
         sidebar={
           <div className="flex flex-col h-full">
             <h3 className="text-xl font-semibold text-foreground mb-4">
-              Validation Checks
+              Checking Your Photo
             </h3>
             <ul className="space-y-2.5">
               {VALIDATION_CHECKS.map((label) => (

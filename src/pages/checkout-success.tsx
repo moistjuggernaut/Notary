@@ -1,8 +1,16 @@
 import { PageLayout } from "@/components/layout";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { CheckCircle, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
 export default function CheckoutSuccess() {
+  usePageMeta({
+    title: "Order placed | Passport Photo Validator",
+    description: "Your order has been placed.",
+    canonicalPath: "/checkout/success",
+    robots: "noindex,nofollow",
+  });
+
   return (
     <PageLayout maxWidth="4xl" showFooter={false}>
       <div className="bg-card border border-success/30 rounded-lg p-6 sm:p-8">

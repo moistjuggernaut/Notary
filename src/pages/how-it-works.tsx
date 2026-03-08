@@ -1,44 +1,45 @@
 import { PageLayout } from "@/components/layout";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { InfoCard } from "@/components/ui/info-card";
-import { Upload, Zap, Download } from "lucide-react";
+import { Upload, Crop, ShoppingCart } from "lucide-react";
 
 const steps = [
   {
     id: 1,
     title: "Upload Photo",
-    description: "Select or drag and drop your passport photo. We support JPG, PNG, and WEBP formats up to 10MB.",
+    description: "Upload a clear photo for your passport or driver's license renewal. We support JPG, PNG, and WEBP files up to 10MB.",
     icon: Upload,
   },
   {
     id: 2,
-    title: "AI Analysis",
-    description: "Our AI system analyzes the photo against EU biometric standards, checking facial positioning, background, lighting, and quality.",
-    icon: Zap,
+    title: "Check And Crop",
+    description: "We verify the requirements for the selected country and document, then crop the photo to the required dimensions.",
+    icon: Crop,
   },
   {
     id: 3,
-    title: "Get Results",
-    description: "Receive detailed feedback on compliance issues and download the validation report for your passport application.",
-    icon: Download,
+    title: "Download Or Order",
+    description: "If the photo works, you can remove the background if needed, download it, or order printed photos online.",
+    icon: ShoppingCart,
   },
 ] as const;
 
 export default function HowItWorks() {
-  usePageMeta(
-    "How Passport Photo Validation Works — AI-Powered ICAO Check",
-    "Learn how our AI-powered passport photo validator checks your photo against ICAO and EU biometric standards in three simple steps.",
-  );
+  usePageMeta({
+    title: "How Renewal Photo Checking Works | Verify, Crop & Order",
+    description: "See how we check passport and driver's license renewal photos, crop them to the required size, offer background cleanup, and let you order online.",
+    canonicalPath: "/how-it-works",
+  });
 
   return (
     <PageLayout maxWidth="4xl">
       <div className="text-center mb-12">
         <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-          How Passport Photo Validation Works
+          How Renewal Photo Checking Works
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          Our AI-powered system validates passport photos against EU biometric standards 
-          (Regulations 2252/2004 & 444/2009) with special allowances for children and infants.
+          We check whether your passport or driver's license renewal photo meets the relevant rules,
+          crop it to the right size, and help you finish with a download or printed order.
         </p>
       </div>
 
@@ -60,9 +61,9 @@ export default function HowItWorks() {
 
       <InfoCard variant="info" title="Important Note">
         <p className="text-sm leading-relaxed">
-          This tool is designed to help ensure compliance with EU biometric standards but does not guarantee acceptance 
-          by national passport authorities. Always verify requirements with your local passport office. For children under 12 years old, 
-          fingerprint requirements are exempt but facial image requirements still apply.
+          This tool helps you check the common biometric rules used for passport renewals and many driver's license renewals,
+          but final acceptance is always decided by the issuing authority. For children under 12 years old, fingerprint
+          requirements are exempt, but facial image requirements still apply.
         </p>
       </InfoCard>
     </PageLayout>

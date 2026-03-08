@@ -13,6 +13,7 @@ import {
 } from "./cta-classes";
 
 interface PreviewStepProps {
+  documentLabel: string;
   file: File;
   onRemoveFile: () => void;
   onValidate: () => void;
@@ -29,6 +30,7 @@ const ICAO_REMINDERS = [
 ];
 
 export default function PreviewStep({
+  documentLabel,
   file,
   onRemoveFile,
   onValidate,
@@ -43,6 +45,9 @@ export default function PreviewStep({
             <h3 className="text-xl font-semibold text-foreground mb-4">
               Review Your Photo
             </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              We will check your {documentLabel} photo against the main requirements and crop it to the right dimensions.
+            </p>
             <ul className="space-y-2.5">
               {ICAO_REMINDERS.map((item) => (
                 <li key={item}>
@@ -73,7 +78,7 @@ export default function PreviewStep({
             ) : (
               <>
                 <Upload className="w-4 h-4" />
-                Run EU Validation
+                Check Photo Requirements
               </>
             )}
           </Button>

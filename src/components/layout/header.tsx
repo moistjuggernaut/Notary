@@ -22,7 +22,7 @@ export default function Header() {
                 Passport Photo Validator
               </span>
               <span className="text-xs sm:text-sm text-muted-foreground truncate block">
-                ICAO & EU Compliance Check
+                Renewal Photo Check
               </span>
             </div>
           </Link>
@@ -37,7 +37,7 @@ export default function Header() {
                   : 'text-muted-foreground hover:text-primary'
               )}
             >
-              Requirements
+              Photo Requirements
             </Link>
             <Link
               href="/how-it-works"

@@ -41,4 +41,4 @@ const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
 )
 Spinner.displayName = "Spinner"
 
-export { Spinner, spinnerVariants }
+export { Spinner }

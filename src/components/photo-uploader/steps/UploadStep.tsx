@@ -2,6 +2,7 @@ import UploadArea from "../upload-area";
 import { STEP_CONTAINER_CLASS } from "./cta-classes";
 
 interface UploadStepProps {
+  documentLabel: string;
   onFileSelect: (file: File) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleDragOver: (e: React.DragEvent) => void;
@@ -11,6 +12,7 @@ interface UploadStepProps {
 }
 
 export default function UploadStep({
+  documentLabel,
   onFileSelect,
   fileInputRef,
   handleDragOver,
@@ -23,7 +25,8 @@ export default function UploadStep({
       <div className="mb-8">
         <h3 className="text-xl font-semibold text-foreground mb-3">Upload Your Photo</h3>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Select a high-quality photo for passport validation.
+          Select a clear photo for your {documentLabel} renewal. We will check the requirements,
+          crop it to the right size, and offer background removal if needed.
         </p>
       </div>
 

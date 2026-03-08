@@ -95,4 +95,4 @@ const InfoCard = React.forwardRef<HTMLDivElement, InfoCardProps>(
 )
 InfoCard.displayName = "InfoCard"
 
-export { InfoCard, infoCardVariants }
+export { InfoCard }

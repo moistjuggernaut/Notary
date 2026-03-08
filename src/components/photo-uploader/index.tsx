@@ -17,6 +17,7 @@ interface PhotoUploaderProps {
   validationResult?: ValidationResult | null;
   currentStep: number;
   onReset: () => void;
+  documentLabel: string;
 }
 
 const STEPS = [
@@ -35,6 +36,7 @@ export default function PhotoUploader({
   validationResult,
   currentStep,
   onReset,
+  documentLabel,
 }: PhotoUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -72,6 +74,7 @@ export default function PhotoUploader({
 
         {currentStep === 1 && (
           <UploadStep
+            documentLabel={documentLabel}
             onFileSelect={onFileSelect}
             fileInputRef={fileInputRef}
             handleDragOver={handleDragOver}
@@ -83,6 +86,7 @@ export default function PhotoUploader({
 
         {currentStep === 2 && selectedFile && (
           <PreviewStep
+            documentLabel={documentLabel}
             file={selectedFile}
             onRemoveFile={onRemoveFile}
             onValidate={onValidatePhoto}
@@ -97,7 +101,7 @@ export default function PhotoUploader({
         {currentStep === 4 && validationResult && (
           <>
             {validationResult.status === "success" ? (
-              <SuccessStep result={validationResult} onUploadNew={onReset} />
+              <SuccessStep documentLabel={documentLabel} result={validationResult} onUploadNew={onReset} />
             ) : (
               <ErrorStep result={validationResult} onTryAgain={onReset} />
             )}

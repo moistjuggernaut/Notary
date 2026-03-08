@@ -11,10 +11,29 @@ import validationImg from "@/assets/validation.png";
 import shippingImg from "@/assets/shipping.png";
 
 const steps = [
-  { title: "Upload Your Photo", description: "Take a selfie or upload an existing photo", image: selfieImg },
-  { title: "AI Validation", description: "Checked against EU biometric requirements", image: validationImg },
-  { title: "Get Your Result", description: "Receive your validated photo instantly", image: shippingImg },
+  { title: "Upload Your Photo", description: "Take a clear photo or upload one you already have.", image: selfieImg },
+  { title: "Check And Crop", description: "We verify the requirements and crop to the right size for the selected country and document.", image: validationImg },
+  { title: "Download Or Order", description: "Remove the background if needed, then download or order printed photos online.", image: shippingImg },
 ];
+
+const faqs = [
+  {
+    question: "Can I use this for passport renewals?",
+    answer: "Yes. We check your photo against country-specific passport requirements, crop it to size, and let you order online.",
+  },
+  {
+    question: "Can I use this for driver's license renewals?",
+    answer: "Yes. The service also supports driver's license renewal photos, including country-specific size checks where needed.",
+  },
+  {
+    question: "Do you crop the photo for me?",
+    answer: "Yes. Once you select the country and document type, we crop the photo to the required dimensions.",
+  },
+  {
+    question: "What if my background is not suitable?",
+    answer: "You can remove the background before downloading or ordering if the original background is not good enough.",
+  },
+] as const;
 
 export default function Home() {
   const [, navigate] = useLocation()
@@ -25,23 +44,24 @@ export default function Home() {
     navigate(`/validate?country=${country}&docType=${docType}`)
   }
 
-  usePageMeta(
-    "Passport Photo Validator — Check ICAO & EU Standards Online",
-    "Free online passport photo validator. Upload your photo and instantly check it meets ICAO international standards and EU biometric requirements. Works for adults, children, and infants.",
-  );
+  usePageMeta({
+    title: "Passport & Driver's License Renewal Photos | Verify, Crop & Order",
+    description: "Check if your passport or driver's license renewal photo meets country requirements. Verify compliance, crop to the required size, remove the background if needed, and order online.",
+    canonicalPath: "/",
+  });
 
   return (
     <PageLayout>
       <section className="py-6 sm:py-8 text-center">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-2 sm:mb-3">
-          Passport Photo Validator
+          Verify And Order Renewal Photos
         </h1>
         <p className="text-lg sm:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed mb-6">
-          Ensure your passport photo meets ICAO international standards and European Union biometric requirements.
-          Valid for all EU member states under Regulations 2252/2004 & 444/2009.
+          Check renewal photos for passports and driver's licenses, crop them to the required dimensions,
+          remove the background if needed, and order online. Built for European country requirements and clear, practical results.
         </p>
         <Button size="lg" className="text-lg px-8 py-6" onClick={() => setModalOpen(true)}>
-          Start Validating
+          Check Your Photo
           <ArrowRight className="w-5 h-5 ml-2" />
         </Button>
         <CountrySelectModal
@@ -70,7 +90,7 @@ export default function Home() {
           <Button variant="outline" asChild className="h-20 text-base">
             <Link href="/requirements">
               <FileText className="w-5 h-5 mr-2" />
-              EU Requirements
+              Photo Requirements
             </Link>
           </Button>
           <Button variant="outline" asChild className="h-20 text-base">
@@ -79,6 +99,25 @@ export default function Home() {
               How It Works
             </Link>
           </Button>
+        </div>
+      </section>
+
+      <section className="py-6 sm:py-8">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground text-center mb-3">
+            Common Questions
+          </h2>
+          <p className="text-muted-foreground text-center mb-8">
+            Straight answers about renewal photos, cropping, background cleanup, and ordering.
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {faqs.map((faq) => (
+              <div key={faq.question} className="rounded-lg border border-border bg-card p-5 text-left">
+                <h3 className="text-base font-semibold text-foreground mb-2">{faq.question}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </PageLayout>

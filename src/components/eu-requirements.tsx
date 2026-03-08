@@ -48,7 +48,7 @@ export default function EURequirements() {
           {/* Disclaimer */}
           <InfoCard variant="info" icon={FileText} className="p-4">
             <p className="text-sm">
-              <strong>Important:</strong> This tool validates photos based on{" "}
+              <strong>Important:</strong> These are the core biometric rules we use when checking renewal photos. The service validates photos based on{" "}
               <a 
                 href={regulationLinks.eu2252.url} 
                 target="_blank" 
@@ -75,8 +75,7 @@ export default function EURequirements() {
               >
                 {regulationLinks.icao9303.label}
               </a>{" "}
-              biometric standards that all EU member states follow.
-              Final photo acceptance is determined by national passport issuing authorities.
+              biometric standards followed across EU member states. Final acceptance is determined by the relevant passport or driver's license issuing authority.
             </p>
           </InfoCard>
         </div>
