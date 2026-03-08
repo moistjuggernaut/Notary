@@ -47,13 +47,6 @@ const faqs = [
   },
 ] as const;
 
-const intentLinks = [
-  { href: "/validate-passport-photo", label: "Validate Passport Photo" },
-  { href: "/validate-driver-license-photo", label: "Validate Driver's License Photo" },
-  { href: "/order-passport-photo", label: "Order Passport Photos" },
-  { href: "/passport-photo-requirements", label: "Passport Photo Requirements" },
-] as const;
-
 export default function Home() {
   const [, navigate] = useLocation()
   const [modalOpen, setModalOpen] = useState(false)
@@ -86,9 +79,6 @@ export default function Home() {
             Validate Your Photo
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
-          <Button variant="outline" size="lg" className="text-lg px-8 py-6" asChild>
-            <Link href="/order-passport-photo">Order Passport Photos</Link>
-          </Button>
         </div>
         <p className="text-sm text-muted-foreground mt-4">
           Free digital download. Printed photos available to order.
@@ -110,16 +100,6 @@ export default function Home() {
               <h3 className="text-lg font-semibold text-foreground mb-2">{step.title}</h3>
               <p className="text-sm text-muted-foreground">{step.description}</p>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="py-6 sm:py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {intentLinks.map((link) => (
-            <Button key={link.href} variant="outline" asChild className="h-16 text-base">
-              <Link href={link.href}>{link.label}</Link>
-            </Button>
           ))}
         </div>
       </section>
