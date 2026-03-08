@@ -85,8 +85,8 @@ export const ValidationThresholds = {
   pupilRoiRadiusRatio: 0.01,
   pupilRoiMinRadius: 5,
   minEyeOpeningPixels: 5,
-  lightingUniformity: 0.25,
-  lightingSampleRadiusRatio: 0.02,
+  lightingUniformity: 0.40,
+  lightingSampleRadiusRatio: 0.04,
   lightingSampleMinRadius: 10,
 } as const
 
@@ -153,7 +153,7 @@ export const ValidationReasonDescriptions: Record<ValidationReasonType, string> 
 // Likelihood values from Cloud Vision API that indicate failure
 export const FailLikelihoods = new Set([
   'POSSIBLE',
-  'LIKELY', 
+  'LIKELY',
   'VERY_LIKELY',
 ])
 
