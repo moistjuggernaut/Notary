@@ -101,8 +101,8 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
 
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Your photo passed the main checks. You can remove the background if needed, download the result,
-          or order printed photos for your {documentLabel} renewal.
+          Your photo passed the main checks. You can download the digital file for free, remove the background if needed,
+          or order printed photos for your {documentLabel}.
         </p>
 
         <div className={CTA_ROW_CLASS}>
@@ -146,7 +146,7 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
               disabled={!displayImageUrl}
             >
               <Download className="w-4 h-4" />
-              Download
+              Free Digital Download
             </Button>
 
             <Button

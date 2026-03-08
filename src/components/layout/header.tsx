@@ -22,7 +22,7 @@ export default function Header() {
                 Passport Photo Validator
               </span>
               <span className="text-xs sm:text-sm text-muted-foreground truncate block">
-                Renewal Photo Check
+                Validate And Order ID Photos
               </span>
             </div>
           </Link>

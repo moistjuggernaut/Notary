@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 
 const SITE_URL = "https://www.passportphotovalidator.com";
-const DEFAULT_TITLE = "Passport & Driver's License Renewal Photos | Verify, Crop & Order";
-const DEFAULT_DESCRIPTION = "Check if your passport or driver's license renewal photo meets country requirements. We verify compliance, crop to the required size, remove the background if needed, and let you order online.";
+const DEFAULT_TITLE = "Passport Photo Validator | Validate Passport And Driver's License Photos Online";
+const DEFAULT_DESCRIPTION = "Validate passport and driver's license photos online. Check your photo against ICAO and country requirements, then download the digital file for free or order prints.";
 const DEFAULT_CANONICAL = `${SITE_URL}/`;
-const DEFAULT_OG_TITLE = "Passport & Driver's License Renewal Photos";
-const DEFAULT_OG_DESCRIPTION = "Verify your renewal photo, crop it to the right size, remove the background if needed, and order online.";
+const DEFAULT_OG_TITLE = "Passport Photo Validator";
+const DEFAULT_OG_DESCRIPTION = "Validate passport and driver's license photos online, then download the digital file for free or order prints.";
 const DEFAULT_TWITTER_TITLE = DEFAULT_OG_TITLE;
 const DEFAULT_TWITTER_DESCRIPTION = DEFAULT_OG_DESCRIPTION;
 const DEFAULT_ROBOTS = "index,follow";

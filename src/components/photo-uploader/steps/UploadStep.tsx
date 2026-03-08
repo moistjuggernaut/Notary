@@ -25,8 +25,8 @@ export default function UploadStep({
       <div className="mb-8">
         <h3 className="text-xl font-semibold text-foreground mb-3">Upload Your Photo</h3>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Select a clear photo for your {documentLabel} renewal. We will check the requirements,
-          crop it to the right size, and offer background removal if needed.
+          Select a clear photo for your {documentLabel}. We will check the requirements, crop it to the right size,
+          and prepare it for download or print ordering.
         </p>
       </div>
 

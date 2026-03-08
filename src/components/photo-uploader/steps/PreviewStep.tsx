@@ -78,7 +78,7 @@ export default function PreviewStep({
             ) : (
               <>
                 <Upload className="w-4 h-4" />
-                Check Photo Requirements
+                Validate Photo
               </>
             )}
           </Button>

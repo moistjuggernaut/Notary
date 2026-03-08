@@ -17,10 +17,11 @@ export default function Validate() {
   const countryName = country ? getCountryByCode(country)?.name : undefined
   const documentLabel = docType === 'drivers_license' ? "driver's license" : "passport"
   const documentLabelTitle = docType === 'drivers_license' ? "Driver's License" : "Passport"
+  const pageTitle = countryName ? `${countryName} ${documentLabelTitle} Photo Validator` : `${documentLabelTitle} Photo Validator`
 
   usePageMeta({
-    title: `${documentLabelTitle} Renewal Photo Check | Verify, Crop & Order`,
-    description: `Upload your ${documentLabel} renewal photo to check the requirements, crop it to the right size, remove the background if needed, and prepare it for download or ordering.`,
+    title: `${documentLabelTitle} Photo Validator | Check And Order Online`,
+    description: `Upload your ${documentLabel} photo, check it against the relevant requirements, crop it to the right size, and continue with a free digital download or print ordering.`,
     canonicalPath: "/validate",
   });
 
@@ -39,11 +40,13 @@ export default function Validate() {
     <PageLayout>
       <section className="py-4 sm:py-6 text-center">
         <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
-          {countryName ? `${countryName} ${documentLabelTitle} Photo Check` : `${documentLabelTitle} Photo Check`}
+          {pageTitle}
         </h1>
         <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          Upload your photo and we will check the requirements, crop it to the required dimensions,
-          and help you finish with a download or printed order.
+          Upload your photo, validate it against the relevant requirements, crop it to the required dimensions, and finish with a free digital download or printed order.
+        </p>
+        <p className="text-sm text-muted-foreground mt-4">
+          Free digital download after validation. Printed photos are available to order.
         </p>
       </section>
 
@@ -64,18 +67,18 @@ export default function Validate() {
       <section className="py-8 sm:py-12">
         <InfoCard variant="info" className="text-center">
           <h3 className="text-lg font-semibold mb-2">Need Help Getting Started?</h3>
-          <p className="mb-4">See the main photo rules we check and how the verification, cropping, and ordering flow works.</p>
+          <p className="mb-4">See the main rules we check and how passport and driver's license photo validation works from upload to ordering.</p>
           <div className="flex flex-wrap justify-center gap-3">
             <Button asChild>
               <Link href="/requirements">
                 <FileText className="w-4 h-4" />
-                View Requirements
+                View Photo Requirements
               </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/how-it-works">
                 <HelpCircle className="w-4 h-4" />
-                How It Works
+                How Validation Works
               </Link>
             </Button>
           </div>

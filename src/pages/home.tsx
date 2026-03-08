@@ -11,28 +11,47 @@ import validationImg from "@/assets/validation.png";
 import shippingImg from "@/assets/shipping.png";
 
 const steps = [
-  { title: "Upload Your Photo", description: "Take a clear photo or upload one you already have.", image: selfieImg },
-  { title: "Check And Crop", description: "We verify the requirements and crop to the right size for the selected country and document.", image: validationImg },
-  { title: "Download Or Order", description: "Remove the background if needed, then download or order printed photos online.", image: shippingImg },
+  {
+    title: "Upload A Photo",
+    description: "Use a photo you already have or take one and upload it in a few seconds.",
+    image: selfieImg,
+  },
+  {
+    title: "Validate The Requirements",
+    description: "Check passport and driver's license photos against ICAO and country-specific rules.",
+    image: validationImg,
+  },
+  {
+    title: "Download Or Order Prints",
+    description: "Download the digital file for free or order printed passport and driver's license photos online.",
+    image: shippingImg,
+  },
 ];
 
 const faqs = [
   {
-    question: "Can I use this for passport renewals?",
-    answer: "Yes. We check your photo against country-specific passport requirements, crop it to size, and let you order online.",
+    question: "Can I validate a passport photo online?",
+    answer: "Yes. Upload a passport photo, check it against the main requirements, then download the digital file for free or continue with a print order.",
   },
   {
-    question: "Can I use this for driver's license renewals?",
-    answer: "Yes. The service also supports driver's license renewal photos, including country-specific size checks where needed.",
+    question: "Can I validate a driver's license photo online?",
+    answer: "Yes. The same flow supports driver's license photos, including country-aware dimensions where they differ, with a free digital download if the photo is ready.",
   },
   {
-    question: "Do you crop the photo for me?",
-    answer: "Yes. Once you select the country and document type, we crop the photo to the required dimensions.",
+    question: "Can I order passport photos after validation?",
+    answer: "Yes. After the photo passes the main checks, you can download the digital file for free or order printed passport photos online.",
   },
   {
-    question: "What if my background is not suitable?",
-    answer: "You can remove the background before downloading or ordering if the original background is not good enough.",
+    question: "Does this work for photos taken anywhere?",
+    answer: "Yes. You can upload a clear photo taken anywhere, validate it, and finish with a digital file or printed order.",
   },
+] as const;
+
+const intentLinks = [
+  { href: "/validate-passport-photo", label: "Validate Passport Photo" },
+  { href: "/validate-driver-license-photo", label: "Validate Driver's License Photo" },
+  { href: "/order-passport-photo", label: "Order Passport Photos" },
+  { href: "/passport-photo-requirements", label: "Passport Photo Requirements" },
 ] as const;
 
 export default function Home() {
@@ -45,25 +64,35 @@ export default function Home() {
   }
 
   usePageMeta({
-    title: "Passport & Driver's License Renewal Photos | Verify, Crop & Order",
-    description: "Check if your passport or driver's license renewal photo meets country requirements. Verify compliance, crop to the required size, remove the background if needed, and order online.",
+    title: "Validate Passport And Driver's License Photos Online",
+    description: "Validate passport and driver's license photos online. Check your photo against ICAO and country requirements, then download the digital file for free or order prints.",
     canonicalPath: "/",
   });
 
   return (
     <PageLayout>
       <section className="py-6 sm:py-8 text-center">
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary mb-3">
+          Passport And Driver's License Photos
+        </p>
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-2 sm:mb-3">
-          Verify And Order Renewal Photos
+          Validate Passport Photos And Order Prints Online
         </h1>
         <p className="text-lg sm:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed mb-6">
-          Check renewal photos for passports and driver's licenses, crop them to the required dimensions,
-          remove the background if needed, and order online. Built for European country requirements and clear, practical results.
+          Upload a passport or driver's license photo, check it against ICAO and country requirements, then download the digital file for free or order prints from one flow.
         </p>
-        <Button size="lg" className="text-lg px-8 py-6" onClick={() => setModalOpen(true)}>
-          Check Your Photo
-          <ArrowRight className="w-5 h-5 ml-2" />
-        </Button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button size="lg" className="text-lg px-8 py-6" onClick={() => setModalOpen(true)}>
+            Validate Your Photo
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+          <Button variant="outline" size="lg" className="text-lg px-8 py-6" asChild>
+            <Link href="/order-passport-photo">Order Passport Photos</Link>
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground mt-4">
+          Free digital download. Printed photos available to order.
+        </p>
         <CountrySelectModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
@@ -86,17 +115,27 @@ export default function Home() {
       </section>
 
       <section className="py-6 sm:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {intentLinks.map((link) => (
+            <Button key={link.href} variant="outline" asChild className="h-16 text-base">
+              <Link href={link.href}>{link.label}</Link>
+            </Button>
+          ))}
+        </div>
+      </section>
+
+      <section className="py-6 sm:py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Button variant="outline" asChild className="h-20 text-base">
             <Link href="/requirements">
               <FileText className="w-5 h-5 mr-2" />
-              Photo Requirements
+              ICAO Photo Requirements
             </Link>
           </Button>
           <Button variant="outline" asChild className="h-20 text-base">
             <Link href="/how-it-works">
               <HelpCircle className="w-5 h-5 mr-2" />
-              How It Works
+              How Photo Validation Works
             </Link>
           </Button>
         </div>
@@ -108,7 +147,7 @@ export default function Home() {
             Common Questions
           </h2>
           <p className="text-muted-foreground text-center mb-8">
-            Straight answers about renewal photos, cropping, background cleanup, and ordering.
+            Straight answers about validating passport photos, checking driver's license photos, and ordering prints online.
           </p>
           <div className="grid gap-4 md:grid-cols-2">
             {faqs.map((faq) => (

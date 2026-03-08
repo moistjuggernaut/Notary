@@ -6,28 +6,28 @@ import { Upload, Crop, ShoppingCart } from "lucide-react";
 const steps = [
   {
     id: 1,
-    title: "Upload Photo",
-    description: "Upload a clear photo for your passport or driver's license renewal. We support JPG, PNG, and WEBP files up to 10MB.",
+    title: "Upload Your Photo",
+    description: "Upload a clear passport or driver's license photo from your phone or computer. We support JPG, PNG, and WEBP files up to 10MB.",
     icon: Upload,
   },
   {
     id: 2,
-    title: "Check And Crop",
-    description: "We verify the requirements for the selected country and document, then crop the photo to the required dimensions.",
+    title: "Validate And Crop",
+    description: "We check the photo against ICAO and country-specific rules for the selected document, then crop it to the required dimensions.",
     icon: Crop,
   },
   {
     id: 3,
     title: "Download Or Order",
-    description: "If the photo works, you can remove the background if needed, download it, or order printed photos online.",
+    description: "Once the photo is ready, you can download the digital file for free or order printed passport or driver's license photos online.",
     icon: ShoppingCart,
   },
 ] as const;
 
 export default function HowItWorks() {
   usePageMeta({
-    title: "How Renewal Photo Checking Works | Verify, Crop & Order",
-    description: "See how we check passport and driver's license renewal photos, crop them to the required size, offer background cleanup, and let you order online.",
+    title: "How To Validate A Passport Photo Online",
+    description: "See how to validate a passport or driver's license photo online, check the requirements, crop to the right size, download the digital file for free, and order prints.",
     canonicalPath: "/how-it-works",
   });
 
@@ -35,11 +35,10 @@ export default function HowItWorks() {
     <PageLayout maxWidth="4xl">
       <div className="text-center mb-12">
         <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-          How Renewal Photo Checking Works
+          How Passport Photo Validation Works
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          We check whether your passport or driver's license renewal photo meets the relevant rules,
-          crop it to the right size, and help you finish with a download or printed order.
+          Upload a passport or driver's license photo, validate it against the relevant rules, then finish with a free digital download or printed order.
         </p>
       </div>
 
@@ -61,9 +60,8 @@ export default function HowItWorks() {
 
       <InfoCard variant="info" title="Important Note">
         <p className="text-sm leading-relaxed">
-          This tool helps you check the common biometric rules used for passport renewals and many driver's license renewals,
-          but final acceptance is always decided by the issuing authority. For children under 12 years old, fingerprint
-          requirements are exempt, but facial image requirements still apply.
+          We check the main biometric rules used for passport and driver's license photos, but final acceptance is always decided by the issuing authority.
+          For children under 12 years old, fingerprint requirements are exempt, while facial image rules still apply.
         </p>
       </InfoCard>
     </PageLayout>

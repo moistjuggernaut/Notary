@@ -48,7 +48,7 @@ export default function EURequirements() {
           {/* Disclaimer */}
           <InfoCard variant="info" icon={FileText} className="p-4">
             <p className="text-sm">
-              <strong>Important:</strong> These are the core biometric rules we use when checking renewal photos. The service validates photos based on{" "}
+              <strong>Important:</strong> These are the core biometric rules we use when checking passport and driver's license photos. The service validates photos based on{" "}
               <a 
                 href={regulationLinks.eu2252.url} 
                 target="_blank" 

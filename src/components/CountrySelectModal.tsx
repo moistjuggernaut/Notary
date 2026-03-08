@@ -68,7 +68,7 @@ export function CountrySelectModal({ open, onClose, onConfirm }: Props) {
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>Select Issuing Country &amp; Document</DialogTitle>
           <DialogDescription>
-            Choose the country and document for your passport or driver's license renewal photo.
+            Choose the country and document for the passport or driver's license photo you want to validate.
           </DialogDescription>
         </DialogHeader>
 
