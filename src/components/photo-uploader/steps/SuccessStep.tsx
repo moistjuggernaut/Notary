@@ -112,11 +112,6 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
       </div>
 
       <div className="space-y-4">
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Your photo passed the main checks. You can download the digital file for free, remove the background if needed,
-          or order printed photos for your {documentLabel}.
-        </p>
-
         <div className={CTA_ROW_CLASS}>
           <div className={CTA_PRIMARY_COLUMN_CLASS}>
             <form
