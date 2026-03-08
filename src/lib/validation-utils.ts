@@ -10,7 +10,8 @@ export const convertApiResponseToValidationResult = (apiResponse: ValidationResp
       status: 'success',
       summary: 'Photo meets all EU biometric requirements and is ready for passport application submission.',
       orderId,
-      imageUrl
+      imageUrl,
+      sheetUrl: apiResponse.sheetUrl
     };
   }
 

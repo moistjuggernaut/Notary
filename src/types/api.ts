@@ -16,6 +16,7 @@ export interface ValidationResponse {
     };
     orderId?: string; // UUID of the stored order
     imageUrl?: string; // Signed URL to access the validated image
+    sheetUrl?: string; // Signed URL to access the print sheet image
     error?: string; // Error message if validation failed or storage failed
 }
 
@@ -27,6 +28,7 @@ export interface RemoveBackgroundResponse {
     success: boolean;
     orderId?: string;
     imageUrl?: string;
+    sheetUrl?: string;
     error?: string;
 }
 
@@ -46,16 +48,16 @@ export interface ShippingInfo {
 }
 
 export interface Order {
-  id: string
-  status: string
-  familinkId?: string
-  shipping?: ShippingInfo
-  stripePaymentIntentId?: string
-  stripeSessionId?: string
-  createdAt: string
-  updatedAt: string
-  rejectionReason?: string
-  imageUrl?: string | null
+    id: string
+    status: string
+    familinkId?: string
+    shipping?: ShippingInfo
+    stripePaymentIntentId?: string
+    stripeSessionId?: string
+    createdAt: string
+    updatedAt: string
+    rejectionReason?: string
+    imageUrl?: string | null
 }
 
 export interface OrdersResponse {

@@ -9,4 +9,5 @@ export interface ValidationResult {
   summary: string;
   orderId?: string;
   imageUrl?: string;
+  sheetUrl?: string;
 } 

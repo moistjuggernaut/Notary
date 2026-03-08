@@ -14,6 +14,7 @@ import { approveOrder, rejectOrder } from '../server/admin-actions.js'
 import { createDatabaseConnection } from '../server/database.js'
 import { orderService } from '../server/order-service.js'
 import { getFamilinkOrder } from '../server/familink.js'
+import { createPrintLayout } from '../server/print-processor.js'
 
 const app = new Hono()
 
@@ -98,13 +99,29 @@ app.post('/api/photo/validate', zValidator('json', ValidationSchema), async (c) 
     await orderService.updateOrderStatus(order.id, 'validation_completed')
     const imageUrl = await getSignedUrlForImage(order.id, 'validated.webp')
 
-    // 4. Return results to frontend
+    // 4. Generate the print sheet
+    let sheetUrl: string | undefined
+    if (validationResult.processedImage) {
+      const sheetResult = await createPrintLayout(
+        validationResult.processedImage,
+        country,
+        docType
+      )
+      if (sheetResult.success && sheetResult.printImage) {
+        const sheetBase64 = bufferToBase64(sheetResult.printImage)
+        await uploadImageToGCP(order.id, sheetBase64, 'print_sheet.png')
+        sheetUrl = await getSignedUrlForImage(order.id, 'print_sheet.png')
+      }
+    }
+
+    // 5. Return results to frontend
     return c.json({
       success: true,
       status: validationResult.status,
       reason_code: validationResult.reason_code,
       orderId: order.id,
       imageUrl: imageUrl,
+      sheetUrl: sheetUrl,
     })
   } catch (error) {
     console.error('Validation error:', error)
@@ -178,10 +195,32 @@ app.post('/api/photo/remove-background', zValidator('json', RemoveBackgroundSche
     const pngBase64 = Buffer.from(await response.arrayBuffer()).toString('base64')
     const result = await uploadImageToGCP(orderId, pngBase64, 'validated_bg_removed.png')
 
+    // Get the order to determine country/docType for the sheet
+    const order = await orderService.getOrderById(orderId)
+    let sheetUrl: string | undefined
+
+    // Create new print sheet with background removed photo
+    const pngBuffer = base64ToBuffer(pngBase64)
+
+    // We default to BE and passport for background removal since the original order creation 
+    // endpoint's country parameters aren't stored in DB yet.
+    // If we need the EXACT original country/docType, we'd need to add them to the Order schema.
+    const sheetResult = await createPrintLayout(
+      pngBuffer,
+      'BE',
+      'passport'
+    )
+    if (sheetResult.success && sheetResult.printImage) {
+      const sheetBase64 = bufferToBase64(sheetResult.printImage)
+      await uploadImageToGCP(orderId, sheetBase64, 'print_sheet_bg_removed.png')
+      sheetUrl = await getSignedUrlForImage(orderId, 'print_sheet_bg_removed.png')
+    }
+
     return c.json({
       success: true,
       orderId,
       imageUrl: result.imageUrl,
+      sheetUrl: sheetUrl,
     })
   } catch (error) {
     console.error('Remove background error:', error)
@@ -254,9 +293,9 @@ app.post('/api/stripe/create-checkout-session', async (c) => {
     return c.redirect(session.url!, 303)
   } catch (error) {
     console.error('Stripe session error:', error)
-    return c.json({ 
-      error: "Stripe error", 
-      message: error instanceof Error ? error.message : 'Unknown error' 
+    return c.json({
+      error: "Stripe error",
+      message: error instanceof Error ? error.message : 'Unknown error'
     }, 500)
   }
 })
@@ -289,7 +328,7 @@ app.post('/api/stripe/webhook', async (c) => {
 
 // Admin routes (protected)
 app.get('/api/admin/orders', authMiddleware, async (c) => {
-  try {    
+  try {
     const orders = await orderService.getOrdersByStatus('checkout_completed')
 
     // Add image URLs to each order
@@ -305,15 +344,15 @@ app.get('/api/admin/orders', authMiddleware, async (c) => {
       })
     )
 
-    return c.json({ 
+    return c.json({
       success: true,
-      orders: ordersWithImages 
+      orders: ordersWithImages
     })
   } catch (error) {
     console.error('Admin orders list error:', error)
-    return c.json({ 
+    return c.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch orders' 
+      error: error instanceof Error ? error.message : 'Failed to fetch orders'
     }, 500)
   }
 })
@@ -321,18 +360,18 @@ app.get('/api/admin/orders', authMiddleware, async (c) => {
 app.post('/api/admin/orders/:orderId/approve', authMiddleware, async (c) => {
   try {
     const orderId = c.req.param('orderId')
-    
+
     await approveOrder(orderId)
-    
-    return c.json({ 
+
+    return c.json({
       success: true,
-      message: 'Order approved and sent to printer' 
+      message: 'Order approved and sent to printer'
     })
   } catch (error) {
     console.error('Admin approve error:', error)
-    return c.json({ 
+    return c.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to approve order' 
+      error: error instanceof Error ? error.message : 'Failed to approve order'
     }, 500)
   }
 })
@@ -345,18 +384,18 @@ app.post('/api/admin/orders/:orderId/reject', authMiddleware, zValidator('json',
   try {
     const orderId = c.req.param('orderId')
     const { reason } = c.req.valid('json')
-    
+
     await rejectOrder(orderId, reason)
-    
-    return c.json({ 
+
+    return c.json({
       success: true,
-      message: 'Order rejected and refunded' 
+      message: 'Order rejected and refunded'
     })
   } catch (error) {
     console.error('Admin reject error:', error)
-    return c.json({ 
+    return c.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to reject order' 
+      error: error instanceof Error ? error.message : 'Failed to reject order'
     }, 500)
   }
 })
@@ -376,16 +415,16 @@ app.get('/api/admin/familink/:orderId', authMiddleware, async (c) => {
     }
 
     const familinkOrder = await getFamilinkOrder(order.familinkId)
-    
-    return c.json({ 
+
+    return c.json({
       success: true,
-      data: familinkOrder 
+      data: familinkOrder
     })
   } catch (error) {
     console.error('Familink order fetch error:', error)
-    return c.json({ 
+    return c.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch Familink order' 
+      error: error instanceof Error ? error.message : 'Failed to fetch Familink order'
     }, 500)
   }
 })

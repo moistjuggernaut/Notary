@@ -33,6 +33,7 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   const [isBackgroundRemoved, setIsBackgroundRemoved] = useState(false);
   const [cachedBgRemovedUrl, setCachedBgRemovedUrl] = useState<string | undefined>(undefined);
+  const [cachedBgRemovedSheetUrl, setCachedBgRemovedSheetUrl] = useState<string | undefined>(undefined);
   useEffect(() => {
     setDisplayImageUrl(result.imageUrl);
     setIsBackgroundRemoved(false);
@@ -45,6 +46,7 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
     // Use cached version if available
     if (cachedBgRemovedUrl) {
       setDisplayImageUrl(cachedBgRemovedUrl);
+      result.sheetUrl = cachedBgRemovedSheetUrl; // Temporarily update result for download
       setIsBackgroundRemoved(true);
       return;
     }
@@ -57,6 +59,12 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
       }
       setDisplayImageUrl(response.imageUrl);
       setCachedBgRemovedUrl(response.imageUrl);
+
+      if (response.sheetUrl) {
+        result.sheetUrl = response.sheetUrl;
+        setCachedBgRemovedSheetUrl(response.sheetUrl);
+      }
+
       setIsBackgroundRemoved(true);
     } catch (error) {
       console.error('Background removal failed:', error);
@@ -142,7 +150,7 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
               variant="outline"
               size="lg"
               className={CTA_SECONDARY_BUTTON_CLASS}
-              onClick={() => handleDownload(displayImageUrl)}
+              onClick={() => handleDownload(result.sheetUrl || displayImageUrl)}
               disabled={!displayImageUrl}
             >
               <Download className="w-4 h-4" />

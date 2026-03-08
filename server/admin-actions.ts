@@ -14,7 +14,7 @@ interface ShippingDetails {
     line2: string | null,
     postal_code: string,
     state: string | null
-    },
+  },
   carrier: string | null,
   name: string,
   phone: string | null,
@@ -27,7 +27,7 @@ export async function approveOrder(orderId: string): Promise<void> {
   console.log('[AdminActions] Approving order:', orderId)
 
   const order: Order | null = await orderService.getOrderById(orderId)
-  
+
   if (!order) {
     throw new Error('Order not found')
   }
@@ -44,12 +44,21 @@ export async function approveOrder(orderId: string): Promise<void> {
   }
 
   try {
-    // Prefer bg-removed output if it exists, otherwise fall back to validated.webp
+    // Prefer bg-removed print sheet if it exists, otherwise fall back to regular print sheet
     let validatedPhotoUrl: string
     try {
-      validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated_bg_removed.png')
+      validatedPhotoUrl = await getSignedUrlForImage(orderId, 'print_sheet_bg_removed.png')
     } catch {
-      validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated.webp')
+      try {
+        validatedPhotoUrl = await getSignedUrlForImage(orderId, 'print_sheet.png')
+      } catch {
+        // Fallbacks for older orders that might not have a print sheet
+        try {
+          validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated_bg_removed.png')
+        } catch {
+          validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated.webp')
+        }
+      }
     }
 
     // Create Familink print order
@@ -95,7 +104,7 @@ export async function rejectOrder(orderId: string, reason: string): Promise<void
   console.log('[AdminActions] Rejecting order:', { orderId, reason })
 
   const order = await orderService.getOrderById(orderId)
-  
+
   if (!order) {
     throw new Error('Order not found')
   }
@@ -114,7 +123,7 @@ export async function rejectOrder(orderId: string, reason: string): Promise<void
   try {
     // Process refund
     await refundPayment(order.stripePaymentIntentId, orderId, reason)
-    
+
     // Update status to refund succeeded
     await orderService.updateOrderStatus(orderId, 'refund_succeeded')
 
