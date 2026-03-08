@@ -136,8 +136,8 @@ export async function createPrintLayout(
 ): Promise<PrintLayoutResult> {
     try {
 
-        let widthMm = ICAOConfig.targetPhotoWidthMm;
-        let heightMm = ICAOConfig.targetPhotoHeightMm;
+        let widthMm: number = ICAOConfig.targetPhotoWidthMm;
+        let heightMm: number = ICAOConfig.targetPhotoHeightMm;
 
         if (countryCode && COUNTRY_DIMENSIONS[countryCode.toUpperCase()]) {
             const docKey = docType === 'drivers_license' ? 'drivers_license' : 'passport';
