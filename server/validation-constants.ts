@@ -75,7 +75,7 @@ export const ICAOConfig = {
 
 // Cloud Vision Validator thresholds
 export const ValidationThresholds = {
-  landmarkingConfidence: 0.6,
+  landmarkingConfidence: 0.5,
   detectionConfidence: 0.9,
   backgroundLightRgb: 200,
   backgroundUniformity: 0.6,

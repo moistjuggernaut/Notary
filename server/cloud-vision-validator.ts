@@ -254,10 +254,15 @@ function validateUnderExposure(face: IFaceAnnotation): ValidationReasonType | nu
 
 // Validate confidence levels
 function validateConfidence(face: IFaceAnnotation): ValidationReasonType | null {
-  if ((face.landmarkingConfidence ?? 0) < ValidationThresholds.landmarkingConfidence) {
+  const landmarkingConf = face.landmarkingConfidence ?? 0
+  const detectionConf = face.detectionConfidence ?? 0
+
+  if (landmarkingConf < ValidationThresholds.landmarkingConfidence) {
+    console.log(`Landmarking confidence is too low: ${landmarkingConf.toFixed(3)} (required: ${ValidationThresholds.landmarkingConfidence})`)
     return ValidationReason.QUAL_BLUR
   }
-  if ((face.detectionConfidence ?? 0) < ValidationThresholds.detectionConfidence) {
+  if (detectionConf < ValidationThresholds.detectionConfidence) {
+    console.log(`Detection confidence is too low: ${detectionConf.toFixed(3)} (required: ${ValidationThresholds.detectionConfidence})`)
     return ValidationReason.NO_FACE
   }
   return null
