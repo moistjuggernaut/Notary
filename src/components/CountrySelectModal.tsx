@@ -66,7 +66,7 @@ export function CountrySelectModal({ open, onClose, onConfirm }: Props) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md gap-0 p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4">
-          <DialogTitle>Select Country &amp; Document</DialogTitle>
+          <DialogTitle>Select Issuing Country &amp; Document</DialogTitle>
           <DialogDescription>
             Choose the country whose photo requirements apply to your document.
           </DialogDescription>
