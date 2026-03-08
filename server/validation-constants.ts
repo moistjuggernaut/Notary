@@ -119,25 +119,17 @@ export type ReasonCodeType = typeof ReasonCode[keyof typeof ReasonCode]
 // Detailed validation reasons from Cloud Vision checks
 export const ValidationReason = {
   NO_FACE: 'NO_FACE',
-  BG: 'BG',
   POSE_DIR: 'POSE_DIR',
   POSE_CTR: 'POSE_CTR',
   EXPR: 'EXPR',
   LIGHT: 'LIGHT',
-  EYES_OBS: 'EYES_OBS',
   EYES_CL: 'EYES_CL',
   GLS_GLARE: 'GLS_GLARE',
   GLS_TINT: 'GLS_TINT',
   HD_COVER: 'HD_COVER',
   QUAL_BLUR: 'QUAL_BLUR',
-  QUAL_REDEYE: 'QUAL_REDEYE',
   CTRY_DIM: 'CTRY_DIM',
-  CTRY_SPEC: 'CTRY_SPEC',
   ICAO_OTH: 'ICAO_OTH',
-  INVALID_RESPONSE: 'INVALID_RESPONSE',
-  PARSE_ERROR: 'PARSE_ERROR',
-  EMPTY_RESPONSE: 'EMPTY_RESPONSE',
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
 } as const
 
 export type ValidationReasonType = typeof ValidationReason[keyof typeof ValidationReason]
@@ -145,25 +137,17 @@ export type ValidationReasonType = typeof ValidationReason[keyof typeof Validati
 // Human-readable descriptions for validation reasons
 export const ValidationReasonDescriptions: Record<ValidationReasonType, string> = {
   [ValidationReason.NO_FACE]: 'No face detected.',
-  [ValidationReason.BG]: 'Background invalid.',
   [ValidationReason.POSE_DIR]: 'Head tilt/rotation.',
   [ValidationReason.POSE_CTR]: 'Head not centered.',
   [ValidationReason.EXPR]: 'Expression not neutral.',
   [ValidationReason.LIGHT]: 'Lighting issues.',
-  [ValidationReason.EYES_OBS]: 'Eyes obscured.',
   [ValidationReason.EYES_CL]: 'Eyes closed.',
   [ValidationReason.GLS_GLARE]: 'Glasses glare.',
   [ValidationReason.GLS_TINT]: 'Tinted glasses.',
   [ValidationReason.HD_COVER]: 'Head covering.',
   [ValidationReason.QUAL_BLUR]: 'Blurry image.',
-  [ValidationReason.QUAL_REDEYE]: 'Red-eye detected.',
   [ValidationReason.CTRY_DIM]: 'Invalid dimensions.',
-  [ValidationReason.CTRY_SPEC]: 'Specific rule violation.',
   [ValidationReason.ICAO_OTH]: 'ICAO compliance issue.',
-  [ValidationReason.INVALID_RESPONSE]: 'Invalid service response.',
-  [ValidationReason.PARSE_ERROR]: 'Response parsing error.',
-  [ValidationReason.EMPTY_RESPONSE]: 'Empty response.',
-  [ValidationReason.VALIDATION_ERROR]: 'Validation error.',
 }
 
 // Likelihood values from Cloud Vision API that indicate failure

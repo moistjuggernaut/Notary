@@ -255,10 +255,10 @@ function validateUnderExposure(face: IFaceAnnotation): ValidationReasonType | nu
 // Validate confidence levels
 function validateConfidence(face: IFaceAnnotation): ValidationReasonType | null {
   if ((face.landmarkingConfidence ?? 0) < ValidationThresholds.landmarkingConfidence) {
-    return ValidationReason.VALIDATION_ERROR
+    return ValidationReason.QUAL_BLUR
   }
   if ((face.detectionConfidence ?? 0) < ValidationThresholds.detectionConfidence) {
-    return ValidationReason.VALIDATION_ERROR
+    return ValidationReason.NO_FACE
   }
   return null
 }
@@ -325,11 +325,7 @@ export async function validateInitial(imageBuffer: Buffer): Promise<InitialValid
     })
 
     if (result.error?.message) {
-      return {
-        success: false,
-        reason: ValidationReason.VALIDATION_ERROR,
-        details: result.error.message,
-      }
+      throw new Error(result.error.message)
     }
 
     const faceAnnotations = result.faceAnnotations || []
@@ -376,12 +372,8 @@ export async function validateInitial(imageBuffer: Buffer): Promise<InitialValid
       faceAnnotation: face,
     }
   } catch (error) {
-    console.error('Vision API validation error:', error)
-    return {
-      success: false,
-      reason: ValidationReason.VALIDATION_ERROR,
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }
+    console.error('Vision API error:', error)
+    throw error
   }
 }
 
