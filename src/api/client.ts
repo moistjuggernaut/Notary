@@ -50,10 +50,17 @@ export async function validatePhoto(
         ...(docType && { docType }),
     };
 
-    return fetchApi<ValidationResponse>('/photo/validate', {
+    const response = await fetch(`${API_BASE_URL}/photo/validate`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(request),
     });
+
+    // Both 200 (success) and 422 (validation failure) return a structured ValidationResponse body
+    if (response.ok || response.status === 422) {
+        return response.json();
+    }
+    throw new Error(`Server error: ${response.status}`);
 }
 
 export async function removeBackground(orderId: string): Promise<RemoveBackgroundResponse> {

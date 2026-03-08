@@ -15,14 +15,7 @@ export const convertApiResponseToValidationResult = (apiResponse: ValidationResp
     };
   }
 
-  const errorInfo = errorMessages[reason_code] || {
-    summary: 'Photo validation encountered an issue.',
-    description: details?.validator_reason_description || `Validation failed with code: ${reason_code}`,
-    recommendations: [
-      'Review the photo requirements and try again',
-      'If the issue keeps happening, try a different photo'
-    ]
-  };
+  const errorInfo = errorMessages[reason_code] ?? errorMessages.INTERNAL_SERVER_ERROR;
 
   return {
     status: 'error',
