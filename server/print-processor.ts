@@ -154,8 +154,10 @@ export async function createPrintLayout(
         const { marginX, marginY } = calculateLayout(photoWidthPx, photoHeightPx)
 
         // Ensure the photo is the correct size
+        // Flatten to white background before converting to JPEG so transparent PNGs don't turn black
         const resizedPhoto = await sharp(photoBuffer)
             .resize(photoWidthPx, photoHeightPx, { fit: 'fill' })
+            .flatten({ background: { r: 255, g: 255, b: 255 } })
             .jpeg({ quality: 95, chromaSubsampling: '4:4:4' })
             .toBuffer()
 
