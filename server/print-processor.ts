@@ -154,11 +154,11 @@ export async function createPrintLayout(
         const { marginX, marginY } = calculateLayout(photoWidthPx, photoHeightPx)
 
         // Ensure the photo is the correct size
-        // Flatten to white background before converting to JPEG so transparent PNGs don't turn black
+        // Flatten to white background and use PNG for strictly lossless quality
         const resizedPhoto = await sharp(photoBuffer)
             .resize(photoWidthPx, photoHeightPx, { fit: 'fill' })
             .flatten({ background: { r: 255, g: 255, b: 255 } })
-            .jpeg({ quality: 95, chromaSubsampling: '4:4:4' })
+            .png()
             .toBuffer()
 
         // Build composite operations for placing photos in a 2x2 grid
