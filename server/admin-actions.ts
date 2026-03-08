@@ -44,20 +44,28 @@ export async function approveOrder(orderId: string): Promise<void> {
   }
 
   try {
-    // Prefer bg-removed print sheet if it exists, otherwise fall back to regular print sheet
+    // Select the print sheet based on whether the user kept the background removal
     let validatedPhotoUrl: string
-    try {
-      validatedPhotoUrl = await getSignedUrlForImage(orderId, 'print_sheet_bg_removed.png')
-    } catch {
+
+    if (order.backgroundRemoved) {
+      // User wanted background removed
       try {
-        validatedPhotoUrl = await getSignedUrlForImage(orderId, 'print_sheet.png')
+        validatedPhotoUrl = await getSignedUrlForImage(orderId, 'print_sheet_bg_removed.png')
       } catch {
-        // Fallbacks for older orders that might not have a print sheet
+        // Fallback for older orders that might not have a print sheet
         try {
           validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated_bg_removed.png')
         } catch {
           validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated.webp')
         }
+      }
+    } else {
+      // User wanted ORIGINAL background (or no action taken)
+      try {
+        validatedPhotoUrl = await getSignedUrlForImage(orderId, 'print_sheet.png')
+      } catch {
+        // Fallback
+        validatedPhotoUrl = await getSignedUrlForImage(orderId, 'validated.webp')
       }
     }
 

@@ -34,11 +34,17 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
   const [isBackgroundRemoved, setIsBackgroundRemoved] = useState(false);
   const [cachedBgRemovedUrl, setCachedBgRemovedUrl] = useState<string | undefined>(undefined);
   const [cachedBgRemovedSheetUrl, setCachedBgRemovedSheetUrl] = useState<string | undefined>(undefined);
+
+  // Store the original sheet URL so we can switch back to it on reset
+  const [originalSheetUrl, setOriginalSheetUrl] = useState<string | undefined>(result.sheetUrl);
+
   useEffect(() => {
     setDisplayImageUrl(result.imageUrl);
+    setOriginalSheetUrl(result.sheetUrl);
     setIsBackgroundRemoved(false);
     setCachedBgRemovedUrl(undefined);
-  }, [result.imageUrl]);
+    setCachedBgRemovedSheetUrl(undefined);
+  }, [result.imageUrl, result.sheetUrl]);
 
   const handleRemoveBackground = async () => {
     if (!result.orderId) return;
@@ -46,7 +52,6 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
     // Use cached version if available
     if (cachedBgRemovedUrl) {
       setDisplayImageUrl(cachedBgRemovedUrl);
-      result.sheetUrl = cachedBgRemovedSheetUrl; // Temporarily update result for download
       setIsBackgroundRemoved(true);
       return;
     }
@@ -61,7 +66,6 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
       setCachedBgRemovedUrl(response.imageUrl);
 
       if (response.sheetUrl) {
-        result.sheetUrl = response.sheetUrl;
         setCachedBgRemovedSheetUrl(response.sheetUrl);
       }
 
@@ -117,7 +121,7 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
           <div className={CTA_PRIMARY_COLUMN_CLASS}>
             <form
               className="w-full contents"
-              action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}`}
+              action={`/api/stripe/create-checkout-session?orderId=${result?.orderId || ''}&bgRemoved=${isBackgroundRemoved}`}
               method="POST"
             >
               <Button
@@ -150,7 +154,12 @@ export default function SuccessStep({ documentLabel, result, onUploadNew }: Succ
               variant="outline"
               size="lg"
               className={CTA_SECONDARY_BUTTON_CLASS}
-              onClick={() => handleDownload(result.sheetUrl || displayImageUrl)}
+              onClick={() => {
+                const downloadUrl = isBackgroundRemoved
+                  ? (cachedBgRemovedSheetUrl || cachedBgRemovedUrl || displayImageUrl)
+                  : (originalSheetUrl || displayImageUrl);
+                handleDownload(downloadUrl);
+              }}
               disabled={!displayImageUrl}
             >
               <Download className="w-4 h-4" />

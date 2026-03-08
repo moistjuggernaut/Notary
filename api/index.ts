@@ -251,6 +251,9 @@ app.post('/api/stripe/create-checkout-session', async (c) => {
       return c.json({ error: 'Order is not in a valid state for checkout' }, 400)
     }
 
+    const bgRemoved = c.req.query('bgRemoved') === 'true'
+    await orderService.updateOrderBackgroundRemoved(order.id, bgRemoved)
+
     await orderService.updateOrderStatus(order.id, 'checkout_started')
 
     const session = await stripe.checkout.sessions.create({

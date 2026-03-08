@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, pgEnum, boolean } from 'drizzle-orm/pg-core';
 
 // Order status enum
 export const orderStatusEnum = pgEnum('order_status', [
@@ -25,6 +25,7 @@ export const orders = pgTable('orders', {
   stripePaymentIntentId: varchar('stripe_payment_intent_id', { length: 255 }),
   familinkId: varchar('familink_id', { length: 255 }),
   status: orderStatusEnum('status').notNull().default('created'),
+  backgroundRemoved: boolean('background_removed').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

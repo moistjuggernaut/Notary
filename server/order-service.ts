@@ -16,7 +16,7 @@ export class OrderService {
         updatedAt: new Date(),
       })
       .returning();
-    
+
     return order;
   }
 
@@ -27,7 +27,7 @@ export class OrderService {
       .from(orders)
       .where(eq(orders.id, id))
       .limit(1);
-    
+
     return order || null;
   }
 
@@ -35,13 +35,13 @@ export class OrderService {
     const db = await this.getDb();
     const [order] = await db
       .update(orders)
-      .set({ 
-        familinkId, 
-        updatedAt: new Date() 
+      .set({
+        familinkId,
+        updatedAt: new Date()
       })
       .where(eq(orders.id, id))
       .returning();
-    
+
     return order || null;
   }
 
@@ -49,13 +49,27 @@ export class OrderService {
     const db = await this.getDb();
     const [order] = await db
       .update(orders)
-      .set({ 
-        status, 
-        updatedAt: new Date() 
+      .set({
+        status,
+        updatedAt: new Date()
       })
       .where(eq(orders.id, id))
       .returning();
-    
+
+    return order || null;
+  }
+
+  async updateOrderBackgroundRemoved(id: string, backgroundRemoved: boolean): Promise<Order | null> {
+    const db = await this.getDb();
+    const [order] = await db
+      .update(orders)
+      .set({
+        backgroundRemoved,
+        updatedAt: new Date()
+      })
+      .where(eq(orders.id, id))
+      .returning();
+
     return order || null;
   }
 
@@ -63,13 +77,13 @@ export class OrderService {
     const db = await this.getDb();
     const [order] = await db
       .update(orders)
-      .set({ 
-        stripeSessionId, 
-        updatedAt: new Date() 
+      .set({
+        stripeSessionId,
+        updatedAt: new Date()
       })
       .where(eq(orders.id, id))
       .returning();
-    
+
     return order || null;
   }
 
@@ -77,13 +91,13 @@ export class OrderService {
     const db = await this.getDb();
     const [order] = await db
       .update(orders)
-      .set({ 
-        stripePaymentIntentId, 
-        updatedAt: new Date() 
+      .set({
+        stripePaymentIntentId,
+        updatedAt: new Date()
       })
       .where(eq(orders.id, id))
       .returning();
-    
+
     return order || null;
   }
 
