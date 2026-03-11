@@ -65,14 +65,11 @@ export default function Home() {
   return (
     <PageLayout>
       <section className="py-6 sm:py-8 text-center">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary mb-3">
-          Passport And Driver's License Photos
-        </p>
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-2 sm:mb-3">
           Validate Passport Photos And Order Prints Online
         </h1>
         <p className="text-lg sm:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed mb-6">
-          Upload a passport or driver's license photo, check it against ICAO and country requirements, then download the digital file for free or order prints from one flow.
+          Upload your passport or driver's license photo, check it against ICAO and local country rules, then get a free digital download or place a print order.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button size="lg" className="text-lg px-8 py-6" onClick={() => setModalOpen(true)}>
@@ -80,9 +77,6 @@ export default function Home() {
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground mt-4">
-          Free digital download. Printed photos available to order.
-        </p>
         <CountrySelectModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
